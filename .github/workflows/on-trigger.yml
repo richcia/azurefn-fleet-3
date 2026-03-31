@@ -1,0 +1,195 @@
+name: Trigger - Initialize Pipeline Run
+
+on:
+  push:
+    paths:
+      - spec.md
+
+jobs:
+  check-invocation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      should-trigger: ${{ steps.detect.outputs.should-trigger }}
+      prompt: ${{ steps.detect.outputs.prompt }}
+    steps:
+      - name: Detect Invocation Pattern
+        id: detect
+        run: |
+          echo "should-trigger=true" >> $GITHUB_OUTPUT
+          echo "prompt=spec.md updated in commit ${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  trigger:
+    needs: check-invocation
+    if: needs.check-invocation.outputs.should-trigger == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Initialize Run Context
+        id: context
+        run: |
+          SPEC_NAME=$(awk '
+            /^### Name[[:space:]]*$/ {
+              while (getline line) {
+                if (line ~ /^[[:space:]]*$/) continue
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+                print line
+                exit
+              }
+            }
+          ' spec.md 2>/dev/null)
+
+          if [ -n "$SPEC_NAME" ]; then
+            SAFE_SPEC_NAME=$(echo "$SPEC_NAME" | tr -cs '[:alnum:]._-' '-')
+            SAFE_SPEC_NAME=${SAFE_SPEC_NAME#-}
+            SAFE_SPEC_NAME=${SAFE_SPEC_NAME%-}
+            PROJECT_NAME="$SAFE_SPEC_NAME"
+          else
+            PROJECT_NAME="${PROJECT_TYPE}_${TIMESTAMP}"
+          fi
+          RUN_ID="${PROJECT_NAME}_$(date +%s)"
+          TIMESTAMP=$(date -u +'%Y%m%d_%H%M%S')
+          PROJECT_TYPE=$(head -1 project-type.md 2>/dev/null || echo "DefaultProject")
+          
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "actor=${{ github.actor }}" >> $GITHUB_OUTPUT
+          echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Initialize Audit Trail
+        id: audit
+        run: |
+          mkdir -p results
+          
+          cat >> results/copilot-progress.md << 'EOF'
+          
+          ## Run: ${{ steps.context.outputs.run_id }} - ${{ steps.context.outputs.timestamp }}
+          
+          **Trigger:** ${{ needs.check-invocation.outputs.prompt }}
+          **Actor:** ${{ steps.context.outputs.actor }}
+          **Branch:** ${{ steps.context.outputs.branch }} @ ${{ steps.context.outputs.sha }}
+          **Workflow URL:** ${{ steps.context.outputs.run_url }}
+          **Project:** ${{ steps.context.outputs.project_name }}
+          
+          ### Stage Transitions
+          
+          **TRIGGER** (${{ steps.context.outputs.timestamp }}): ✓ Complete
+          - Initialized run context
+          - Created GitHub Project: ${{ steps.context.outputs.project_name }}
+          - Ready for DESIGN stage
+          
+          EOF
+        shell: bash
+
+      - name: Trigger Design Review Agent
+        id: design_review
+        run: |
+          SPEC_CONTENT=$(cat spec.md)
+          PROMPT=$(cat <<EOF
+          Review input file: spec.md
+          output=json
+          Return strict JSON only.
+
+          $SPEC_CONTENT
+          EOF
+          )
+
+          RESULT=$(gh copilot --agent design-review-agent --prompt "$PROMPT" --yes)
+
+          # Ensure downstream steps always receive valid JSON.
+          printf "%s" "$RESULT" | jq -e . >/dev/null
+
+          mkdir -p results
+          printf "%s\n" "$RESULT" > results/design-review.json
+
+          {
+            echo "result<<EOF"
+            echo "$RESULT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create/Update Design Review Issue
+        run: |
+          TITLE="DESIGN:${{ steps.context.outputs.project_name }}"
+          RESULT="$DESIGN_RESULT"
+          RESULT_JSON=$(printf "%s" "$RESULT" | jq -c .)
+
+          CRITICAL_COUNT=$(printf "%s" "$RESULT_JSON" | jq -r 'if (.critical_count // null) != null then .critical_count else ([.findings[]? | select((.severity // "") | ascii_downcase == "critical")] | length) end')
+          MAJOR_COUNT=$(printf "%s" "$RESULT_JSON" | jq -r '.major_count // ([.findings[]? | select((.severity // "") | ascii_downcase == "major")] | length)')
+          MINOR_COUNT=$(printf "%s" "$RESULT_JSON" | jq -r '.minor_count // ([.findings[]? | select((.severity // "") | ascii_downcase == "minor")] | length)')
+          SUMMARY=$(printf "%s" "$RESULT_JSON" | jq -r '.summary // "No summary provided."')
+
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            HAS_CRITICAL=true
+          else
+            HAS_CRITICAL=false
+          fi
+
+          BODY_FILE=$(mktemp)
+          {
+            echo "# Design Review Results"
+            echo
+            echo "Project: ${{ steps.context.outputs.project_name }}"
+            echo "Run: ${{ steps.context.outputs.run_url }}"
+            echo "Commit: ${{ steps.context.outputs.sha }}"
+            echo "Critical: $CRITICAL_COUNT | Major: $MAJOR_COUNT | Minor: $MINOR_COUNT"
+            echo
+            echo "## Summary"
+            echo
+            printf "%s\n" "$SUMMARY"
+            echo
+            echo "## Agent Output"
+            echo
+            echo '```json'
+            printf "%s\n" "$RESULT_JSON" | jq .
+            echo '```'
+            echo
+            if [ "$HAS_CRITICAL" = true ]; then
+              echo "## Required Next Action"
+              echo
+              echo "Resolve all critical findings in spec.md, commit, and push to trigger another review cycle."
+            else
+              echo "## Status"
+              echo
+              echo "No critical findings. This issue can be marked complete."
+            fi
+          } > "$BODY_FILE"
+
+          ISSUE_NUMBER=$(gh issue list --state all --json number,title --jq '.[] | select(.title == "'"$TITLE"'") | .number' | head -n 1)
+
+          if [ -n "$ISSUE_NUMBER" ]; then
+            gh issue edit "$ISSUE_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
+          else
+            ISSUE_URL=$(gh issue create --title "$TITLE" --body-file "$BODY_FILE")
+            ISSUE_NUMBER="${ISSUE_URL##*/}"
+          fi
+
+          if [ "$HAS_CRITICAL" = true ]; then
+            gh issue reopen "$ISSUE_NUMBER" || true
+            gh issue comment "$ISSUE_NUMBER" --body "Critical findings detected. Resolve all critical findings in spec.md and push to initiate another review."
+          else
+            gh issue close "$ISSUE_NUMBER" --comment "No critical findings detected in the latest design review. Marking complete."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESIGN_RESULT: ${{ steps.design_review.outputs.result }}
+
+      - name: Commit Audit Trail
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A results/copilot-progress.md results/design-review.json
+          git commit -m "chore: pipeline run ${{ steps.context.outputs.run_id }} initialized" || true
+          git push

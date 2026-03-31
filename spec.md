@@ -8,7 +8,7 @@ This file contains the design for an Azure Function
 1985-NY-Yankees
 
 ### Description
-List the members of the 1985 NY Yankees
+List the members of the 1985 New York Yankees
 
 ### Owner/Team
 rciapala

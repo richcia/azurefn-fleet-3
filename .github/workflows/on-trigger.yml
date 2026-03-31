@@ -26,6 +26,7 @@ jobs:
     permissions:
       issues: write
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -111,6 +112,7 @@ jobs:
           Review input file: spec.md
           output=json
           Return strict JSON only.
+          Include an updated_spec field containing the full rewritten spec.md text with all critical and major recommendations applied inline throughout the document.
 
           $SPEC_CONTENT
           EOF
@@ -178,6 +180,51 @@ jobs:
             HAS_CRITICAL=false
           fi
 
+          PR_URL=""
+          if [ "$HAS_CRITICAL" = true ]; then
+            BRANCH_NAME="fix/design-review-$(echo "${{ steps.context.outputs.run_id }}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b "$BRANCH_NAME"
+
+            UPDATED_SPEC=$(printf "%s" "$RESULT_JSON" | jq -r '.updated_spec // empty')
+            if [ -n "$UPDATED_SPEC" ]; then
+              printf "%s\n" "$UPDATED_SPEC" > spec.md
+            else
+              {
+                printf "\n\n## Required Changes (Critical Findings — Auto-generated)\n\n"
+                printf "%s" "$RESULT_JSON" | jq -r '.findings[]? | select((.severity // "") | ascii_downcase == "critical") | "### \(.title)\n\n**Component:** \(.component)\n\n**Evidence:** \(.evidence)\n\n**Recommendation:** \(.recommendation)\n"'
+              } >> spec.md
+            fi
+
+            git add spec.md
+            git commit -m "fix: apply critical design review recommendations (${{ steps.context.outputs.run_id }})"
+            git push origin "$BRANCH_NAME"
+
+            PR_BODY_FILE=$(mktemp)
+            {
+              echo "## Critical Design Review Findings"
+              echo
+              echo "This PR applies recommendations from the automated design review."
+              echo
+              echo "**Run:** ${{ steps.context.outputs.run_url }}"
+              echo "**Project:** ${{ steps.context.outputs.project_name }}"
+              echo
+              echo "### Critical Findings ($CRITICAL_COUNT)"
+              echo
+              printf "%s" "$RESULT_JSON" | jq -r '.findings[]? | select((.severity // "") | ascii_downcase == "critical") | "#### \(.title)\n\n**Evidence:** \(.evidence)\n\n**Recommendation:** \(.recommendation)\n"'
+            } > "$PR_BODY_FILE"
+
+            PR_URL=$(gh pr create \
+              --title "fix: resolve $CRITICAL_COUNT critical design review findings (${{ steps.context.outputs.project_name }})" \
+              --body-file "$PR_BODY_FILE" \
+              --base "${{ github.ref_name }}" \
+              --head "$BRANCH_NAME")
+
+            git checkout "${{ github.ref_name }}"
+          fi
+
           BODY_FILE=$(mktemp)
           {
             echo "# Design Review Results"
@@ -186,6 +233,9 @@ jobs:
             echo "Run: ${{ steps.context.outputs.run_url }}"
             echo "Commit: ${{ steps.context.outputs.sha }}"
             echo "Critical: $CRITICAL_COUNT | Major: $MAJOR_COUNT | Minor: $MINOR_COUNT"
+            if [ -n "$PR_URL" ]; then
+              echo "PR: $PR_URL"
+            fi
             echo
             echo "## Summary"
             echo
@@ -200,6 +250,10 @@ jobs:
             if [ "$HAS_CRITICAL" = true ]; then
               echo "## Required Next Action"
               echo
+              if [ -n "$PR_URL" ]; then
+                echo "A pull request with recommended changes has been opened: $PR_URL"
+                echo
+              fi
               echo "Resolve all critical findings in spec.md, commit, and push to trigger another review cycle."
             else
               echo "## Status"
@@ -219,7 +273,11 @@ jobs:
 
           if [ "$HAS_CRITICAL" = true ]; then
             gh issue reopen "$ISSUE_NUMBER" || true
-            gh issue comment "$ISSUE_NUMBER" --body "Critical findings detected. Resolve all critical findings in spec.md and push to initiate another review."
+            COMMENT="Critical findings detected ($CRITICAL_COUNT critical). Resolve all critical findings in spec.md and push to initiate another review."
+            if [ -n "$PR_URL" ]; then
+              COMMENT="$COMMENT A pull request with recommended changes has been opened: $PR_URL"
+            fi
+            gh issue comment "$ISSUE_NUMBER" --body "$COMMENT"
           else
             gh issue close "$ISSUE_NUMBER" --comment "No critical findings detected in the latest design review. Marking complete."
           fi

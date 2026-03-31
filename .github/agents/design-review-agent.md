@@ -65,10 +65,12 @@ When JSON output is requested, return only valid JSON with no markdown fences, n
 		}
 	],
 	"missing_details": ["string"],
-	"next_actions": ["string"]
+	"next_actions": ["string"],
+	"updated_spec": "string"
 }
 
 Rules for JSON mode:
 - `critical_count`, `major_count`, and `minor_count` must match `findings`.
 - Put unresolved missing design details in `missing_details`; treat them as critical in review reasoning.
 - Use empty arrays instead of null.
+- `updated_spec` must contain the full rewritten text of the input spec with every critical and major recommendation applied inline throughout the document. Replace placeholder sections, fill in missing details based on recommendations, and preserve all existing valid content. If there are no critical or major findings, set `updated_spec` to an empty string.

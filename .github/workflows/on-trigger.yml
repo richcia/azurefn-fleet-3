@@ -126,7 +126,7 @@ jobs:
           GH_EXIT_CODE=$?
           set -e
 
-          RESULT=$(cat "$GH_STDOUT_FILE")
+          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
 
           if [ -s "$GH_STDERR_FILE" ]; then
             echo "gh copilot emitted stderr (mirrored to stdout above)."
@@ -137,7 +137,19 @@ jobs:
             exit "$GH_EXIT_CODE"
           fi
 
-          # Ensure downstream steps always receive valid JSON.
+          # Extract only the JSON object portion (gh copilot may append diagnostic text).
+          # Use jq to parse the first valid JSON object and discard trailing diagnostics.
+          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -s '.[0]' 2>/dev/null || \
+            printf "%s" "$RAW_OUTPUT" | sed -n '/{/,/^}/p' | head -1)
+
+          if [ -z "$RESULT" ]; then
+            echo "Error: Could not extract valid JSON from gh copilot output."
+            echo "Raw output:"
+            printf "%s" "$RAW_OUTPUT"
+            exit 1
+          fi
+
+          # Ensure extracted JSON is valid.
           printf "%s" "$RESULT" | jq -e . >/dev/null
 
           mkdir -p results

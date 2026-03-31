@@ -92,8 +92,12 @@ jobs:
         shell: bash
 
       - name: Trigger Design Review Agent
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         id: design_review
         run: |
+          set -euo pipefail
+                  
           SPEC_CONTENT=$(cat spec.md)
           PROMPT=$(cat <<EOF
           Review input file: spec.md
@@ -104,7 +108,26 @@ jobs:
           EOF
           )
 
-          RESULT=$(gh copilot --agent design-review-agent --prompt "Respond to this following prompt in JSON format: $PROMPT")
+          GH_STDOUT_FILE=$(mktemp)
+          GH_STDERR_FILE=$(mktemp)
+
+          set +e
+          gh copilot --agent design-review-agent --prompt "Respond to this following prompt in JSON format: $PROMPT" \
+            > >(tee "$GH_STDOUT_FILE") \
+            2> >(tee "$GH_STDERR_FILE" >&1)
+          GH_EXIT_CODE=$?
+          set -e
+
+          RESULT=$(cat "$GH_STDOUT_FILE")
+
+          if [ -s "$GH_STDERR_FILE" ]; then
+            echo "gh copilot emitted stderr (mirrored to stdout above)."
+          fi
+
+          if [ "$GH_EXIT_CODE" -ne 0 ]; then
+            echo "gh copilot failed with exit code $GH_EXIT_CODE"
+            exit "$GH_EXIT_CODE"
+          fi
 
           # Ensure downstream steps always receive valid JSON.
           printf "%s" "$RESULT" | jq -e . >/dev/null
@@ -117,8 +140,6 @@ jobs:
             echo "$RESULT"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create/Update Design Review Issue
         run: |

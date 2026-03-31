@@ -104,7 +104,7 @@ jobs:
           EOF
           )
 
-          RESULT=$(gh copilot --agent design-review-agent --prompt "$PROMPT" --json)
+          RESULT=$(gh copilot --agent design-review-agent --prompt "Respond to this following prompt in JSON format: $PROMPT")
 
           # Ensure downstream steps always receive valid JSON.
           printf "%s" "$RESULT" | jq -e . >/dev/null

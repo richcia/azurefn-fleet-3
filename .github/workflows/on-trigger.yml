@@ -94,9 +94,17 @@ jobs:
       - name: Trigger Design Review Agent
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         id: design_review
         run: |
           set -euo pipefail
+
+          if [ -z "${COPILOT_GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "Missing authentication token for gh copilot."
+            echo "Set repository/org secret COPILOT_GITHUB_TOKEN with a token that has Copilot access."
+            exit 1
+          fi
                   
           SPEC_CONTENT=$(cat spec.md)
           PROMPT=$(cat <<EOF

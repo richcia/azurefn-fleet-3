@@ -34,12 +34,12 @@ rciapala
   - [ ] All players are returned (24–28 roster members, including known players: Don Mattingly, Dave Winfield, Rickey Henderson)
   - [ ] Response is validated against expected schema before blob write
   - [ ] TRAPI HTTP call has a 45-second timeout with 3 exponential-backoff retries
-  - [ ] Failed/invalid responses are written to `yankees-roster/failed/{run_date_utc}.json` and trigger an alert
+  - [ ] Failed/invalid responses are written to `failed/{run_date_utc}.json` in the `yankees-roster` container and trigger an alert
 - **Dependencies:** TRAPI endpoint, GPT-4o model access, Managed Identity with TRAPI auth scope
 
 #### Requirement 2: Store Players
 - **Description:** Write the validated roster JSON to Azure Blob Storage using a date-stamped blob name for idempotency and auditability. Use a conditional PUT (If-None-Match) to prevent double-writes on retrigger. The function uses a dedicated storage account (not the host storage account) and authenticates via Managed Identity.
-- **Blob Naming Convention:** `yankees-roster/{run_date_utc}.json` (e.g., `yankees-roster/2026-03-31.json`)
+- **Blob Naming Convention:** `{run_date_utc}.json` (e.g., `2026-03-31.json`) within the `yankees-roster` container
 - **Storage Account:** Dedicated account (Standard_LRS, Cool access tier); container `yankees-roster` (private, no anonymous access); soft-delete enabled with 7-day retention.
 - **Acceptance Criteria:**
   - [ ] All players are stored to the `yankees-roster` container in the dedicated storage account

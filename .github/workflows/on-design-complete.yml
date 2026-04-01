@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - spec.md
+      
   workflow_dispatch:
     inputs:
       trigger_file:
@@ -142,83 +143,6 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create/Update Implement Issues From Task Plan
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TASK_PLAN_RESULT: ${{ steps.task_planner.outputs.result }}
-        run: |
-          set -euo pipefail
-
-          RESULT_JSON=$(printf "%s" "$TASK_PLAN_RESULT" | jq -c .)
-          TASK_COUNT=$(printf "%s" "$RESULT_JSON" | jq -r '.tasks | length')
-
-          if [ "$TASK_COUNT" -eq 0 ]; then
-            echo "No tasks returned by task planner agent."
-            exit 0
-          fi
-
-          ISSUE_NUMBERS=""
-
-          while IFS= read -r TASK; do
-            TASK_ID=$(printf "%s" "$TASK" | jq -r '.id // "UNSPECIFIED"')
-            TASK_TITLE=$(printf "%s" "$TASK" | jq -r '.title // "Untitled task"')
-            TASK_TYPE=$(printf "%s" "$TASK" | jq -r '.type // "app"')
-            TASK_DESC=$(printf "%s" "$TASK" | jq -r '.description // "No description provided."')
-            TASK_OWNER=$(printf "%s" "$TASK" | jq -r '.owner_role // "unassigned"')
-            TASK_ESTIMATE=$(printf "%s" "$TASK" | jq -r '.estimate // "M"')
-
-            TITLE="IMPLEMENT:${{ steps.context.outputs.project_name }}:${TASK_ID} - ${TASK_TITLE}"
-
-            BODY_FILE=$(mktemp)
-            {
-              echo "# Implementation Task"
-              echo
-              echo "- **Project:** ${{ steps.context.outputs.project_name }}"
-              echo "- **Run:** ${{ steps.context.outputs.run_url }}"
-              echo "- **Commit:** ${{ steps.context.outputs.sha }}"
-              echo "- **Task ID:** $TASK_ID"
-              echo "- **Type:** $TASK_TYPE"
-              echo "- **Owner Role:** $TASK_OWNER"
-              echo "- **Estimate:** $TASK_ESTIMATE"
-              echo
-              echo "## Description"
-              echo
-              printf "%s\n" "$TASK_DESC"
-              echo
-              echo "## Inputs"
-              printf "%s" "$TASK" | jq -r '.inputs[]? | "- " + .'
-              echo
-              echo "## Outputs"
-              printf "%s" "$TASK" | jq -r '.outputs[]? | "- " + .'
-              echo
-              echo "## Dependencies"
-              printf "%s" "$TASK" | jq -r 'if (.depends_on | length) == 0 then "- none" else .depends_on[] | "- " + . end'
-              echo
-              echo "## Acceptance Criteria"
-              printf "%s" "$TASK" | jq -r '.acceptance_criteria[]? | "- [ ] " + .'
-              echo
-              echo "## Risks"
-              printf "%s" "$TASK" | jq -r 'if (.risks | length) == 0 then "- none" else .risks[] | "- " + . end'
-            } > "$BODY_FILE"
-
-            ISSUE_NUMBER=$(gh issue list --state all --json number,title --jq '.[] | select(.title == "'"$TITLE"'") | .number' | head -n 1)
-
-            if [ -n "$ISSUE_NUMBER" ]; then
-              gh issue edit "$ISSUE_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
-            else
-              ISSUE_URL=$(gh issue create --title "$TITLE" --body-file "$BODY_FILE")
-              ISSUE_NUMBER="${ISSUE_URL##*/}"
-            fi
-
-            ISSUE_NUMBERS="$ISSUE_NUMBERS #$ISSUE_NUMBER"
-          done < <(printf "%s" "$RESULT_JSON" | jq -c '.tasks[]')
-
-          {
-            echo
-            echo "**PLAN** ($(date -u +'%Y%m%d_%H%M%S')): ✓ Complete"
-            echo "- Task planner agent generated $TASK_COUNT tasks from ${{ steps.context.outputs.trigger_file }}"
-            echo "- Created/updated IMPLEMENT issues:$ISSUE_NUMBERS"
-          } >> results/copilot-progress.md
 
       - name: Commit Audit Trail
         run: |

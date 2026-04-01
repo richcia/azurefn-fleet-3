@@ -30,14 +30,18 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +'%Y%m%d_%H%M%S')
 
-          echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
           echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
-          echo "project_name=${{ inputs.project_name }}" >> $GITHUB_OUTPUT
+          echo "project_name=${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
           echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "actor=${{ github.actor }}" >> $GITHUB_OUTPUT
-          echo "run_url=${{ inputs.run_url }}" >> $GITHUB_OUTPUT
-          echo "trigger_file=${{ inputs.trigger_file }}" >> $GITHUB_OUTPUT
+          # Use workflow_dispatch input when present; otherwise default to spec.md for push runs
+          TRIGGER_FILE="${{ inputs.trigger_file }}"
+          if [ -z "$TRIGGER_FILE" ]; then
+            TRIGGER_FILE="spec.md"
+          fi
+          echo "trigger_file=$TRIGGER_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Initialize Audit Trail
         run: |

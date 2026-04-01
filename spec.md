@@ -61,7 +61,7 @@ rciapala
 ### Non-Functional Requirements
 
 - **Performance:** Function must complete within 60 seconds under normal conditions. `functionTimeout` set to 120 seconds in `host.json` as a safety buffer. TRAPI HTTP call timeout = 45 seconds.
-- **Scalability:** Single instance; `maxConcurrentCalls = 1` (Timer Trigger, no fan-out). No horizontal scaling required.
+- **Scalability:** Single logical execution per scheduled run (Timer Trigger, no fan-out). Rely on Timer Trigger’s singleton behavior; no horizontal scaling required.
 - **Reliability:** Best-effort execution on Consumption Plan (Azure SLA ~99.95%). Missed executions are surfaced via Application Insights alert. Retry policy: 3 retries with exponential backoff for TRAPI calls.
 - **Security:** No hardcoded API keys or connection strings. All service authentication via Managed Identity or Key Vault references. Blob container is private (no anonymous access).
 - **Cost:** Estimated <$1/month on Consumption Plan at 1 execution/day. Application Insights sampling enabled to control ingestion costs.

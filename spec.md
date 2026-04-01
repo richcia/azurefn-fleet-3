@@ -124,7 +124,7 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 ### Alerting
 - **Execution failure alert:** Application Insights alert rule — fires when function execution failure count > 0 in a 1-hour window; notifies rciapala via email
 - **Duration alert:** Alert when function execution duration > 90 seconds (signals TRAPI slowness)
-- **Data quality alert:** Custom metric `player_count_returned` — alert if value < 24 or > 40 (GPT output drift), emitted on both successful runs and validation-failure runs so out-of-range responses still trigger this alert
+- **Data quality alert:** Custom metric `player_count_returned` — alert if value < 24 or > 28 (aligns with validation range; GPT output drift), emitted on both successful runs and validation-failure runs so out-of-range responses still trigger this alert
 
 ### Logging
 - Structured logging via ILogger / OpenTelemetry SDK

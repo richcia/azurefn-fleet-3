@@ -21,7 +21,7 @@ rciapala
 
 #### Requirement 1: Get Players
 - **Description:** Query GPT-4o via TRAPI using a pinned, version-controlled prompt template to retrieve the 1985 New York Yankees roster. The response must be validated for completeness (expected player count: 24–28 active roster members) before proceeding. If validation fails, write the raw response to a `failed/` blob prefix and raise an alert — do not write to the primary output path.
-- **Prompt Template:** Stored in `prompts/get_1985_yankees.txt` in source control. Pinned to a specific GPT-4o model version to ensure deterministic output.
+- **Prompt Template:** Stored in `prompts/get_1985_yankees.txt` in source control. Pinned to a specific GPT-4o model version to reduce model drift; determinism/reproducibility must be enforced via TRAPI request parameters (e.g., temperature=0 or equivalent) and by relying on the schema and roster-count validation described below, rather than by model pinning alone.
 - **Expected Response Schema:**
   ```json
   {

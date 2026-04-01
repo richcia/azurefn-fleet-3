@@ -45,7 +45,7 @@ rciapala
   - [ ] All players are stored to the `yankees-roster` container in the dedicated storage account
   - [ ] Blob name is date-stamped in UTC for idempotency
   - [ ] Conditional PUT prevents duplicate writes on same-day retrigger
-  - [ ] At least 7 days of versioned blobs retained
+  - [ ] Deleted blobs are recoverable for at least 7 days via soft-delete retention policy
 - **Dependencies:** Dedicated Azure Storage Account, Managed Identity with `Storage Blob Data Contributor` role on target container
 
 #### Requirement 3: Repeat Nightly

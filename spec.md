@@ -9,7 +9,7 @@ It is used by the design-validator skill to verify completeness before implement
 1985-NY-Yankees
 
 ### Description
-List the members of the 1985 New York Yankees
+List the members of the 1985 NY Yankees
 
 ### Owner/Team
 rciapala

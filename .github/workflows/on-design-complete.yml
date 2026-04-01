@@ -1,0 +1,225 @@
+name: Design - Complete
+
+on:
+  push:
+    paths:
+      - spec.md
+  workflow_dispatch:
+    inputs:
+      trigger_file:
+        description: Path to the design file that triggered this workflow
+        required: false
+        default: spec.md
+        type: string
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Initialize Run Context
+        id: context
+        run: |
+          TIMESTAMP=$(date -u +'%Y%m%d_%H%M%S')
+
+          echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "project_name=${{ inputs.project_name }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "actor=${{ github.actor }}" >> $GITHUB_OUTPUT
+          echo "run_url=${{ inputs.run_url }}" >> $GITHUB_OUTPUT
+          echo "trigger_file=${{ inputs.trigger_file }}" >> $GITHUB_OUTPUT
+
+      - name: Initialize Audit Trail
+        run: |
+          mkdir -p results
+
+          cat >> results/copilot-progress.md << 'EOF_AUDIT'
+
+          ## Run: ${{ steps.context.outputs.run_id }} - ${{ steps.context.outputs.timestamp }}
+
+          **Trigger:** workflow_dispatch - ${{ steps.context.outputs.trigger_file }}
+          **Actor:** ${{ steps.context.outputs.actor }}
+          **Branch:** ${{ steps.context.outputs.branch }} @ ${{ steps.context.outputs.sha }}
+          **Workflow URL:** ${{ steps.context.outputs.run_url }}
+          **Project:** ${{ steps.context.outputs.project_name }}
+
+          ### Stage Transitions
+
+          **DESIGN** (${{ steps.context.outputs.timestamp }}): ✓ Complete
+          - Design gate passed
+          - Ready for PLAN stage
+
+          EOF_AUDIT
+        shell: bash
+
+      - name: Invoke Task Planner Agent
+        id: task_planner
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${COPILOT_GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "Missing authentication token for gh copilot."
+            echo "Set repository/org secret COPILOT_GITHUB_TOKEN with a token that has Copilot access."
+            exit 1
+          fi
+
+          TRIGGER_FILE="${{ steps.context.outputs.trigger_file }}"
+          if [ ! -f "$TRIGGER_FILE" ]; then
+            echo "Trigger file not found: $TRIGGER_FILE"
+            exit 1
+          fi
+
+          FILE_CONTENT=$(cat "$TRIGGER_FILE")
+          PROMPT=$(cat <<EOF
+          Create an implementation-ready engineering task plan from this design spec.
+          Review input file: $TRIGGER_FILE
+          output=json
+          Return strict JSON only following the Task Planner Agent schema.
+          Include all required engineering infrastructure tasks.
+
+          $FILE_CONTENT
+          EOF
+          )
+
+          GH_STDOUT_FILE=$(mktemp)
+          GH_STDERR_FILE=$(mktemp)
+
+          set +e
+          gh copilot --agent task-planner-agent --prompt "Respond to this following prompt in JSON format: $PROMPT" \
+            > >(tee "$GH_STDOUT_FILE") \
+            2> >(tee "$GH_STDERR_FILE" >&1)
+          GH_EXIT_CODE=$?
+          set -e
+
+          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
+
+          if [ -s "$GH_STDERR_FILE" ]; then
+            echo "gh copilot emitted stderr (mirrored to stdout above)."
+          fi
+
+          if [ "$GH_EXIT_CODE" -ne 0 ]; then
+            echo "gh copilot failed with exit code $GH_EXIT_CODE"
+            exit "$GH_EXIT_CODE"
+          fi
+
+          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -s '.[0]' 2>/dev/null || \
+            printf "%s" "$RAW_OUTPUT" | sed -n '/{/,/^}/p' | head -1)
+
+          if [ -z "$RESULT" ]; then
+            echo "Error: Could not extract valid JSON from gh copilot output."
+            echo "Raw output:"
+            printf "%s" "$RAW_OUTPUT"
+            exit 1
+          fi
+
+          printf "%s" "$RESULT" | jq -e . >/dev/null
+          printf "%s" "$RESULT" | jq -e '.tasks and (.tasks | type == "array")' >/dev/null
+
+          mkdir -p results
+          printf "%s\n" "$RESULT" > results/task-plan.json
+
+          {
+            echo "result<<EOF"
+            echo "$RESULT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create/Update Implement Issues From Task Plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_PLAN_RESULT: ${{ steps.task_planner.outputs.result }}
+        run: |
+          set -euo pipefail
+
+          RESULT_JSON=$(printf "%s" "$TASK_PLAN_RESULT" | jq -c .)
+          TASK_COUNT=$(printf "%s" "$RESULT_JSON" | jq -r '.tasks | length')
+
+          if [ "$TASK_COUNT" -eq 0 ]; then
+            echo "No tasks returned by task planner agent."
+            exit 0
+          fi
+
+          ISSUE_NUMBERS=""
+
+          while IFS= read -r TASK; do
+            TASK_ID=$(printf "%s" "$TASK" | jq -r '.id // "UNSPECIFIED"')
+            TASK_TITLE=$(printf "%s" "$TASK" | jq -r '.title // "Untitled task"')
+            TASK_TYPE=$(printf "%s" "$TASK" | jq -r '.type // "app"')
+            TASK_DESC=$(printf "%s" "$TASK" | jq -r '.description // "No description provided."')
+            TASK_OWNER=$(printf "%s" "$TASK" | jq -r '.owner_role // "unassigned"')
+            TASK_ESTIMATE=$(printf "%s" "$TASK" | jq -r '.estimate // "M"')
+
+            TITLE="IMPLEMENT:${{ steps.context.outputs.project_name }}:${TASK_ID} - ${TASK_TITLE}"
+
+            BODY_FILE=$(mktemp)
+            {
+              echo "# Implementation Task"
+              echo
+              echo "- **Project:** ${{ steps.context.outputs.project_name }}"
+              echo "- **Run:** ${{ steps.context.outputs.run_url }}"
+              echo "- **Commit:** ${{ steps.context.outputs.sha }}"
+              echo "- **Task ID:** $TASK_ID"
+              echo "- **Type:** $TASK_TYPE"
+              echo "- **Owner Role:** $TASK_OWNER"
+              echo "- **Estimate:** $TASK_ESTIMATE"
+              echo
+              echo "## Description"
+              echo
+              printf "%s\n" "$TASK_DESC"
+              echo
+              echo "## Inputs"
+              printf "%s" "$TASK" | jq -r '.inputs[]? | "- " + .'
+              echo
+              echo "## Outputs"
+              printf "%s" "$TASK" | jq -r '.outputs[]? | "- " + .'
+              echo
+              echo "## Dependencies"
+              printf "%s" "$TASK" | jq -r 'if (.depends_on | length) == 0 then "- none" else .depends_on[] | "- " + . end'
+              echo
+              echo "## Acceptance Criteria"
+              printf "%s" "$TASK" | jq -r '.acceptance_criteria[]? | "- [ ] " + .'
+              echo
+              echo "## Risks"
+              printf "%s" "$TASK" | jq -r 'if (.risks | length) == 0 then "- none" else .risks[] | "- " + . end'
+            } > "$BODY_FILE"
+
+            ISSUE_NUMBER=$(gh issue list --state all --json number,title --jq '.[] | select(.title == "'"$TITLE"'") | .number' | head -n 1)
+
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh issue edit "$ISSUE_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
+            else
+              ISSUE_URL=$(gh issue create --title "$TITLE" --body-file "$BODY_FILE")
+              ISSUE_NUMBER="${ISSUE_URL##*/}"
+            fi
+
+            ISSUE_NUMBERS="$ISSUE_NUMBERS #$ISSUE_NUMBER"
+          done < <(printf "%s" "$RESULT_JSON" | jq -c '.tasks[]')
+
+          {
+            echo
+            echo "**PLAN** ($(date -u +'%Y%m%d_%H%M%S')): ✓ Complete"
+            echo "- Task planner agent generated $TASK_COUNT tasks from ${{ steps.context.outputs.trigger_file }}"
+            echo "- Created/updated IMPLEMENT issues:$ISSUE_NUMBERS"
+          } >> results/copilot-progress.md
+
+      - name: Commit Audit Trail
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A results/copilot-progress.md results/task-plan.json
+          git commit -m "chore: pipeline run ${{ steps.context.outputs.run_id }} planned" || true
+          git push

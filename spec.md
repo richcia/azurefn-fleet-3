@@ -118,7 +118,7 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 ## Monitoring & Operations
 
 ### Health Checks
-- Azure Functions built-in `/api/health` endpoint (if HTTP trigger added for ops use)
+- Custom HTTP-triggered `/api/health` function implemented in the Function App and configured as the App Service Health Check path
 - Timer Trigger monitor (`useMonitor: true`) surfaces missed executions in Application Insights
 
 ### Alerting

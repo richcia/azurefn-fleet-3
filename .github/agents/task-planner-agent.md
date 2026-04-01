@@ -100,15 +100,15 @@ Each wave must include:
 When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, and this shape:
 
 {
-	"status": "success|partial_success|failure",
-	"issues_created": 0,
-	"issues_updated": 0,
-	"errors": [
-		{
-			"task_id": "string",
-			"message": "string"
-		}
-	]
+  "status": "success|partial_success|failure",
+  "created_issues": ["string"],
+  "updated_issues": ["string"],
+  "errors": [
+    {
+      "task_id": "string",
+      "error_message": "string"
+    }
+  ]
 }
 
 Rules for JSON mode:

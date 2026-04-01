@@ -54,7 +54,6 @@ jobs:
           **Trigger:** workflow_dispatch - ${{ steps.context.outputs.trigger_file }}
           **Actor:** ${{ steps.context.outputs.actor }}
           **Branch:** ${{ steps.context.outputs.branch }} @ ${{ steps.context.outputs.sha }}
-          **Workflow URL:** ${{ steps.context.outputs.run_url }}
           **Project:** ${{ steps.context.outputs.project_name }}
 
           ### Stage Transitions
@@ -94,6 +93,7 @@ jobs:
           output=json
           Return strict JSON only following the Task Planner Agent schema.
           Include all required engineering infrastructure tasks.
+          Write all error messages and warnings to stderr and stdout, but ensure the JSON output is only the valid JSON plan.
 
           $FILE_CONTENT
           EOF

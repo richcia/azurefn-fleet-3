@@ -1,9 +1,9 @@
 name: Trigger - Initialize Pipeline Run
 
-on:
-  push:
-    paths:
-      - spec.md
+# on:
+#   push:
+#     paths:
+#       - spec.md
 
 jobs:
   check-invocation:

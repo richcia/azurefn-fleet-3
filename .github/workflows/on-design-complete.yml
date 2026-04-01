@@ -92,9 +92,8 @@ jobs:
           Create an implementation-ready engineering task plan from this design spec.
           Review input file: $TRIGGER_FILE
           output=json
-          Return strict JSON only following the Task Planner Agent schema.
+          Return the path to the generated plan file.
           Include all required engineering infrastructure tasks.
-          Write all error messages and warnings to stderr and stdout, but ensure the JSON output is only the valid JSON plan.
 
           $FILE_CONTENT
           EOF
@@ -104,7 +103,7 @@ jobs:
           GH_STDERR_FILE=$(mktemp)
 
           set +e
-          gh copilot --agent task-planner-agent --prompt "Respond to this following prompt in JSON format: $PROMPT" \
+          gh copilot --agent task-planner-agent --prompt "$PROMPT" \
             > >(tee "$GH_STDOUT_FILE") \
             2> >(tee "$GH_STDERR_FILE" >&1)
           GH_EXIT_CODE=$?
@@ -121,15 +120,19 @@ jobs:
             exit "$GH_EXIT_CODE"
           fi
 
-          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -s '.[0]' 2>/dev/null || \
-            printf "%s" "$RAW_OUTPUT" | sed -n '/{/,/^}/p' | head -1)
+          PLAN_FILE=$(printf "%s" "$RAW_OUTPUT" | tr -d '\r' | grep -Eo '(^|[[:space:]])[^[:space:]]*plan\.json([[:space:]]|$)' | head -1 | xargs)
+          if [ -z "$PLAN_FILE" ]; then
+            PLAN_FILE="plan.json"
+          fi
 
-          if [ -z "$RESULT" ]; then
-            echo "Error: Could not extract valid JSON from gh copilot output."
-            echo "Raw output:"
-            printf "%s" "$RAW_OUTPUT"
+          if [ ! -f "$PLAN_FILE" ]; then
+            echo "Error: Task Planner Agent did not produce expected plan file: $PLAN_FILE"
+            echo "Agent output was:"
+            printf "%s\n" "$RAW_OUTPUT"
             exit 1
           fi
+
+          RESULT=$(cat "$PLAN_FILE")
 
           printf "%s" "$RESULT" | jq -e . >/dev/null
           printf "%s" "$RESULT" | jq -e '.tasks and (.tasks | type == "array")' >/dev/null
@@ -138,16 +141,74 @@ jobs:
           printf "%s\n" "$RESULT" > results/task-plan.json
 
           {
+            echo "plan_file=results/task-plan.json"
             echo "result<<EOF"
             echo "$RESULT"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Issues From Task Plan
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PLAN_FILE="${{ steps.task_planner.outputs.plan_file }}"
+          if [ -z "$PLAN_FILE" ] || [ ! -f "$PLAN_FILE" ]; then
+            echo "Task plan file not found: $PLAN_FILE"
+            exit 1
+          fi
+
+          jq -c '.tasks[]' "$PLAN_FILE" | while read -r task; do
+            TASK_ID=$(jq -r '.id' <<< "$task")
+            TASK_TITLE=$(jq -r '.title' <<< "$task")
+            ISSUE_TITLE="[Task ${TASK_ID}] ${TASK_TITLE}"
+
+            EXISTING_COUNT=$(gh issue list --state all --search "\"${ISSUE_TITLE}\" in:title" --json title --jq 'length')
+            if [ "$EXISTING_COUNT" -gt 0 ]; then
+              echo "Issue already exists for ${TASK_ID}; skipping."
+              continue
+            fi
+
+            ISSUE_BODY=$(jq -r '
+              [
+                "## Task Metadata",
+                "- ID: " + .id,
+                "- Type: " + .type,
+                "- Estimate: " + .estimate,
+                "- Owner Role: " + .owner_role,
+                "- Parallelizable: " + (if .parallelizable then "Yes" else "No" end),
+                "",
+                "## Description",
+                .description,
+                "",
+                "## Inputs",
+                (if (.inputs | length) > 0 then (.inputs | map("- " + .) | join("\n")) else "- None" end),
+                "",
+                "## Outputs",
+                (if (.outputs | length) > 0 then (.outputs | map("- " + .) | join("\n")) else "- None" end),
+                "",
+                "## Depends On",
+                (if (.depends_on | length) > 0 then (.depends_on | map("- " + .) | join("\n")) else "- None" end),
+                "",
+                "## Acceptance Criteria",
+                (if (.acceptance_criteria | length) > 0 then (.acceptance_criteria | map("- [ ] " + .) | join("\n")) else "- [ ] None specified" end),
+                "",
+                "## Risks",
+                (if (.risks | length) > 0 then (.risks | map("- " + .) | join("\n")) else "- None noted" end)
+              ] | join("\n")
+            ' <<< "$task")
+
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --body "$ISSUE_BODY"
+          done
 
 
       - name: Commit Audit Trail
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A results/copilot-progress.md results/task-plan.json
+          git add -A results/copilot-progress.md ${{ steps.task_planner.outputs.plan_file }}
           git commit -m "chore: pipeline run ${{ steps.context.outputs.run_id }} planned" || true
           git push

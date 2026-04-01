@@ -8,7 +8,7 @@ This file contains the design for an Azure Function
 1985-NY-Yankees
 
 ### Description
-List the members of the 1985 New York Yankees by querying GPT-4o via TRAPI nightly and persisting the structured roster to Azure Blob Storage using Managed Identity for all service authentication.
+List the members of the 1985 NY Yankees by querying GPT-4o via TRAPI nightly and persisting the structured roster to Azure Blob Storage using Managed Identity for all service authentication.
 
 ### Owner/Team
 rciapala

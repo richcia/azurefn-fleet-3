@@ -73,7 +73,7 @@ Each wave must include:
 ## Output
 - Output using JSON Output format specified below
 - Write output to `plan.json` in the workspace root
-- Only output status and errors to the console, not the plan itself
+- Do not output anything to console, stdout or stderr
 
 ### JSON Output
 When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, and this shape:

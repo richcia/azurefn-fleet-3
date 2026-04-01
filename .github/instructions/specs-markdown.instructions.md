@@ -7,11 +7,11 @@ Follow these instructions when reviewing Markdown files related to project speci
 
 ## Required workflow
 1) **Design review pass**
-- Perform a “design review” pass: check the doc for completeness, clarity, and feasibility.
-- If you would normally delegate to a “design-review-agent”, simulate that outcome by producing a structured set of findings (see “Output format” below).
+- Use “design-review-agent” (`.github/agents/design-review-agent.md`) to perform a complete design review and return specific, actionable feedback with suggestions.
 
 2) **Inline comments for critical issues**
 - Add critical feedback as **inline PR comments** on the relevant lines when possible (tight coupling to the exact requirement/section).
+- Add suggestions as "copilot fixes" that the author can easily apply (for example: “Replace this sentence with: ...” or “Add the following acceptance criteria: ...”).
 
 3) **Summarize major + minor findings**
 - For major and minor feedback, compile a list of findings as a **Findings** section (either:
@@ -24,8 +24,6 @@ Follow these instructions when reviewing Markdown files related to project speci
 5) **Azure Functions best practices (with links)**
 - When commenting on Azure Function design/architecture, ground recommendations in Azure Functions best practices and include links to authoritative Microsoft/Azure docs when relevant (for example: triggers/bindings, hosting plan choices, identity, storage, retries, idempotency, observability, and security).
 
-6) **Provide easy-to-apply fixes**
-- Convert recommendations into concrete edits the author can apply (rewrite sentences, propose new acceptance criteria, provide a revised bullet list, etc.).
 
 ## Output format (for Markdown spec/design reviews)
 - **Critical (inline comments):** only the highest-severity issues that must be fixed.

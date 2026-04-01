@@ -76,7 +76,6 @@ For each task, include:
 - If an issue with the exact stable title already exists, update it instead of creating a duplicate.
 - If issue creation fails for a task, continue attempting the remaining tasks and report the failure in the final error list.
 - Add a separate section in the issue that describes the task in JSON that is consumeable by other agents, using the same schema as the input task definition.
-- Use `gh issue create`, `gh issue edit`, and `gh issue list` for GitHub issue operations.
 
 ## Delivery Waves
 Organize tasks into execution waves:

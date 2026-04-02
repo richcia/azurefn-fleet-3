@@ -112,7 +112,14 @@ jobs:
             [ -z "$issue_number" ] && continue
             echo "Assigning issue #$issue_number to Copilot flow"
 
-            gh issue edit "$issue_number" --add-assignee "copilot" >/dev/null 2>&1 || true
+            if gh issue edit "$issue_number" --add-assignee "@copilot" >/dev/null 2>&1; then
+              echo "Assigned issue #$issue_number to copilot"
+            else
+              echo "Error: Could not assign issue #$issue_number to copilot."
+              echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
+              exit 1
+            fi
+
             gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
           done < ready_issues.txt
 

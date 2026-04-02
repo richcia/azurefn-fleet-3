@@ -1,4 +1,4 @@
-name: Cleanup Design Artifacts
+name: Cleanup Pipeline Artifacts
 
 on:
   workflow_dispatch:

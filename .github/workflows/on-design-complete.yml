@@ -140,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          PLAN_FILE="${{ steps.task_planner.outputs.plan_file }}"
+          PLAN_FILE="results/task-plan.json""
           if [ -z "$PLAN_FILE" ] || [ ! -f "$PLAN_FILE" ]; then
             echo "Task plan file not found: $PLAN_FILE"
             exit 1

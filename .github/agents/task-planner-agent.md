@@ -77,10 +77,10 @@ Each wave must include:
 - Do not commit task plan artifacts from within this agent
 - Do not output anything except the valid JSON payload
 - Do not write any files
+- Only return the JSON payload, do not include any explanatory text or markdown formatting
 
 ### JSON Output
-When JSON output is requested, JSON in this shape:
-
+When JSON output is requested, JSON is in this shape:
 {
 	"summary": "string",
 	"assumptions": ["string"],

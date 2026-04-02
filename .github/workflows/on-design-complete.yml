@@ -243,7 +243,8 @@ jobs:
             WAVE=$(jq -r '.wave // ""' <<< "$task")
             MILESTONE_ARG=()
             if [ -n "$WAVE" ] && [ -n "${MILESTONE_NUMBER_MAP[$WAVE]:-}" ]; then
-              MILESTONE_ARG=(--milestone "${MILESTONE_NUMBER_MAP[$WAVE]}")
+              MILESTONE_ARG=(--milestone "${WAVE}")
+              echo "Assigning task ${TASK_ID} to milestone '${WAVE}' (#${MILESTONE_NUMBER_MAP[$WAVE]})"
             fi
 
             echo "Creating issue for task ${TASK_ID}..."

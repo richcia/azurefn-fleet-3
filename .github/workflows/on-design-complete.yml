@@ -148,8 +148,11 @@ jobs:
 
           jq -c '.tasks[]' "$PLAN_FILE" | while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")
+            echo "Processing task: $TASK_ID"
             TASK_TITLE=$(jq -r '.title' <<< "$task")
+            echo "Task title: $TASK_TITLE"
             ISSUE_TITLE="[Task ${TASK_ID}] ${TASK_TITLE}"
+            echo "Issue title: $ISSUE_TITLE"
 
             EXISTING_COUNT=$(gh issue list --state all --search "\"${ISSUE_TITLE}\" in:title" --json title --jq 'length')
             if [ "$EXISTING_COUNT" -gt 0 ]; then
@@ -185,6 +188,8 @@ jobs:
                 (if (.risks | length) > 0 then (.risks | map("- " + .) | join("\n")) else "- None noted" end)
               ] | join("\n")
             ' <<< "$task")
+
+            echo "Creating issue for task ${TASK_ID}..."
 
             gh issue create \
               --title "$ISSUE_TITLE" \

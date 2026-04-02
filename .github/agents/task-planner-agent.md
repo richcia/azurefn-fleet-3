@@ -72,6 +72,7 @@ Each wave must include:
 - exit criteria
 
 ## Output
+- Do NOT output preamble, narrative or explanations. Output ONLY the JSON payload with the task plan.
 - Output using JSON Output format specified below
 - Return the task plan JSON to stdout only
 - Do not commit task plan artifacts from within this agent

@@ -14,7 +14,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 
 ## Input Handling
 - Accept a file path as input for the primary design/spec document.
-- If no file path is provided, default to `spec.md` in the workspace root.
+- If no file path is provided, default to `spec.md`.
 - If the target file does not exist, report that clearly and ask for an alternate file path.
 - Plan from the provided file first, then use related files only when needed for context.
 
@@ -31,7 +31,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 3. Separate enablement/infrastructure from feature implementation tasks when sequencing.
 4. Add acceptance criteria that are verifiable and implementation-focused.
 5. Include non-functional work (security, reliability, observability, performance, compliance) as first-class tasks.
-6. Identify parallelizable tasks, depdendency tasks and critical-path tasks.
+6. Identify parallelizable tasks, dependency tasks and critical-path tasks.
 7. Keep tasks small enough to estimate and assign to owners.
 8. Keep to 12 tasks total
 
@@ -76,8 +76,8 @@ Each wave must include:
 
 ## Output
 - Output using JSON Output format specified below
-- If the prompt provides an output file name/path for the task plan, write to that exact file in the workspace root
-- If no output file name/path is provided in the prompt, write output to `plan.json` in the workspace root
+- If the prompt provides an output file name/path for the task plan, write to that exact file
+- If no output file name/path is provided in the prompt, write output to `plan.json`
 - Do not output anything to console, stdout or stderr
 
 ### JSON Output

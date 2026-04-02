@@ -1,0 +1,70 @@
+name: Cleanup Design Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DELETE to confirm destructive cleanup
+        required: true
+        default: ""
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+
+    steps:
+      - name: Confirm Destructive Action
+        run: |
+          if [ "${{ inputs.confirm }}" != "DELETE" ]; then
+            echo "Confirmation failed. Set input 'confirm' to DELETE."
+            exit 1
+          fi
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Delete All GitHub Issues
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            export GH_TOKEN="$GITHUB_TOKEN"
+          fi
+
+          ISSUES=$(gh issue list --state all --limit 1000 --json number --jq '.[].number')
+
+          if [ -z "$ISSUES" ]; then
+            echo "No issues found."
+          else
+            for issue in $ISSUES; do
+              echo "Deleting issue #$issue"
+              gh issue delete "$issue" --yes
+            done
+          fi
+
+      - name: Delete All Files In results
+        run: |
+          set -euo pipefail
+
+          mkdir -p results
+          find results -mindepth 1 -delete
+
+      - name: Commit Cleanup Changes
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A results
+          git commit -m "chore: cleanup design pipeline artifacts" || true
+          git push

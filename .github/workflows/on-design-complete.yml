@@ -160,9 +160,33 @@ jobs:
           fi
 
           echo "Reading task plan from $PLAN_FILE"
-          echo "PLAN_FILE first 10 chars: $(head -c 10 "$PLAN_FILE")"
+          echo "PLAN_FILE contents:"; cat "$PLAN_FILE"
 
-          jq -c '.tasks[]' "${PLAN_FILE}" | while read -r task; do
+          # Create a GitHub Milestone for each wave and build a number lookup map
+          declare -A MILESTONE_NUMBER_MAP
+          while IFS= read -r wave; do
+            [ -z "$wave" ] && continue
+            echo "Ensuring milestone exists for wave: $wave"
+            EXISTING=$(gh api "repos/${{ github.repository }}/milestones" \
+              --jq ".[] | select(.title == \"$wave\") | .number" 2>/dev/null || true)
+            if [ -n "$EXISTING" ]; then
+              MILESTONE_NUMBER_MAP["$wave"]="$EXISTING"
+              echo "Using existing milestone '$wave': #$EXISTING"
+            else
+              CREATED=$(gh api "repos/${{ github.repository }}/milestones" \
+                --method POST -f title="$wave" -f state="open" \
+                --jq '.number' 2>/dev/null || true)
+              if [ -n "$CREATED" ]; then
+                MILESTONE_NUMBER_MAP["$wave"]="$CREATED"
+                echo "Created milestone '$wave': #$CREATED"
+              else
+                echo "Warning: Could not create milestone for wave '$wave'"
+              fi
+            fi
+          done < <(jq -r '[.tasks[].wave // empty] | unique | .[]' "$PLAN_FILE")
+
+          # Use process substitution (not pipe) so MILESTONE_NUMBER_MAP remains in scope
+          while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")
             echo "Processing task: $TASK_ID"
             TASK_TITLE=$(jq -r '.title' <<< "$task")
@@ -216,13 +240,20 @@ jobs:
               ] | join("\n")
             ' <<< "$task")
 
+            WAVE=$(jq -r '.wave // ""' <<< "$task")
+            MILESTONE_ARG=()
+            if [ -n "$WAVE" ] && [ -n "${MILESTONE_NUMBER_MAP[$WAVE]:-}" ]; then
+              MILESTONE_ARG=(--milestone "${MILESTONE_NUMBER_MAP[$WAVE]}")
+            fi
+
             echo "Creating issue for task ${TASK_ID}..."
 
             gh issue create \
               --title "$ISSUE_TITLE" \
               --body "$ISSUE_BODY" \
-              "${LABEL_ARGS[@]}"
-          done
+              "${LABEL_ARGS[@]}" \
+              "${MILESTONE_ARG[@]}"
+          done < <(jq -c '.tasks[]' "${PLAN_FILE}")
 
 
       - name: Commit Audit Trail

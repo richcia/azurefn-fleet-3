@@ -80,12 +80,13 @@ Each wave must include:
 - If no output file name/path is provided in the prompt, write output to `plan.json`
 - Do not commit `plan.json` to the repository after writing it, as it is a transient artifact for workflow consumption
 - Do not output anything to console, stdout or stderr
-- Return the file path of the generated plan in the `plan_file` output variable for workflow consumption
+- Include the full absolute file path of the generated plan in the JSON `plan_file` field for workflow consumption
 
 ### JSON Output
 When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, human readable, and this shape:
 
 {
+	"plan_file": "string",
 	"summary": "string",
 	"assumptions": ["string"],
 	"open_questions": ["string"],
@@ -120,6 +121,7 @@ When JSON output is requested, return only valid JSON with no markdown fences, n
 
 Rules for JSON Output:
 - Use empty arrays instead of null.
+- `plan_file` must be the full absolute path to the written plan file.
 - Every task in `tasks` must appear in exactly one wave in `waves.task_ids`.
 - `critical_path` must be an ordered list of task IDs.
 - `start_now` must contain exactly 5 task IDs when at least 5 tasks exist; otherwise include all tasks.

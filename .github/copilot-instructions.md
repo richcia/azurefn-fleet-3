@@ -69,4 +69,6 @@ When reviewing pull requests in this repository:
   - Major
   - Minor
   - Questions / Clarifications
-- **Suggested edits:** provide specific replacement text or new sections (copy/paste friendly).
+  - **Suggested edits:** provide specific replacement text or new sections (copy/paste friendly).
+
+# Copilot 

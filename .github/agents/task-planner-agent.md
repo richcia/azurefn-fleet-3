@@ -20,7 +20,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 - Include application and infrastructure tasks required to ship and operate the solution.
 - Cover build/test/release and operational readiness tasks when required by the spec.
 - Explicitly call out unknowns, assumptions, and external dependencies that can block implementation.
-- Include an explicit task with the title of "[Task PM-01] Review and approve implementation task plan" to approve this task plan. Automatically mark it complete if the input spec specifies that the plan should be automatically approved. Add a label called "start-assign" to that task to indicate it is ready for assignment and work to begin once approved.
+- Include an explicit task with the title of "Review and approve implementation task plan" to approve this task plan. Automatically mark it complete if the input spec specifies that the plan should be automatically approved. Add a label called "start-assign" to that task to indicate it is ready for assignment and work to begin once approved.
 
 ## Planning Principles
 1. Derive tasks directly from explicit requirements and constraints in the spec.
@@ -32,6 +32,8 @@ Your job is to transform a design/spec document into an implementation-ready eng
 7. Keep tasks small enough to estimate and assign to owners.
 8. Keep to 12 tasks per wave to maintain focus and momentum.
 9. Ensure the critical path is clear and includes all blocking dependencies.
+10. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
+11. All `app` type tasks must include unit test instructions in description and acceptance criteria, and all `infra` type tasks must include infrastructure validation steps in description and acceptance criteria.
 
 ## Required Task Categories
 1. Environment and IaC provisioning

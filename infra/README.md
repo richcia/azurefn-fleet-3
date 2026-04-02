@@ -10,7 +10,8 @@ Bicep templates that provision the Azure infrastructure for the **1985-NY-Yankee
 | Blob Container | `Microsoft.Storage/storageAccounts/blobServices/containers` | `yankees-roster` — stores the nightly roster output |
 | App Service Plan | `Microsoft.Web/serverfarms` | Consumption (Y1 / Dynamic) |
 | Function App | `Microsoft.Web/sites` | Python 3.11, HTTPS-only, FTP disabled |
-| Role Assignment | `Microsoft.Authorization/roleAssignments` | Storage Blob Data Contributor scoped to the Storage Account |
+| Role Assignment (Blob) | `Microsoft.Authorization/roleAssignments` | Storage Blob Data Owner scoped to the Storage Account |
+| Role Assignment (Queue) | `Microsoft.Authorization/roleAssignments` | Storage Queue Data Contributor scoped to the Storage Account |
 
 All resources are tagged with:
 
@@ -79,8 +80,12 @@ az storage blob service-properties show \
 
 ## Security Notes
 
-- The Function App uses a **system-assigned Managed Identity** — no shared keys or API keys are stored in application settings.
-- The Managed Identity is granted the built-in **Storage Blob Data Contributor** role (`ba92f5b4-2d11-453d-a403-e96b0029c9fe`) scoped to the Storage Account, following least-privilege principles.
+- The Function App uses a **system-assigned Managed Identity** for all storage access — no account keys or connection strings are stored in application settings.
+- `AzureWebJobsStorage` is configured via `AzureWebJobsStorage__accountName` (identity-based connection), which instructs the Azure Functions runtime to authenticate to Storage using the Managed Identity.
+- The Managed Identity is granted two built-in roles scoped to the Storage Account:
+  - **Storage Blob Data Owner** (`b7e6dc9b-827d-4af3-a56f-e6d3a4e7765d`) — required by the Functions runtime for blob lease management.
+  - **Storage Queue Data Contributor** (`974c5e8b-45b9-4653-ba55-5f855dd0fb88`) — required by the Functions runtime for host queue operations.
+- `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` and `WEBSITE_CONTENTSHARE` are intentionally omitted — they are Windows-only settings not required on a Linux Consumption plan.
 - Public blob access is disabled on the Storage Account.
 - Minimum TLS version is set to 1.2 across all resources.
 - FTP/FTPS is disabled on the Function App.

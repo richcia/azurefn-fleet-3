@@ -35,8 +35,9 @@ module functionApp 'modules/functionapp.bicep' = {
   }
 }
 
-// Grant the Function App's Managed Identity the Storage Blob Data Contributor role
-// on the Storage Account so it can read/write blobs without a connection string.
+// Grant the Function App's Managed Identity the roles needed for identity-based
+// AzureWebJobsStorage: Storage Blob Data Owner (runtime host blobs) and
+// Storage Queue Data Contributor (runtime host queues).
 module rbac 'modules/rbac.bicep' = {
   name: 'rbac'
   params: {

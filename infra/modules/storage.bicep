@@ -7,7 +7,9 @@ param prefix string
 @description('Resource tags applied to all resources.')
 param tags object
 
-var storageAccountName = take('st${replace(prefix, '-', '')}${uniqueString(resourceGroup().id)}', 24)
+// Strip hyphens, underscores, dots, and spaces so the name is lowercase alphanumeric only.
+var normalizedPrefix = toLower(replace(replace(replace(replace(prefix, '-', ''), '_', ''), '.', ''), ' ', ''))
+var storageAccountName = take('st${normalizedPrefix}${uniqueString(resourceGroup().id)}', 24)
 var blobContainerName = 'yankees-roster'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {

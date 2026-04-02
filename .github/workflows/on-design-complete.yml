@@ -140,11 +140,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          PLAN_FILE="results/task-plan.json""
+          PLAN_FILE="results/task-plan.json"
           if [ -z "$PLAN_FILE" ] || [ ! -f "$PLAN_FILE" ]; then
             echo "Task plan file not found: $PLAN_FILE"
             exit 1
           fi
+
+          echo "Reading task plan from $PLAN_FILE"
 
           jq -c '.tasks[]' "$PLAN_FILE" | while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")

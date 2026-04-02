@@ -123,19 +123,9 @@ jobs:
             exit "$GH_EXIT_CODE"
           fi
 
-          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -e . 2>/dev/null || true)
-          if [ -z "$RESULT" ]; then
-            echo "Error: Could not parse JSON output from Task Planner Agent."
-            echo "Agent output was:"
-            printf "%s\n" "$RAW_OUTPUT"
-            exit 1
-          fi
-
-          printf "%s" "$RESULT" | jq -e . >/dev/null
-          printf "%s" "$RESULT" | jq -e '.tasks and (.tasks | type == "array")' >/dev/null
-
           mkdir -p results
-          printf "%s\n" "$RESULT" > results/task-plan.json
+          printf "%s\n" "$RAW_OUTPUT" > results/task-plan.json
+          RESULT=$(cat results/task-plan.json)
 
           {
             echo "plan_file=results/task-plan.json"

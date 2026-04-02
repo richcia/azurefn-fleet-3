@@ -66,14 +66,6 @@ jobs:
           EOF_AUDIT
         shell: bash
 
-      - name: Prepare Task Plan File
-        id: task_plan_file
-        run: |
-          set -euo pipefail
-          PLAN_FILE_NAME="plan.json"
-          rm -f "$PLAN_FILE_NAME"
-          echo "plan_file_name=$PLAN_FILE_NAME" >> "$GITHUB_OUTPUT"
-
       - name: Invoke Task Planner Agent
         id: task_planner
         env:
@@ -82,6 +74,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         working-directory: ${{ github.workspace }}
         run: |
+          cd "$GITHUB_WORKSPACE"
+          pwd
+          ls -la
+
           set -euo pipefail
 
           if [ -z "${COPILOT_GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -96,15 +92,12 @@ jobs:
             exit 1
           fi
 
-          PLAN_FILE_NAME="${{ steps.task_plan_file.outputs.plan_file_name }}"
-
           FILE_CONTENT=$(cat "$TRIGGER_FILE")
           PROMPT=$(cat <<EOF
           Create an implementation-ready engineering task plan from this design spec.
           Review input file: $TRIGGER_FILE
           output=json
-          Use this exact output file name for the task plan: $PLAN_FILE_NAME
-          Return the path to the generated plan file.
+          Return strict JSON only to stdout following the Task Planner Agent schema.
           Include all required engineering infrastructure tasks.
 
           $FILE_CONTENT
@@ -115,13 +108,11 @@ jobs:
           GH_STDERR_FILE=$(mktemp)
 
           set +e
-          gh copilot --agent task-planner-agent --prompt "$PROMPT" \
-            > >(tee "$GH_STDOUT_FILE") \
-            2> >(tee "$GH_STDERR_FILE" >&1)
+          gh copilot agent run --agent task-planner-agent --prompt "$PROMPT" --write-file plan.json 
           GH_EXIT_CODE=$?
           set -e
 
-          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
+          RAW_OUTPUT=$(cat plan.json)
 
           if [ -s "$GH_STDERR_FILE" ]; then
             echo "gh copilot emitted stderr (mirrored to stdout above)."
@@ -140,38 +131,6 @@ jobs:
             exit 1
           fi
 
-          PLAN_FILE=$(printf "%s" "$RESULT" | jq -r '.plan_file // empty')
-          if [ -z "$PLAN_FILE" ]; then
-            echo "Error: Task Planner Agent JSON output did not include required plan_file."
-            exit 1
-          fi
-
-          if [ "${PLAN_FILE#/}" = "$PLAN_FILE" ]; then
-            PLAN_FILE="$PWD/$PLAN_FILE"
-          fi
-
-          if [ ! -f "$PLAN_FILE" ]; then
-            echo "Error: Task Planner Agent reported plan file that does not exist: $PLAN_FILE"
-            exit 1
-          fi
-
-          PLAN_FILE=$(realpath "$PLAN_FILE")
-          case "$PLAN_FILE" in
-            "$PWD"/*) ;;
-            *)
-              echo "Error: plan_file must resolve inside workspace. Got: $PLAN_FILE"
-              exit 1
-              ;;
-          esac
-          PLAN_FILE_REPO="${PLAN_FILE#$PWD/}"
-
-          if [ ! -f "$PLAN_FILE" ]; then
-            echo "Error: Task Planner Agent did not produce expected plan file: $PLAN_FILE"
-            echo "Agent output was:"
-            printf "%s\n" "$RAW_OUTPUT"
-            exit 1
-          fi
-
           printf "%s" "$RESULT" | jq -e . >/dev/null
           printf "%s" "$RESULT" | jq -e '.tasks and (.tasks | type == "array")' >/dev/null
 
@@ -179,8 +138,7 @@ jobs:
           printf "%s\n" "$RESULT" > results/task-plan.json
 
           {
-            echo "plan_file=$PLAN_FILE"
-            echo "plan_file_repo=$PLAN_FILE_REPO"
+            echo "plan_file=results/task-plan.json"
             echo "result<<EOF"
             echo "$RESULT"
             echo "EOF"
@@ -248,6 +206,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A results/copilot-progress.md results/task-plan.json ${{ steps.task_planner.outputs.plan_file_repo }}
+          git add -A results/copilot-progress.md results/task-plan.json
           git commit -m "chore: pipeline run ${{ steps.context.outputs.run_id }} planned" || true
           git push

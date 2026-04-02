@@ -58,6 +58,14 @@ jobs:
           mkdir -p results
           find results -mindepth 1 -delete
 
+      - name: Delete All Files In src
+        run: |
+          set -euo pipefail
+
+          if [ -d "src" ]; then
+            find src -mindepth 1 -delete
+          fi
+
       - name: Commit Cleanup Changes
         run: |
           set -euo pipefail

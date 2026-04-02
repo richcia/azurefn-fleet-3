@@ -50,6 +50,7 @@ For each task, include:
 - `id`: short stable identifier (for example: INF-01)
 - `title`: concise action phrase
 - `type`: one of `infra|app|data|security|ops|qa|release|documentation|project`
+- `labels`: list of GitHub labels to apply to the task issue (for example: `["start-assign", "start-plan"]`)
 - `description`: implementation intent in 1-3 sentences
 - `inputs`: required prerequisites, docs, or systems
 - `outputs`: task plan sent to stdout 
@@ -101,7 +102,8 @@ When JSON output is requested, JSON is in this shape:
 		{
 			"id": "string",
 			"title": "string",
-			"type": "infra|app|data|security|ops|qa|release|documentation",
+			"type": "infra|app|data|security|ops|qa|release|documentation|project",
+			"labels": ["string"],
 			"description": "string",
 			"inputs": ["string"],
 			"outputs": ["string"],

@@ -170,6 +170,17 @@ jobs:
             ISSUE_TITLE="[Task ${TASK_ID}] ${TASK_TITLE}"
             echo "Issue title: $ISSUE_TITLE"
 
+            LABELS=$(jq -r '(.labels // [])[]' <<< "$task")
+            LABEL_ARGS=()
+            if [ -n "$LABELS" ]; then
+              while IFS= read -r label; do
+                [ -z "$label" ] && continue
+                # Ensure label exists so gh issue create does not fail.
+                gh label create "$label" --color "0E8A16" --description "Task plan label" >/dev/null 2>&1 || true
+                LABEL_ARGS+=(--label "$label")
+              done <<< "$LABELS"
+            fi
+
             EXISTING_COUNT=$(gh issue list --state all --search "\"${ISSUE_TITLE}\" in:title" --json title --jq 'length')
             if [ "$EXISTING_COUNT" -gt 0 ]; then
               echo "Issue already exists for ${TASK_ID}; skipping."
@@ -209,7 +220,8 @@ jobs:
 
             gh issue create \
               --title "$ISSUE_TITLE" \
-              --body "$ISSUE_BODY"
+              --body "$ISSUE_BODY" \
+              "${LABEL_ARGS[@]}"
           done
 
 

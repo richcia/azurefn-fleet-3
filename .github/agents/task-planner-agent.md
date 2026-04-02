@@ -78,7 +78,7 @@ Each wave must include:
 - Do not output anything except the valid JSON payload
 - Do not write any files
 - Only return the JSON payload, do not include any explanatory text or markdown formatting
-- Do not output ```json
+- Do not output "```json" prefix or suffix
 
 ### JSON Output
 When JSON output is requested, JSON is in this shape:

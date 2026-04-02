@@ -108,7 +108,7 @@ jobs:
           GH_STDERR_FILE=$(mktemp)
 
           set +e
-          gh copilot agent run --agent task-planner-agent --prompt "$PROMPT" > >(tee "$GH_STDOUT_FILE") 2> >(tee "$GH_STDERR_FILE" >&2)
+          gh copilot --agent task-planner-agent --prompt "$PROMPT" > >(tee "$GH_STDOUT_FILE") 2> >(tee "$GH_STDERR_FILE" >&2)
           GH_EXIT_CODE=$?
           set -e
 

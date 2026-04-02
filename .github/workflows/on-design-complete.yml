@@ -122,6 +122,7 @@ jobs:
           RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
           echo "RAW_OUTPUT before strip (first 50 lines): $(printf "%s" "${RAW_OUTPUT}" | head -n 50)"
           RAW_OUTPUT2=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
+          RAW_OUTPUT2=$(printf "%s" "$RAW_OUTPUT2" | perl -0pe 's/^[^{]*//s; s/[^}]*$//s')
           echo "RAW_OUTPUT after strip (first 50 lines): $(printf "%s" "${RAW_OUTPUT2}" | head -n 50)"
 
           JQ_ERROR_FILE=$(mktemp)

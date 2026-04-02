@@ -70,7 +70,7 @@ jobs:
         id: task_plan_file
         run: |
           set -euo pipefail
-          PLAN_FILE_NAME="./results/plan.json"
+          PLAN_FILE_NAME="plan.json"
           rm -f "$PLAN_FILE_NAME"
           echo "plan_file_name=$PLAN_FILE_NAME" >> "$GITHUB_OUTPUT"
 
@@ -150,10 +150,10 @@ jobs:
           printf "%s" "$RESULT" | jq -e '.tasks and (.tasks | type == "array")' >/dev/null
 
           mkdir -p results
-          printf "%s\n" "$RESULT" > ./results/plan.json
+          printf "%s\n" "$RESULT" > plan.json
 
           {
-            echo "plan_file=./results/plan.json"
+            echo "plan_file=plan.json"
             echo "result<<EOF"
             echo "$RESULT"
             echo "EOF"

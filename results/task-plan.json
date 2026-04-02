@@ -1,0 +1,609 @@
+{
+  "summary": "Implement a nightly Azure Function (Timer Trigger) that queries GPT-4o via TRAPI to retrieve the 1985 New York Yankees roster and persists the results to Azure Blob Storage, using Managed Identity exclusively (no API keys).",
+  "assumptions": [
+    "TRAPI refers to an internal Azure/Microsoft proxy service for GPT-4o access that supports Managed Identity authentication.",
+    "Azure Functions Consumption or Flex Consumption plan is acceptable for this low-frequency nightly workload.",
+    "Python is the preferred implementation language given the simplicity of the workload.",
+    "A single Azure Storage Blob container is sufficient for output; each nightly run overwrites or appends a dated blob.",
+    "IaC will use Bicep and deployment via GitHub Actions.",
+    "The target Azure subscription and resource group will be provided by the team; this plan does not assume greenfield subscription creation.",
+    "No VNet integration is required unless the TRAPI endpoint mandates it.",
+    "The nightly schedule is interpreted as 00:00 UTC unless specified otherwise."
+  ],
+  "open_questions": [
+    "What is the exact TRAPI endpoint URL and required request schema for GPT-4o access?",
+    "Which Azure subscription and resource group should host the Function App and Storage Account?",
+    "Should each nightly run overwrite a single blob or create a new dated blob per run?",
+    "What RBAC roles does the Function App Managed Identity need on the TRAPI service principal/scope?",
+    "Is there a required blob container name or naming convention for the output?",
+    "What is the exact nightly schedule time (timezone/UTC)?",
+    "Are there data retention requirements for stored blobs?",
+    "Should failed runs trigger alerts, and if so, to what notification channel?"
+  ],
+  "waves": [
+    {
+      "name": "Foundation",
+      "objective": "Establish project governance, infrastructure scaffolding, CI/CD pipeline, and identity baseline so all subsequent build work has a deployable target.",
+      "task_ids": [
+        "PM-01",
+        "INF-01",
+        "INF-02",
+        "INF-03",
+        "REL-01"
+      ],
+      "entry_criteria": [
+        "spec.md reviewed by owner (rciapala)",
+        "Target Azure subscription and resource group identified",
+        "TRAPI endpoint details available"
+      ],
+      "exit_criteria": [
+        "PM-01 approved",
+        "Azure Function App and Storage Account provisioned in target environment",
+        "Managed Identity created and assigned to Function App",
+        "CI/CD pipeline deploys successfully to the Function App",
+        "IaC code committed and peer-reviewed"
+      ]
+    },
+    {
+      "name": "Core Build",
+      "objective": "Implement and deploy the three functional requirements: TRAPI/GPT-4o query, Blob Storage write, and nightly Timer Trigger.",
+      "task_ids": [
+        "APP-01",
+        "APP-02",
+        "APP-03",
+        "SEC-01"
+      ],
+      "entry_criteria": [
+        "Foundation wave exit criteria met",
+        "TRAPI endpoint URL and Managed Identity RBAC role confirmed",
+        "Blob container name and naming convention confirmed"
+      ],
+      "exit_criteria": [
+        "Timer Trigger fires on schedule in dev/staging environment",
+        "TRAPI call returns 1985 Yankees roster successfully",
+        "Roster blob written to Storage Account without API keys",
+        "No secrets or API keys present in code or configuration"
+      ]
+    },
+    {
+      "name": "Hardening",
+      "objective": "Add reliability, error handling, observability, and test coverage to production-harden the function.",
+      "task_ids": [
+        "REL-02",
+        "OBS-01",
+        "QA-01"
+      ],
+      "entry_criteria": [
+        "Core Build wave exit criteria met",
+        "Function executes end-to-end successfully at least once"
+      ],
+      "exit_criteria": [
+        "Retry and error handling logic implemented and tested",
+        "Structured logging and Application Insights connected",
+        "Alert rule for failed runs configured",
+        "Unit and integration tests pass in CI"
+      ]
+    },
+    {
+      "name": "Release Readiness",
+      "objective": "Validate production deployment, confirm nightly schedule, verify monitoring, and complete acceptance sign-off.",
+      "task_ids": [
+        "REL-03",
+        "QA-02"
+      ],
+      "entry_criteria": [
+        "Hardening wave exit criteria met",
+        "All acceptance criteria from spec.md verified in staging"
+      ],
+      "exit_criteria": [
+        "Function deployed to production",
+        "Nightly Timer Trigger confirmed firing in production",
+        "Blob output verified in production Storage Account",
+        "Monitoring and alerting active in production",
+        "Owner (rciapala) sign-off obtained"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "PM-01",
+      "title": "[Task PM-01] Review and approve implementation task plan",
+      "type": "project",
+      "labels": [
+        "start-assign"
+      ],
+      "description": "Owner (rciapala) reviews this task plan, resolves open questions, and formally approves it before implementation begins. Confirm TRAPI endpoint details, target subscription, blob naming convention, and schedule time.",
+      "inputs": [
+        "spec.md",
+        "This task plan JSON"
+      ],
+      "outputs": [
+        "Approved task plan",
+        "Resolved open questions documented"
+      ],
+      "depends_on": [],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "project manager / owner",
+      "acceptance_criteria": [
+        "All open questions have documented answers",
+        "Task plan approved by rciapala",
+        "Target Azure subscription and resource group confirmed",
+        "TRAPI endpoint URL and auth scope confirmed",
+        "Nightly schedule time (UTC) confirmed"
+      ],
+      "risks": [
+        "TRAPI endpoint details unavailable, blocking APP-02",
+        "Subscription/resource group not yet provisioned, blocking INF-01"
+      ]
+    },
+    {
+      "id": "INF-01",
+      "title": "Provision Azure Function App and App Service Plan via Bicep",
+      "type": "infra",
+      "labels": [
+        "start-assign"
+      ],
+      "description": "Author Bicep templates to provision a Consumption or Flex Consumption Azure Function App with an associated storage account for the Functions runtime, deploying to the confirmed resource group. Enable system-assigned Managed Identity on the Function App.",
+      "inputs": [
+        "Confirmed Azure subscription and resource group",
+        "PM-01 approval"
+      ],
+      "outputs": [
+        "Bicep template for Function App",
+        "Deployed Function App with Managed Identity enabled",
+        "Function App resource ID and Managed Identity principal ID"
+      ],
+      "depends_on": [
+        "PM-01"
+      ],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Bicep template is idempotent and passes `az bicep build` without errors",
+        "Function App deployed to target resource group",
+        "System-assigned Managed Identity is enabled on the Function App",
+        "Function App runtime is Python 3.11+",
+        "No secrets or connection strings stored in App Settings beyond system-required values"
+      ],
+      "risks": [
+        "Subscription quota limits on Consumption plan in target region",
+        "TRAPI may require VNet integration not currently planned"
+      ]
+    },
+    {
+      "id": "INF-02",
+      "title": "Provision Azure Blob Storage Account for player data output",
+      "type": "infra",
+      "labels": [
+        "start-assign"
+      ],
+      "description": "Extend Bicep templates to provision an Azure Storage Account and Blob container for storing nightly Yankees roster output. Configure container name per confirmed naming convention.",
+      "inputs": [
+        "Confirmed blob container name and naming convention",
+        "INF-01 Bicep templates"
+      ],
+      "outputs": [
+        "Bicep template for Storage Account and container",
+        "Deployed Storage Account and container",
+        "Storage Account resource ID"
+      ],
+      "depends_on": [
+        "PM-01"
+      ],
+      "parallelizable": true,
+      "estimate": "S",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Storage Account deployed with LRS redundancy minimum",
+        "Blob container created with confirmed name",
+        "Public blob access disabled",
+        "Storage Account accessible via Managed Identity (no shared key auth required by Function)"
+      ],
+      "risks": [
+        "Storage Account name collisions (globally unique requirement)"
+      ]
+    },
+    {
+      "id": "INF-03",
+      "title": "Assign RBAC roles to Function App Managed Identity",
+      "type": "infra",
+      "labels": [],
+      "description": "Assign the Storage Blob Data Contributor role to the Function App Managed Identity on the output Storage Account. Assign the required TRAPI RBAC role/scope to the Managed Identity so the function can authenticate to TRAPI without API keys.",
+      "inputs": [
+        "Function App Managed Identity principal ID (from INF-01)",
+        "Storage Account resource ID (from INF-02)",
+        "TRAPI required RBAC scope and role (from PM-01)"
+      ],
+      "outputs": [
+        "RBAC role assignments in Bicep",
+        "Verified Managed Identity access to Storage and TRAPI"
+      ],
+      "depends_on": [
+        "INF-01",
+        "INF-02",
+        "PM-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Storage Blob Data Contributor assigned to Function App MI on the output container",
+        "TRAPI RBAC role assigned to Function App MI",
+        "Role assignments codified in Bicep (not applied manually)",
+        "Verified: Function App MI can obtain a token for TRAPI scope"
+      ],
+      "risks": [
+        "TRAPI RBAC role name/scope unknown until PM-01 resolved",
+        "Propagation delay in AAD role assignments may affect initial testing"
+      ]
+    },
+    {
+      "id": "REL-01",
+      "title": "Configure GitHub Actions CI/CD pipeline for Function App",
+      "type": "release",
+      "labels": [
+        "start-assign"
+      ],
+      "description": "Create a GitHub Actions workflow that lints, runs tests, packages the Python function app, and deploys to the Azure Function App using federated identity (OIDC) — no stored credentials.",
+      "inputs": [
+        "Function App name and resource group (from INF-01)",
+        "GitHub repository confirmed"
+      ],
+      "outputs": [
+        "GitHub Actions workflow YAML",
+        "Successful deployment run to staging/production slot"
+      ],
+      "depends_on": [
+        "INF-01"
+      ],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "platform engineer / DevOps engineer",
+      "acceptance_criteria": [
+        "Workflow triggers on push to main branch",
+        "Workflow runs lint (flake8 or ruff) and unit tests before deploy",
+        "Deployment uses OIDC federated identity (no stored Azure credentials in GitHub secrets)",
+        "Successful deployment verified by checking Function App status post-deploy",
+        "Failed deployments cause workflow to exit non-zero"
+      ],
+      "risks": [
+        "OIDC federated identity setup requires Azure AD app registration permissions",
+        "Function App cold-start after deployment may cause initial Timer Trigger miss"
+      ]
+    },
+    {
+      "id": "APP-01",
+      "title": "Implement Azure Timer Trigger function with nightly CRON schedule",
+      "type": "app",
+      "labels": [],
+      "description": "Scaffold the Azure Functions Python project and implement a Timer Trigger function configured to execute nightly at the confirmed UTC time. Wire up the application entry point to orchestrate the TRAPI call and blob write.",
+      "inputs": [
+        "Confirmed nightly schedule time (from PM-01)",
+        "Azure Functions Python v2 programming model docs"
+      ],
+      "outputs": [
+        "Python Azure Function project with Timer Trigger",
+        "function_app.py with CRON schedule",
+        "requirements.txt"
+      ],
+      "depends_on": [
+        "PM-01",
+        "REL-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "software engineer",
+      "acceptance_criteria": [
+        "Timer Trigger CRON expression matches confirmed nightly schedule",
+        "Function app starts locally with `func start` without errors",
+        "Timer fires on schedule when deployed to Function App",
+        "Function execution logged with run timestamp"
+      ],
+      "risks": [
+        "Incorrect CRON expression causing missed or double-firing runs"
+      ]
+    },
+    {
+      "id": "APP-02",
+      "title": "Implement TRAPI/GPT-4o client to retrieve 1985 Yankees roster",
+      "type": "app",
+      "labels": [],
+      "description": "Implement a Python module that authenticates to TRAPI using the Function App Managed Identity (azure-identity DefaultAzureCredential), calls GPT-4o with a prompt to list all members of the 1985 New York Yankees, and returns a structured list of player names.",
+      "inputs": [
+        "TRAPI endpoint URL and request schema (from PM-01)",
+        "INF-03 RBAC assignments complete",
+        "azure-identity SDK"
+      ],
+      "outputs": [
+        "trapi_client.py module",
+        "Structured list of 1985 Yankees players",
+        "Unit tests for TRAPI client"
+      ],
+      "depends_on": [
+        "INF-03",
+        "APP-01"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "software engineer",
+      "acceptance_criteria": [
+        "Authentication uses DefaultAzureCredential — no API keys or connection strings in code",
+        "GPT-4o prompt returns a parseable list of 1985 Yankees roster members",
+        "Response parsed into a structured Python list/dict",
+        "Unit tests mock the TRAPI HTTP call and validate parsing logic",
+        "HTTP errors and empty responses raise explicit exceptions"
+      ],
+      "risks": [
+        "GPT-4o response format may vary; prompt engineering required for consistent structured output",
+        "TRAPI endpoint details unknown until PM-01 resolved — blocks implementation",
+        "LLM hallucination risk: roster may be incomplete or contain errors"
+      ]
+    },
+    {
+      "id": "APP-03",
+      "title": "Implement Azure Blob Storage writer for roster output",
+      "type": "app",
+      "labels": [],
+      "description": "Implement a Python module that authenticates to Azure Blob Storage using DefaultAzureCredential and writes the structured Yankees roster to the output container as a JSON blob. Each run should produce a dated blob (e.g., 1985-yankees-YYYYMMDD.json) or overwrite a fixed blob per confirmed convention.",
+      "inputs": [
+        "Storage Account name and container name (from INF-02)",
+        "Blob naming convention (from PM-01)",
+        "azure-storage-blob SDK"
+      ],
+      "outputs": [
+        "blob_writer.py module",
+        "JSON blob in output container",
+        "Unit tests for blob writer"
+      ],
+      "depends_on": [
+        "INF-03",
+        "APP-02"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "software engineer",
+      "acceptance_criteria": [
+        "Authentication uses DefaultAzureCredential — no storage account keys or SAS tokens in code",
+        "Blob written to confirmed container with confirmed naming convention",
+        "Blob content is valid JSON containing the full player list",
+        "Unit tests mock the BlobServiceClient and validate write logic",
+        "Storage errors raise explicit exceptions caught by the Timer Trigger handler"
+      ],
+      "risks": [
+        "Blob overwrite vs. append strategy not confirmed — may require re-work if convention changes"
+      ]
+    },
+    {
+      "id": "SEC-01",
+      "title": "Security review: validate no API keys, secrets, or credentials in code or config",
+      "type": "security",
+      "labels": [],
+      "description": "Perform a security review of the codebase and GitHub Actions workflow to confirm no API keys, storage account keys, SAS tokens, or other secrets are present in source code, environment variables, or repository secrets. Validate Managed Identity is the sole authentication mechanism.",
+      "inputs": [
+        "Completed APP-01, APP-02, APP-03 code",
+        "REL-01 GitHub Actions workflow"
+      ],
+      "outputs": [
+        "Security review sign-off",
+        "Any remediation items resolved"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02",
+        "APP-03",
+        "REL-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "security engineer / software engineer",
+      "acceptance_criteria": [
+        "No API keys, passwords, or connection strings found in source code via secret scanning",
+        "GitHub Actions workflow uses OIDC — no stored Azure credentials in repository secrets",
+        "Azure Function App Settings contain no secrets beyond system-required values",
+        "Storage Account shared key access disabled or not used by the Function",
+        "Bicep templates reviewed: no hard-coded credentials"
+      ],
+      "risks": [
+        "Developer inadvertently commits a TRAPI token during local testing"
+      ]
+    },
+    {
+      "id": "REL-02",
+      "title": "Implement retry logic and error handling for TRAPI and Blob Storage failures",
+      "type": "app",
+      "labels": [],
+      "description": "Add retry logic (exponential backoff) to TRAPI HTTP calls and Blob Storage writes. Implement a top-level exception handler in the Timer Trigger that catches unhandled errors, logs structured error details, and does not silently swallow failures.",
+      "inputs": [
+        "APP-02 and APP-03 modules",
+        "Azure Functions retry policy docs"
+      ],
+      "outputs": [
+        "Updated trapi_client.py and blob_writer.py with retry logic",
+        "Timer Trigger exception handler",
+        "Tests for retry and failure scenarios"
+      ],
+      "depends_on": [
+        "APP-02",
+        "APP-03"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "software engineer",
+      "acceptance_criteria": [
+        "TRAPI HTTP calls retry up to 3 times with exponential backoff on transient errors",
+        "Blob write retries on transient storage errors",
+        "Unhandled exceptions logged with structured error context before re-raising",
+        "Failed function execution visible in Application Insights as a failed invocation",
+        "Tests simulate TRAPI and Storage transient failures and verify retry behavior"
+      ],
+      "risks": [
+        "Overly aggressive retry on TRAPI may exhaust token quota"
+      ]
+    },
+    {
+      "id": "OBS-01",
+      "title": "Configure Application Insights and structured logging",
+      "type": "ops",
+      "labels": [],
+      "description": "Connect the Azure Function App to an Application Insights instance. Implement structured logging throughout the application (TRAPI call, response parsing, blob write). Configure an alert rule for failed function invocations to notify the team.",
+      "inputs": [
+        "Function App name (from INF-01)",
+        "Application Insights workspace or new instance",
+        "Alert notification channel (from PM-01)"
+      ],
+      "outputs": [
+        "Application Insights connected to Function App",
+        "Structured log statements in all modules",
+        "Alert rule for failed invocations"
+      ],
+      "depends_on": [
+        "INF-01",
+        "APP-01",
+        "APP-02",
+        "APP-03"
+      ],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "platform engineer / software engineer",
+      "acceptance_criteria": [
+        "Application Insights resource provisioned and connected to Function App via APPLICATIONINSIGHTS_CONNECTION_STRING app setting",
+        "Each function invocation produces a structured log entry with run timestamp and outcome",
+        "TRAPI call duration and HTTP status logged",
+        "Blob write success/failure logged",
+        "Alert rule fires when function invocation failure rate exceeds 1 in a 24-hour window",
+        "Alert notification reaches confirmed channel"
+      ],
+      "risks": [
+        "Alert notification channel not confirmed until PM-01 resolved"
+      ]
+    },
+    {
+      "id": "QA-01",
+      "title": "Write and execute integration tests for end-to-end function execution",
+      "type": "qa",
+      "labels": [],
+      "description": "Write integration tests that execute the full function logic against a staging Storage Account (using real Managed Identity credentials in CI) and validate that a blob is written with expected content. Include a test that validates the 1985 Yankees roster is non-empty and contains known players.",
+      "inputs": [
+        "Staging Storage Account and Function App",
+        "Known 1985 Yankees player list for assertion"
+      ],
+      "outputs": [
+        "Integration test suite",
+        "Test results in CI pipeline",
+        "Validated blob output"
+      ],
+      "depends_on": [
+        "REL-02",
+        "OBS-01",
+        "REL-01"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "software engineer / QA engineer",
+      "acceptance_criteria": [
+        "Integration tests run in GitHub Actions CI against staging environment",
+        "Test asserts blob is created in Storage container after function execution",
+        "Test asserts blob JSON contains at least N known 1985 Yankees players (e.g., Don Mattingly, Rickey Henderson)",
+        "Test asserts no API keys are used in the execution path",
+        "All tests pass in CI before merge to main"
+      ],
+      "risks": [
+        "TRAPI availability in CI environment may require a mock/stub for unit pipeline runs",
+        "LLM non-determinism may cause flaky roster completeness assertions"
+      ]
+    },
+    {
+      "id": "REL-03",
+      "title": "Deploy to production and verify nightly Timer Trigger",
+      "type": "release",
+      "labels": [],
+      "description": "Execute production deployment via CI/CD pipeline. Verify the Timer Trigger fires at the configured nightly schedule, the TRAPI call succeeds, and the roster blob is written to the production Storage Account. Obtain owner sign-off.",
+      "inputs": [
+        "QA-01 passing",
+        "Production Azure resources provisioned",
+        "rciapala availability for sign-off"
+      ],
+      "outputs": [
+        "Function App running in production",
+        "Verified nightly blob output in production",
+        "Owner sign-off"
+      ],
+      "depends_on": [
+        "QA-01",
+        "SEC-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "platform engineer / owner",
+      "acceptance_criteria": [
+        "Production deployment succeeds via CI/CD pipeline without manual steps",
+        "Timer Trigger fires at confirmed nightly schedule time in production",
+        "Blob written to production Storage container with correct content",
+        "Application Insights shows successful invocation",
+        "No API keys present in production configuration",
+        "rciapala provides written sign-off"
+      ],
+      "risks": [
+        "TRAPI endpoint not available in production environment",
+        "Managed Identity RBAC propagation delay causing first-run failure"
+      ]
+    },
+    {
+      "id": "QA-02",
+      "title": "Execute production acceptance validation and complete success criteria checklist",
+      "type": "qa",
+      "labels": [],
+      "description": "Walk through the spec.md success criteria checklist against the production deployment. Verify all functional requirements, acceptance criteria, code review, test coverage, monitoring, and documentation are complete.",
+      "inputs": [
+        "spec.md success criteria",
+        "REL-03 production deployment",
+        "OBS-01 monitoring active"
+      ],
+      "outputs": [
+        "Completed success criteria checklist",
+        "Any outstanding gaps resolved or documented"
+      ],
+      "depends_on": [
+        "REL-03"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "owner / QA engineer",
+      "acceptance_criteria": [
+        "All spec.md functional requirement acceptance criteria checked off",
+        "Nightly execution confirmed over at least one real nightly cycle",
+        "Monitoring and alerting confirmed active",
+        "Code review completed and merged",
+        "Test coverage meets agreed threshold",
+        "rciapala confirms project complete"
+      ],
+      "risks": [
+        "Waiting for a real nightly cycle adds 24-hour minimum to release readiness"
+      ]
+    }
+  ],
+  "critical_path": [
+    "PM-01",
+    "INF-01",
+    "INF-02",
+    "INF-03",
+    "REL-01",
+    "APP-01",
+    "APP-02",
+    "APP-03",
+    "REL-02",
+    "SEC-01",
+    "QA-01",
+    "REL-03",
+    "QA-02"
+  ],
+  "start_now": [
+    "PM-01",
+    "INF-01",
+    "INF-02",
+    "REL-01",
+    "OBS-01"
+  ]
+}

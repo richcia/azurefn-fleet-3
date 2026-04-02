@@ -123,6 +123,9 @@ jobs:
             exit "$GH_EXIT_CODE"
           fi
 
+          # Strip markdown code fences if the agent wrapped output despite instructions
+          RAW_OUTPUT=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
+
           mkdir -p results
           printf "%s\n" "$RAW_OUTPUT" > results/task-plan.json
           RESULT=$(cat results/task-plan.json)
@@ -148,7 +151,7 @@ jobs:
 
           echo "Reading task plan from $PLAN_FILE"
 
-          jq -c '.tasks[]' "${PLAN_FILE:7}" | while read -r task; do
+          jq -c '.tasks[]' "${PLAN_FILE}" | while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")
             echo "Processing task: $TASK_ID"
             TASK_TITLE=$(jq -r '.title' <<< "$task")

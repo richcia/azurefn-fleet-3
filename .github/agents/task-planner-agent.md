@@ -77,7 +77,8 @@ Each wave must include:
 - Do not commit task plan artifacts from within this agent
 - Do not output anything except the valid JSON payload
 - Do not write any files
-- Only return the JSON payload, do not include any explanatory text or markdown formatting
+- Do NOT wrap output in markdown code fences (no ```json, no ```, no backticks of any kind)
+- The very first character of output must be `{` and the very last must be `}`
 
 ### JSON Output
 When JSON output is requested, JSON is in this shape:

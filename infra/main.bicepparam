@@ -1,0 +1,10 @@
+using './main.bicep'
+
+param location = 'eastus'
+param projectName = '1985-NY-Yankees'
+param ownerName = 'rciapala'
+param storageAccountName = 'st1985nyyankees'
+param functionAppName = 'func-1985-ny-yankees'
+param appServicePlanName = 'asp-1985-ny-yankees'
+param appInsightsName = 'appi-1985-ny-yankees'
+param logAnalyticsWorkspaceName = 'law-1985-ny-yankees'

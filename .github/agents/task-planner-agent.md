@@ -79,7 +79,7 @@ Each wave must include:
 - Do not write any files
 
 ### JSON Output
-When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, human readable, and this shape:
+When JSON output is requested, JSON in this shape:
 
 {
 	"summary": "string",

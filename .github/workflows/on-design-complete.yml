@@ -108,7 +108,7 @@ jobs:
           GH_STDERR_FILE=$(mktemp)
 
           set +e
-          gh copilot --agent task-planner-agent --prompt "$PROMPT" > >(tee "$GH_STDOUT_FILE") 2> >(tee "$GH_STDERR_FILE" >&2)
+          gh copilot --agent task-planner-agent --prompt "$PROMPT" > "$GH_STDOUT_FILE" 2> >(tee "$GH_STDERR_FILE" >&2)
           GH_EXIT_CODE=$?
           set -e
 
@@ -124,8 +124,9 @@ jobs:
           fi
 
           # Strip markdown code fences if the agent wrapped output despite instructions
+          echo "RAW_OUTPUT before strip: ${RAW_OUTPUT}"
           RAW_OUTPUT=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
-          echo "RAW_OUTPUT first 10 chars: ${RAW_OUTPUT:0:10}"
+          echo "RAW_OUTPUT after strip: ${RAW_OUTPUT}"
 
           RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -e . 2>/dev/null || true)
           if [ -z "$RESULT" ]; then

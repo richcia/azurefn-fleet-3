@@ -1,0 +1,208 @@
+name: Assign Tasks
+
+on:
+  workflow_call:
+    secrets:
+      COPILOT_GITHUB_TOKEN:
+        required: false
+  workflow_dispatch:
+
+jobs:
+  assign-and-execute:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+
+    env:
+      COPILOT_PROMPT: Complete tasks in Issue's Description section, produce all artifacts in Outputs section, and ensure all criteria in Acceptance Criteria is met (checking each as they are met)
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure GitHub Auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
+            echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+          else
+            echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Query Ready Issues By Dependencies
+        id: ready_issues
+        run: |
+          set -euo pipefail
+
+          gh issue list --state all --limit 1000 --json number,title,body,state,url > all_issues.json
+
+          declare -A TASK_STATE
+          while IFS=$'\t' read -r task_id task_state; do
+            [ -z "$task_id" ] && continue
+            TASK_STATE["$task_id"]="$task_state"
+          done < <(jq -r '
+            .[]
+            | select(.title | test("^\\[Task [^\\]]+\\]"))
+            | (.title | capture("^\\[Task (?<id>[^\\]]+)\\]").id) + "\t" + .state
+          ' all_issues.json)
+
+          : > ready_issues.txt
+          : > blocked_issues.txt
+
+          while IFS= read -r issue_b64; do
+            issue_json=$(printf "%s" "$issue_b64" | base64 --decode)
+            issue_number=$(jq -r '.number' <<< "$issue_json")
+            issue_title=$(jq -r '.title' <<< "$issue_json")
+            issue_state=$(jq -r '.state' <<< "$issue_json")
+            issue_body=$(jq -r '.body // ""' <<< "$issue_json")
+
+            [ "$issue_state" != "OPEN" ] && continue
+
+            depends_section=$(printf "%s\n" "$issue_body" | awk '
+              BEGIN { in_dep = 0 }
+              /^## Depends On[[:space:]]*$/ { in_dep = 1; next }
+              /^##[[:space:]]+/ { if (in_dep) exit }
+              { if (in_dep) print }
+            ')
+
+            deps=$(printf "%s\n" "$depends_section" \
+              | sed -E 's/^\s*[-*]\s*//' \
+              | sed -E 's/^\[ \]\s*//' \
+              | sed -E 's/^\[x\]\s*//I' \
+              | sed -E 's/^Task\s+//' \
+              | sed -E 's/^\[Task\s+([^\]]+)\].*$/\1/' \
+              | sed -E 's/\s+$//' \
+              | sed -E '/^$/d' \
+              | sed -E '/^None$/I d')
+
+            ready=true
+            missing_or_open=()
+            if [ -n "$deps" ]; then
+              while IFS= read -r dep; do
+                [ -z "$dep" ] && continue
+                dep_state="${TASK_STATE[$dep]:-MISSING}"
+                if [ "$dep_state" != "CLOSED" ]; then
+                  ready=false
+                  missing_or_open+=("$dep")
+                fi
+              done <<< "$deps"
+            fi
+
+            if [ "$ready" = true ]; then
+              echo "$issue_number" >> ready_issues.txt
+            else
+              echo "$issue_number\t${missing_or_open[*]}" >> blocked_issues.txt
+            fi
+          done < <(jq -r '.[] | @base64' all_issues.json)
+
+          ready_count=$(wc -l < ready_issues.txt | tr -d ' ')
+          echo "ready_count=$ready_count" >> "$GITHUB_OUTPUT"
+          echo "Ready issues: $ready_count"
+
+      - name: Assign Ready Issues To Copilot
+        if: steps.ready_issues.outputs.ready_count != '0'
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
+            echo "Assigning issue #$issue_number to Copilot flow"
+
+            gh issue edit "$issue_number" --add-assignee "copilot" >/dev/null 2>&1 || true
+            gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
+          done < ready_issues.txt
+
+      - name: Start Code Review On Related PRs
+        if: steps.ready_issues.outputs.ready_count != '0'
+        run: |
+          set -euo pipefail
+
+          : > ready_prs.txt
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
+
+            pr_numbers=$(gh pr list --state open --search "#$issue_number" --json number --jq '.[].number')
+            if [ -z "$pr_numbers" ]; then
+              continue
+            fi
+
+            while IFS= read -r pr; do
+              [ -z "$pr" ] && continue
+              echo "$pr" >> ready_prs.txt
+              gh pr comment "$pr" --body "@copilot review"
+            done <<< "$pr_numbers"
+          done < ready_issues.txt
+
+          sort -u ready_prs.txt -o ready_prs.txt || true
+
+      - name: Resolve All Open Review Threads
+        run: |
+          set -euo pipefail
+
+          if [ ! -f ready_prs.txt ]; then
+            echo "No PRs to process."
+            exit 0
+          fi
+
+          while IFS= read -r pr_number; do
+            [ -z "$pr_number" ] && continue
+
+            thread_ids=$(gh api graphql -f query='query($owner:String!, $repo:String!, $number:Int!){ repository(owner:$owner, name:$repo){ pullRequest(number:$number){ reviewThreads(first:100){ nodes { id isResolved } } } } }' -f owner='${{ github.repository_owner }}' -f repo='${{ github.event.repository.name }}' -F number="$pr_number" --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | .id')
+
+            if [ -z "$thread_ids" ]; then
+              echo "No unresolved review threads for PR #$pr_number"
+              continue
+            fi
+
+            while IFS= read -r thread_id; do
+              [ -z "$thread_id" ] && continue
+              gh api graphql -f query='mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ thread { id isResolved } } }' -f threadId="$thread_id" >/dev/null
+              echo "Resolved review thread $thread_id"
+            done <<< "$thread_ids"
+          done < ready_prs.txt
+
+      - name: Run Unit Tests And Attempt Auto-Resolve
+        run: |
+          set -euo pipefail
+
+          run_tests() {
+            if [ -f package.json ]; then
+              npm test
+              return $?
+            fi
+            if [ -f pytest.ini ] || [ -d tests ] || [ -f requirements.txt ] || [ -f pyproject.toml ]; then
+              python -m pytest
+              return $?
+            fi
+            if ls *.sln >/dev/null 2>&1; then
+              dotnet test
+              return $?
+            fi
+            if [ -f go.mod ]; then
+              go test ./...
+              return $?
+            fi
+            echo "No recognized unit test configuration found."
+            return 0
+          }
+
+          if run_tests; then
+            echo "Unit tests passed."
+            exit 0
+          fi
+
+          echo "Unit tests failed; requesting Copilot fixes on related PRs."
+
+          if [ -f ready_prs.txt ]; then
+            while IFS= read -r pr_number; do
+              [ -z "$pr_number" ] && continue
+              gh pr comment "$pr_number" --body "@copilot Unit tests failed in CI. Please fix failing tests and code, then update the PR." || true
+            done < ready_prs.txt
+          fi
+
+          # Fail the job so the failure is visible and reruns can verify fixes.
+          exit 1

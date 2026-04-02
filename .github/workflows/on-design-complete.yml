@@ -148,7 +148,7 @@ jobs:
 
           echo "Reading task plan from $PLAN_FILE"
 
-          jq -c '.tasks[]' "$PLAN_FILE" | while read -r task; do
+          jq -c '.tasks[]' "${PLAN_FILE:7}" | while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")
             echo "Processing task: $TASK_ID"
             TASK_TITLE=$(jq -r '.title' <<< "$task")

@@ -104,15 +104,15 @@ jobs:
           EOF
           )
 
-          GH_STDOUT_FILE=$(mktemp)
+          GH_STDOUT_FILE="plan.json"
           GH_STDERR_FILE=$(mktemp)
 
           set +e
-          gh copilot agent run --agent task-planner-agent --prompt "$PROMPT" --write-file plan.json 
+          gh copilot agent run --agent task-planner-agent --prompt "$PROMPT" > "$GH_STDOUT_FILE" 2> "$GH_STDERR_FILE"
           GH_EXIT_CODE=$?
           set -e
 
-          RAW_OUTPUT=$(cat plan.json)
+          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
 
           if [ -s "$GH_STDERR_FILE" ]; then
             echo "gh copilot emitted stderr (mirrored to stdout above)."

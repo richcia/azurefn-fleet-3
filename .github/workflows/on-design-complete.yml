@@ -104,7 +104,7 @@ jobs:
           EOF
           )
 
-          GH_STDOUT_FILE="plan.json"
+          GH_STDOUT_FILE="results/task-plan.json"
           GH_STDERR_FILE=$(mktemp)
 
           set +e
@@ -112,18 +112,14 @@ jobs:
           GH_EXIT_CODE=$?
           set -e
 
-          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
-
-          if [ -s "$GH_STDERR_FILE" ]; then
-            echo "gh copilot emitted stderr (mirrored to stdout above)."
-          fi
-
           if [ "$GH_EXIT_CODE" -ne 0 ]; then
             echo "gh copilot failed with exit code $GH_EXIT_CODE"
+            echo "See $GH_STDERR_FILE for details"
             exit "$GH_EXIT_CODE"
           fi
 
           # Strip markdown code fences if the agent wrapped output despite instructions
+          RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
           echo "RAW_OUTPUT before strip: ${RAW_OUTPUT}"
           RAW_OUTPUT=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
           echo "RAW_OUTPUT after strip: ${RAW_OUTPUT}"
@@ -135,16 +131,8 @@ jobs:
             printf "%s\n" "$RAW_OUTPUT"
             exit 1
           fi
-
-          mkdir -p results
-          printf "%s\n" "$RESULT" > results/task-plan.json
-
-          {
-            echo "plan_file=results/task-plan.json"
-            echo "result<<EOF"
-            echo "$RESULT"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "Task Planner Agent output successfully parsed."
+          fi
 
       - name: Create GitHub Issues From Task Plan
         env:

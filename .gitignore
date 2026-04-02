@@ -1,0 +1,3 @@
+# Bicep build artifacts (compiled ARM JSON)
+infra/**/*.json
+infra/**/parameters/*.json

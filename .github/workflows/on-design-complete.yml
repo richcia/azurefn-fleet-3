@@ -124,9 +124,12 @@ jobs:
           RAW_OUTPUT=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
           echo "RAW_OUTPUT after strip (first 50 lines): $(printf "%s" "${RAW_OUTPUT}" | head -n 50)"
 
-          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -e . 2>/dev/null || true)
+          JQ_ERROR_FILE=$(mktemp)
+          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -e . 2>"$JQ_ERROR_FILE" || true)
           if [ -z "$RESULT" ]; then
             echo "Error: Could not parse JSON output from Task Planner Agent after stripping markdown fences."
+            echo "jq parse error:"
+            cat "$JQ_ERROR_FILE"
             echo "Agent output was:"
             printf "%s\n" "$RAW_OUTPUT"
             exit 1

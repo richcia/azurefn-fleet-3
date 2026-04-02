@@ -73,7 +73,7 @@ Each wave must include:
 ## Output
 - Output using JSON Output format specified below
 - If the prompt provides an output file name/path for the task plan, write to that exact file in the workspace root
-- If no output file name/path is provided in the prompt, write output to `plan.json` in the workspace root
+- If no output file name/path is provided in the prompt, write output to `./results/plan.json` in the workspace root
 - Do not output anything to console, stdout or stderr
 
 ### JSON Output

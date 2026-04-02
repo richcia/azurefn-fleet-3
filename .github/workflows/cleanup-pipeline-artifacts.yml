@@ -51,6 +51,28 @@ jobs:
             done
           fi
 
+      - name: Delete All GitHub Milestones
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            export GH_TOKEN="$GITHUB_TOKEN"
+          fi
+
+          MILESTONES=$(gh api "repos/${{ github.repository }}/milestones?state=all&per_page=100" --jq '.[].number')
+
+          if [ -z "$MILESTONES" ]; then
+            echo "No milestones found."
+          else
+            for milestone in $MILESTONES; do
+              echo "Deleting milestone #$milestone"
+              gh api "repos/${{ github.repository }}/milestones/$milestone" --method DELETE >/dev/null
+            done
+          fi
+
       - name: Delete All Files In results
         run: |
           set -euo pipefail

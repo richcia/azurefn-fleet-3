@@ -78,7 +78,9 @@ Each wave must include:
 - Output using JSON Output format specified below
 - If the prompt provides an output file name/path for the task plan, write to that exact file
 - If no output file name/path is provided in the prompt, write output to `plan.json`
+- Do not commit `plan.json` to the repository after writing it, as it is a transient artifact for workflow consumption
 - Do not output anything to console, stdout or stderr
+- Return the file path of the generated plan in the `plan_file` output variable for workflow consumption
 
 ### JSON Output
 When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, human readable, and this shape:

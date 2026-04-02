@@ -76,7 +76,7 @@ Each wave must include:
 - Do not output anything to console, stdout or stderr
 
 ### JSON Output
-When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, and this shape:
+When JSON output is requested, return only valid JSON with no markdown fences, no prose before or after, human readable, and this shape:
 
 {
 	"summary": "string",

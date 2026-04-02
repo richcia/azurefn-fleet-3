@@ -78,7 +78,7 @@ Each wave must include:
 - Do not output anything except the valid JSON payload
 - Do not write any files
 - The very first character of output must be `{` and the very last must be `}`
-- Output must be parseable by `jq` without errors
+- Output must be parseable by `jq` without errors. If not recreated output until it is parseable by `jq` without errors.
 
 ### JSON Output
 When JSON output is requested, JSON is in this shape:

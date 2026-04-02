@@ -66,6 +66,14 @@ jobs:
           EOF_AUDIT
         shell: bash
 
+      - name: Prepare Task Plan File
+        id: task_plan_file
+        run: |
+          set -euo pipefail
+          PLAN_FILE_NAME="plan.json"
+          rm -f "$PLAN_FILE_NAME"
+          echo "plan_file_name=$PLAN_FILE_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Invoke Task Planner Agent
         id: task_planner
         env:
@@ -87,11 +95,14 @@ jobs:
             exit 1
           fi
 
+          PLAN_FILE_NAME="${{ steps.task_plan_file.outputs.plan_file_name }}"
+
           FILE_CONTENT=$(cat "$TRIGGER_FILE")
           PROMPT=$(cat <<EOF
           Create an implementation-ready engineering task plan from this design spec.
           Review input file: $TRIGGER_FILE
           output=json
+          Use this exact output file name for the task plan: $PLAN_FILE_NAME
           Return the path to the generated plan file.
           Include all required engineering infrastructure tasks.
 
@@ -120,9 +131,10 @@ jobs:
             exit "$GH_EXIT_CODE"
           fi
 
-          PLAN_FILE=$(printf "%s" "$RAW_OUTPUT" | tr -d '\r' | grep -Eo '(^|[[:space:]])[^[:space:]]*plan\.json([[:space:]]|$)' | head -1 | xargs)
-          if [ -z "$PLAN_FILE" ]; then
-            PLAN_FILE="plan.json"
+          PLAN_FILE="$PLAN_FILE_NAME"
+          REPORTED_PLAN_FILE=$(printf "%s" "$RAW_OUTPUT" | tr -d '\r' | grep -Eo '(^|[[:space:]])[^[:space:]]*plan\.json([[:space:]]|$)' | head -1 | xargs)
+          if [ -n "$REPORTED_PLAN_FILE" ] && [ "$REPORTED_PLAN_FILE" != "$PLAN_FILE_NAME" ]; then
+            echo "Planner reported different plan file path ($REPORTED_PLAN_FILE); expected $PLAN_FILE_NAME."
           fi
 
           if [ ! -f "$PLAN_FILE" ]; then

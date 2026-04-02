@@ -120,10 +120,9 @@ jobs:
 
           # Strip markdown code fences if the agent wrapped output despite instructions
           RAW_OUTPUT=$(cat "$GH_STDOUT_FILE")
-          echo "RAW_OUTPUT before strip (first 50 lines): $(printf "%s" "${RAW_OUTPUT}" | head -n 50)"
           RAW_OUTPUT2=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
           RAW_OUTPUT2=$(printf "%s" "$RAW_OUTPUT2" | perl -0pe 's/^[^{]*//s; s/[^}]*$//s')
-          echo "RAW_OUTPUT after strip (first 50 lines): $(printf "%s" "${RAW_OUTPUT2}" | head -n 50)"
+          printf "%s\n" "$RAW_OUTPUT2" > "$GH_STDOUT_FILE"
 
           JQ_ERROR_FILE=$(mktemp)
           RESULT=$(printf "%s" "$RAW_OUTPUT2" | jq -e . 2>"$JQ_ERROR_FILE" || true)
@@ -136,6 +135,17 @@ jobs:
             exit 1
           fi
           echo "Task Planner Agent output successfully parsed."
+
+          mkdir -p results
+          printf "%s\n" "$RESULT" > results/task-plan.json
+
+          {
+            echo "result<<EOF"
+            echo "$RESULT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          
 
       - name: Create GitHub Issues From Task Plan
         env:

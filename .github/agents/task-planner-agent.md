@@ -96,7 +96,6 @@ When JSON output is requested, JSON is in this shape:
 		{
 			"name": "Foundation|Core Build|Hardening|Release Readiness",
 			"objective": "string",
-			"task_ids": ["string"],
 			"entry_criteria": ["string"],
 			"exit_criteria": ["string"]
 		}
@@ -116,6 +115,7 @@ When JSON output is requested, JSON is in this shape:
 			"owner_role": "string",
 			"acceptance_criteria": ["string"],
 			"risks": ["string"]
+			"wave": "Foundation|Core Build|Hardening|Release Readiness"
 		}
 	],
 	"critical_path": ["string"],

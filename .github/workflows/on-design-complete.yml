@@ -125,10 +125,18 @@ jobs:
 
           # Strip markdown code fences if the agent wrapped output despite instructions
           RAW_OUTPUT=$(printf "%s" "$RAW_OUTPUT" | sed '/^```/d')
+          echo "RAW_OUTPUT first 10 chars: ${RAW_OUTPUT:0:10}"
+
+          RESULT=$(printf "%s" "$RAW_OUTPUT" | jq -e . 2>/dev/null || true)
+          if [ -z "$RESULT" ]; then
+            echo "Error: Could not parse JSON output from Task Planner Agent after stripping markdown fences."
+            echo "Agent output was:"
+            printf "%s\n" "$RAW_OUTPUT"
+            exit 1
+          fi
 
           mkdir -p results
-          printf "%s\n" "$RAW_OUTPUT" > results/task-plan.json
-          RESULT=$(cat results/task-plan.json)
+          printf "%s\n" "$RESULT" > results/task-plan.json
 
           {
             echo "plan_file=results/task-plan.json"
@@ -150,6 +158,7 @@ jobs:
           fi
 
           echo "Reading task plan from $PLAN_FILE"
+          echo "PLAN_FILE first 10 chars: $(head -c 10 "$PLAN_FILE")"
 
           jq -c '.tasks[]' "${PLAN_FILE}" | while read -r task; do
             TASK_ID=$(jq -r '.id' <<< "$task")

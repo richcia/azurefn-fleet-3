@@ -66,8 +66,8 @@ For each task, include:
 
 ## Delivery Waves
 Organize tasks into execution waves:
-1. Foundation
-2. Core Build
+1. Core Build
+2. Foundation
 3. Hardening
 4. Release Readiness
 

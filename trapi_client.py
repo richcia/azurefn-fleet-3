@@ -124,8 +124,9 @@ def get_roster(
     by default). No API keys are used.
 
     Transient HTTP 429 (Too Many Requests) and HTTP 503 (Service Unavailable)
-    responses trigger an exponential-backoff retry (up to MAX_RETRIES = 3 retries,
-    base delay BACKOFF_BASE = 2 s → delays of 1 s, 2 s, 4 s).
+    responses trigger an exponential-backoff retry (up to MAX_RETRIES = 3 retries).
+    The wait before each retry is ``BACKOFF_BASE ** attempt`` seconds, where
+    *attempt* is 0-indexed: delays of 1 s (2^0), 2 s (2^1), 4 s (2^2).
 
     Args:
         credential: An ``azure.identity.DefaultAzureCredential`` instance. If
@@ -212,10 +213,8 @@ def get_roster(
                     "Non-retryable HTTP error on attempt %d: %s", attempt + 1, exc
                 )
                 raise
-            # Retriable error already handled above; shouldn't reach here normally
-            if attempt >= MAX_RETRIES:
-                raise
-            continue
+            # Retriable 429/503 reached raise_for_status() on the final attempt
+            raise
 
         # Successful response – parse and return
         try:

@@ -7,13 +7,12 @@ All external dependencies (DefaultAzureCredential, httpx.Client) are mocked
 so the tests run without real Azure credentials or network access.
 """
 import json
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-
-import trapi_client
 from trapi_client import (
+    BACKOFF_BASE,
     MAX_RETRIES,
     _get_bearer_token,
     _parse_roster,
@@ -178,7 +177,7 @@ class TestGetRosterSuccess:
 
         # URL must use the patched module-level endpoint
         call_url = mock_client.post.call_args[0][0]
-        assert "trapi.env.example.com" in call_url
+        assert call_url.startswith("https://trapi.env.example.com/")
 
     @patch("trapi_client.time.sleep")
     @patch("trapi_client.httpx.Client")
@@ -325,7 +324,7 @@ class TestGetRosterRetry:
             )
 
         expected_delays = [
-            trapi_client.BACKOFF_BASE**i for i in range(MAX_RETRIES)
+            BACKOFF_BASE**i for i in range(MAX_RETRIES)
         ]
         actual_delays = [c[0][0] for c in mock_sleep.call_args_list]
         assert actual_delays == expected_delays

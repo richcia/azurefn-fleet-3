@@ -35,6 +35,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 10. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
 11. All `app` type tasks must include unit test instructions in description and all tests running successfully acceptance criteria (including a link to the test results), and all `infra` type tasks must include infrastructure validation steps in description and acceptance criteria.
 12. All `app` tasks must create a PR with @copilot assigned for review, and all `infra` tasks must create a PR with @copilot assigned for review, as part of their acceptance criteria.
+13. Prioritize all `Core Build` wave tasks before all `Foundation`, `Hardening` and `Release Readiness` wave tasks, but within each wave prioritize tasks based on critical path and dependencies, not type or estimate.
 
 ## Required Task Categories
 1. Environment and IaC provisioning

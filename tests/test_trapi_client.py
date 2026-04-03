@@ -62,6 +62,7 @@ def _make_api_status_error(status_code: int = 500) -> APIStatusError:
 # ---------------------------------------------------------------------------
 
 
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._build_client")
 @patch("trapi_client._get_token", return_value="mock-token")
 def test_successful_response(mock_token, mock_build_client):
@@ -80,9 +81,10 @@ def test_successful_response(mock_token, mock_build_client):
     assert len(result) == len(SAMPLE_ROSTER)
     assert result[0] == "Don Mattingly"
     mock_token.assert_called_once()
-    mock_build_client.assert_called_once_with(api_key="mock-token")
+    mock_build_client.assert_called_once_with(bearer_token="mock-token")
 
 
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._build_client")
 @patch("trapi_client._get_token", return_value="mock-token")
 def test_empty_response_raises(mock_token, mock_build_client):
@@ -97,6 +99,7 @@ def test_empty_response_raises(mock_token, mock_build_client):
         trapi_client.get_1985_yankees_roster()
 
 
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._build_client")
 @patch("trapi_client._get_token", return_value="mock-token")
 def test_http_error_propagates(mock_token, mock_build_client):
@@ -111,6 +114,7 @@ def test_http_error_propagates(mock_token, mock_build_client):
         trapi_client.get_1985_yankees_roster()
 
 
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._get_token")
 def test_auth_failure_propagates(mock_token):
     """get_1985_yankees_roster propagates AuthenticationError on auth failure."""
@@ -122,6 +126,16 @@ def test_auth_failure_propagates(mock_token):
         trapi_client.get_1985_yankees_roster()
 
 
+def test_missing_trapi_endpoint_raises(monkeypatch):
+    """get_1985_yankees_roster raises ValueError when TRAPI_ENDPOINT is not set."""
+    import trapi_client
+
+    monkeypatch.setattr(trapi_client, "TRAPI_ENDPOINT", "")
+    with pytest.raises(ValueError, match="TRAPI_ENDPOINT"):
+        trapi_client.get_1985_yankees_roster()
+
+
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._build_client")
 @patch("trapi_client._get_token", return_value="mock-token")
 def test_whitespace_only_response_raises(mock_token, mock_build_client):
@@ -138,6 +152,7 @@ def test_whitespace_only_response_raises(mock_token, mock_build_client):
         trapi_client.get_1985_yankees_roster()
 
 
+@patch("trapi_client.TRAPI_ENDPOINT", "https://fake-trapi.example.com")
 @patch("trapi_client._build_client")
 @patch("trapi_client._get_token", return_value="mock-token")
 def test_strips_blank_lines(mock_token, mock_build_client):

@@ -24,11 +24,11 @@ def _get_token() -> str:
     return token.token
 
 
-def _build_client(api_key: str) -> AzureOpenAI:
+def _build_client(bearer_token: str) -> AzureOpenAI:
     """Build an AzureOpenAI client authenticated with a bearer token."""
     return AzureOpenAI(
         azure_endpoint=TRAPI_ENDPOINT,
-        api_key=api_key,
+        api_key=bearer_token,
         api_version="2024-02-01",
     )
 
@@ -40,12 +40,15 @@ def get_1985_yankees_roster() -> list[str]:
         A non-empty list of player name strings.
 
     Raises:
+        ValueError: If TRAPI_ENDPOINT is not configured.
         AuthenticationError: If token acquisition or API authentication fails.
         APIStatusError: If the API returns a non-success HTTP response.
         ValueError: If the API returns an empty or unparseable roster.
     """
+    if not TRAPI_ENDPOINT:
+        raise ValueError("TRAPI_ENDPOINT environment variable must be set")
     token = _get_token()
-    client = _build_client(api_key=token)
+    client = _build_client(bearer_token=token)
 
     response = client.chat.completions.create(
         model=GPT4O_DEPLOYMENT,

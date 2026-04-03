@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh issue list --state all --limit 1000 --json number,title,body,state,url > all_issues.json
+          gh issue list --state all --limit 1000 --label app --json number,title,body,state,url > all_issues.json
 
           declare -A TASK_STATE
           while IFS=$'\t' read -r task_id task_state; do

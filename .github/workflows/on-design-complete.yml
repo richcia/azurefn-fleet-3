@@ -190,9 +190,16 @@ jobs:
             TASK_ID=$(jq -r '.id' <<< "$task")
             echo "Processing task: $TASK_ID"
             TASK_TITLE=$(jq -r '.title' <<< "$task")
+            TASK_TYPE=$(jq -r '.type // ""' <<< "$task")
             echo "Task title: $TASK_TITLE"
             ISSUE_TITLE="[Task ${TASK_ID}] ${TASK_TITLE}"
             echo "Issue title: $ISSUE_TITLE"
+
+            ISSUE_STATE="closed"
+            if [ "${TASK_TYPE,,}" = "app" ]; then
+              ISSUE_STATE="open"
+            fi
+            echo "Task type: ${TASK_TYPE:-unknown}; target issue state: $ISSUE_STATE"
 
             LABELS=$(jq -r '(.labels // [])[]' <<< "$task")
             LABEL_ARGS=()
@@ -249,11 +256,16 @@ jobs:
 
             echo "Creating issue for task ${TASK_ID}..."
 
-            gh issue create \
+            CREATED_ISSUE=$(gh issue create \
               --title "$ISSUE_TITLE" \
               --body "$ISSUE_BODY" \
               "${LABEL_ARGS[@]}" \
-              "${MILESTONE_ARG[@]}"
+              "${MILESTONE_ARG[@]}")
+
+            if [ "$ISSUE_STATE" = "closed" ]; then
+              gh issue close "$CREATED_ISSUE" >/dev/null
+              echo "Closed issue for non-app task ${TASK_ID}."
+            fi
           done < <(jq -c '.tasks[]' "${PLAN_FILE}")
 
 

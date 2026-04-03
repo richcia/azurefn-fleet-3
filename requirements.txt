@@ -1,0 +1,6 @@
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0
+openai>=1.30.0
+pytest>=8.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.14.0

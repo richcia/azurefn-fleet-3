@@ -28,7 +28,7 @@ def _build_client(bearer_token: str) -> AzureOpenAI:
     """Build an AzureOpenAI client authenticated with a bearer token."""
     return AzureOpenAI(
         azure_endpoint=TRAPI_ENDPOINT,
-        api_key=bearer_token,
+        azure_ad_token=bearer_token,
         api_version="2024-02-01",
     )
 

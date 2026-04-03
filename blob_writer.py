@@ -25,7 +25,7 @@ def write_roster(
     """Write the player roster as UTF-8 JSON to the 'yankees-roster' blob container.
 
     Args:
-        roster: List of player records to serialise as JSON.
+        roster: List of player records to serialize as JSON.
         storage_account_name: Azure Storage account name (without .blob.core.windows.net).
         date: Optional date override for the blob name (defaults to UTC today).
         credential: Optional Azure credential; defaults to DefaultAzureCredential().
@@ -33,6 +33,7 @@ def write_roster(
     Returns:
         The blob name that was written.
     """
+
     if credential is None:
         credential = DefaultAzureCredential()
 

@@ -19,13 +19,11 @@ jobs:
       COPILOT_PROMPT: >-
         1. Complete tasks in Issue's Description section, produce all artifacts in Outputs section, and ensure all criteria 
         in Acceptance Criteria is met
-        2. After all unit tests successfully pass, add @copilot as a reviewer and make the PR ready for review. 
-        3. Automatically apply all code review fixes and suggestions from @copilot, update the PR until there are no more comments and close 
-        the PR conversations when comments are resolved. If you need to ask for clarification, ask in the issue comments.
-        4. Check all Acceptance Criteria in the Issue as they are met and only mark the issue as closed when all criteria are met. 
-        If you are blocked, comment in the issue with what you need to unblock yourself.
-        5. Rerun all unit tests after making final changes to code, fix any issues and ensure all tests pass before marking 
-        the issue as closed.
+        2. Build and run all unit tests related to the task, ensure they pass and add new tests if needed to cover new code. 
+        If tests are failing, fix the code until all tests pass.
+        3. After all unit tests successfully pass, add "Ready for Review" label to the issue.
+        4. If you encounter any blockers or need clarification, add "Blocked" label to the issue, ask for help in the issue 
+        comments and wait for a response before proceeding.
 
     steps:
       - name: Checkout Repository
@@ -42,7 +40,7 @@ jobs:
             echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
           fi
 
-      - name: Query Ready Issues By Dependencies
+      - name: Query Code Ready Issues By Dependencies
         id: ready_issues
         run: |
           set -euo pipefail
@@ -112,7 +110,7 @@ jobs:
           echo "ready_count=$ready_count" >> "$GITHUB_OUTPUT"
           echo "Ready issues: $ready_count"
 
-      - name: Assign Ready Issues To Copilot
+      - name: Assign Code Ready Issues To Copilot
         if: steps.ready_issues.outputs.ready_count != '0'
         run: |
           set -euo pipefail

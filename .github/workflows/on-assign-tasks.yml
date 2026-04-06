@@ -119,12 +119,21 @@ jobs:
             [ -z "$issue_number" ] && continue
             echo "Assigning issue #$issue_number to Copilot flow"
 
-            if gh issue edit "$issue_number" --add-assignee "@copilot" >/dev/null 2>&1; then
-              echo "Assigned issue #$issue_number to copilot"
+            already_assigned=false
+            if gh issue view "$issue_number" --json assignees --jq '.assignees[]?.login' | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
+              already_assigned=true
+            fi
+
+            if [ "$already_assigned" = true ]; then
+              echo "Issue #$issue_number is already assigned to copilot. Skipping assignment."
             else
-              echo "Error: Could not assign issue #$issue_number to copilot."
-              echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
-              exit 1
+              if gh issue edit "$issue_number" --add-assignee "@copilot" >/dev/null 2>&1; then
+                echo "Assigned issue #$issue_number to copilot"
+              else
+                echo "Error: Could not assign issue #$issue_number to copilot."
+                echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
+                exit 1
+              fi
             fi
 
             gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
@@ -141,7 +150,9 @@ jobs:
             [ -z "$pr_number" ] && continue
 
             has_finished_work=false
-            if gh pr view "$pr_number" --json comments --jq '.comments[]?.body' | grep -Fqi "Copilot finished work"; then
+            if {
+              gh api --paginate -H "Accept: application/vnd.github+json" "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" --jq '.[] | [.body, .event, .state_reason] | map(select(. != null and . != "")) | join(" ")'
+            } | grep -Fqi "Copilot finished work"; then
               has_finished_work=true
             fi
 

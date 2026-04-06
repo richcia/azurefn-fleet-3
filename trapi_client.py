@@ -12,10 +12,11 @@ azure-identity DefaultAzureCredential (Managed Identity in production,
 developer credentials locally).
 """
 
+import json
 import os
 import time
 import logging
-from typing import List
+from typing import List, Optional
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -96,7 +97,7 @@ def _call_trapi(
         "Content-Type": "application/json",
     }
 
-    last_exc: Exception | None = None
+    last_exc: Optional[Exception] = None
     for attempt in range(max_retries + 1):
         try:
             response = requests.post(endpoint, json=payload, headers=headers, timeout=30)
@@ -137,8 +138,6 @@ def _maybe_sleep(attempt: int, backoff_base: float, max_retries: int) -> None:
 
 def _parse_response(data: dict) -> List[str]:
     """Extract the roster list from the TRAPI/OpenAI chat-completions response."""
-    import json as _json
-
     try:
         content = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError) as exc:
@@ -149,8 +148,8 @@ def _parse_response(data: dict) -> List[str]:
         return []
 
     try:
-        players = _json.loads(content)
-    except _json.JSONDecodeError as exc:
+        players = json.loads(content)
+    except json.JSONDecodeError as exc:
         raise RuntimeError(
             f"Could not parse JSON roster from TRAPI response: {content!r}"
         ) from exc

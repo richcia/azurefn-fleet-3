@@ -129,6 +129,7 @@ jobs:
 
             gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
           done < ready_issues.txt
+          
       - name: Mark Issues as Ready for Review
         run: |
           set -euo pipefail
@@ -144,12 +145,7 @@ jobs:
               has_finished_work=true
             fi
 
-            copilot_is_reviewer=false
-            if gh api "repos/${{ github.repository }}/pulls/$pr_number/requested_reviewers" --jq '.users[]?.login' | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
-              copilot_is_reviewer=true
-            fi
-
-            if [ "$has_finished_work" != true ] || [ "$copilot_is_reviewer" != false ]; then
+            if [ "$has_finished_work" != true ]; then
               continue
             fi
 

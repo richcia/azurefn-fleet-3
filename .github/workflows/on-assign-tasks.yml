@@ -150,9 +150,7 @@ jobs:
             [ -z "$pr_number" ] && continue
 
             has_finished_work=false
-            if {
-              gh api --paginate -H "Accept: application/vnd.github+json" "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" --jq '.[] | [.body, .event, .state_reason] | map(select(. != null and . != "")) | join(" ")'
-            } | grep -Fqi "Copilot finished work"; then
+            if gh api --paginate -H "Accept: application/vnd.github+json" "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" --jq '.[] | select(.event == "copilot_work_finished") | .event' | grep -Fq "copilot_work_finished"; then
               has_finished_work=true
             fi
 

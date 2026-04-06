@@ -129,4 +129,33 @@ jobs:
 
             gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
           done < ready_issues.txt
+      - name: Mark Issues as Ready for Review
+        run: |
+          set -euo pipefail
 
+          gh pr list --state open --limit 1000 --json number,isDraft > all_open_prs.json
+
+          ready_count=0
+          while IFS= read -r pr_number; do
+            [ -z "$pr_number" ] && continue
+
+            has_finished_work=false
+            if gh pr view "$pr_number" --json comments --jq '.comments[]?.body' | grep -Fqi "Copilot finished work"; then
+              has_finished_work=true
+            fi
+
+            copilot_is_reviewer=false
+            if gh api "repos/${{ github.repository }}/pulls/$pr_number/requested_reviewers" --jq '.users[]?.login' | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
+              copilot_is_reviewer=true
+            fi
+
+            if [ "$has_finished_work" != true ] || [ "$copilot_is_reviewer" != false ]; then
+              continue
+            fi
+
+            echo "Running gh pr ready on PR #$pr_number"
+            gh pr ready "$pr_number" >/dev/null
+            ready_count=$((ready_count + 1))
+          done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
+
+          echo "Code review ready PRs: $ready_count"

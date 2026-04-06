@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+      pull-requests: write
       contents: write
 
     steps:
@@ -71,6 +72,44 @@ jobs:
               echo "Deleting milestone #$milestone"
               gh api "repos/${{ github.repository }}/milestones/$milestone" --method DELETE >/dev/null
             done
+          fi
+
+      - name: Close All Open Pull Requests
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            export GH_TOKEN="$GITHUB_TOKEN"
+          fi
+
+          gh pr list --state open --limit 1000 --json number,headRefName,headRepositoryOwner,headRepository \
+            > all_open_prs.json
+
+          PRS=$(jq -r '.[].number' all_open_prs.json)
+
+          if [ -z "$PRS" ]; then
+            echo "No open pull requests found."
+          else
+            while IFS= read -r pr_number; do
+              [ -z "$pr_number" ] && continue
+
+              head_ref=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | .headRefName' all_open_prs.json)
+              head_repo_owner=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | .headRepositoryOwner.login // ""' all_open_prs.json)
+              head_repo_name=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | .headRepository.name // ""' all_open_prs.json)
+
+              echo "Closing pull request #$pr_number"
+              gh pr close "$pr_number" --delete-branch || gh pr close "$pr_number"
+
+              if [ -n "$head_ref" ] \
+                && [ "$head_repo_owner" = "${{ github.repository_owner }}" ] \
+                && [ "$head_repo_name" = "${{ github.event.repository.name }}" ]; then
+                echo "Deleting branch $head_ref"
+                gh api "repos/${{ github.repository }}/git/refs/heads/$head_ref" --method DELETE >/dev/null || true
+              fi
+            done <<< "$PRS"
           fi
 
       - name: Delete All Files In results

@@ -36,8 +36,10 @@ jobs:
           set -euo pipefail
           if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
             echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+            echo "Using COPILOT_GITHUB_TOKEN secret for authentication."
           else
             echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+            echo "Using default GITHUB_TOKEN for authentication."
           fi
 
       - name: Query Code Ready Issues By Dependencies

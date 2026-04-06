@@ -142,9 +142,9 @@ jobs:
           done < ready_issues.txt
           
       - name: Mark Issues as Ready for Review
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-
           gh pr list --state open --limit 1000 --json number,isDraft > all_open_prs.json
 
           ready_count=0

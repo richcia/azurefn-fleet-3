@@ -133,18 +133,35 @@ jobs:
             already_assigned=false
             if {
               gh issue view "$issue_number" --json assignees --jq '.assignees[]?.login'
-            } | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
+            } | grep -Eqi '^copilot$|^copilot\[bot\]$|^copilot-swe-agent\[bot\]$'; then
               already_assigned=true
             fi
 
             if [ "$already_assigned" = true ]; then
               echo "Issue #$issue_number is already assigned to copilot. Skipping assignment." 
             else
-              if gh issue edit "$issue_number" --add-assignee "Copilot"; then
-                echo "Assigned issue #$issue_number to copilot"
+              assignment_payload=$(jq -n --arg repo "${{ github.repository }}" '{
+                assignees: ["copilot-swe-agent[bot]"],
+                agent_assignment: {
+                  target_repo: $repo,
+                  base_branch: "main",
+                  custom_instructions: "",
+                  custom_agent: "",
+                  model: ""
+                }
+              }')
+
+              if gh api \
+                --method POST \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/repos/${{ github.repository }}/issues/$issue_number/assignees" \
+                --input - <<< "$assignment_payload"
+              then
+                echo "Assigned issue #$issue_number to copilot-swe-agent[bot]"
               else
-                echo "Warning: Could not assign issue #$issue_number to copilot."
-                echo "::warning title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
+                echo "Warning: Could not assign issue #$issue_number to copilot-swe-agent[bot]."
+                echo "::warning title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot-swe-agent[bot]"
               fi
               gh issue comment "$issue_number" --body "@Copilot ${COPILOT_PROMPT}"
             fi

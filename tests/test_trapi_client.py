@@ -65,20 +65,38 @@ class TestParseRosterContent:
         result = _parse_roster_content("[]")
         assert result == []
 
-    def test_filters_out_incomplete_entries(self):
+    def test_invalid_entry_not_a_dict_raises_value_error(self):
         players = [
             {"name": "Don Mattingly", "position": "1B"},
-            {"name": "Missing Position"},  # no position field
-            {"position": "P"},              # no name field
-            "not a dict",                   # completely wrong type
+            "not a dict",
         ]
-        result = _parse_roster_content(json.dumps(players))
-        assert len(result) == 1
-        assert result[0]["name"] == "Don Mattingly"
+        with pytest.raises(ValueError, match="expected object"):
+            _parse_roster_content(json.dumps(players))
+
+    def test_invalid_entry_missing_position_raises_value_error(self):
+        players = [{"name": "Missing Position"}]
+        with pytest.raises(ValueError, match="missing required field"):
+            _parse_roster_content(json.dumps(players))
+
+    def test_invalid_entry_missing_name_raises_value_error(self):
+        players = [{"position": "P"}]
+        with pytest.raises(ValueError, match="missing required field"):
+            _parse_roster_content(json.dumps(players))
 
     def test_invalid_json_raises_value_error(self):
         with pytest.raises(ValueError, match="Could not parse TRAPI response"):
             _parse_roster_content("this is not json")
+
+    def test_invalid_json_error_includes_preview_not_full_content(self):
+        """Long invalid content should be truncated in the error message."""
+        long_bad_content = "x" * 500
+        with pytest.raises(ValueError) as exc_info:
+            _parse_roster_content(long_bad_content)
+        msg = str(exc_info.value)
+        assert "content length=500" in msg
+        assert "..." in msg
+        # The full 500-char string should NOT appear verbatim
+        assert "x" * 500 not in msg
 
     def test_non_list_json_raises_value_error(self):
         with pytest.raises(ValueError, match="Expected a JSON array"):
@@ -181,7 +199,23 @@ class TestFetch1985YankeesRoster:
 
     @patch("trapi_client._get_bearer_token", return_value="fake-token")
     @patch("trapi_client.requests.post")
-    def test_response_with_markdown_fences(self, mock_post, mock_token, monkeypatch):
+    def test_non_json_2xx_response_raises_value_error(
+        self, mock_post, mock_token, monkeypatch
+    ):
+        """ValueError raised when a 2xx response body is not valid JSON (e.g., HTML proxy page)."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_resp = MagicMock()
+        mock_resp.ok = True
+        mock_resp.status_code = 200
+        mock_resp.text = "<html>Gateway error</html>"
+        mock_resp.json.side_effect = ValueError("No JSON object could be decoded")
+
+        mock_post.return_value = mock_resp
+
+        with pytest.raises(ValueError, match="non-JSON body"):
+            fetch_1985_yankees_roster()
+
+
         """Content wrapped in markdown fences is correctly parsed."""
         monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
         fenced = "```json\n" + json.dumps(SAMPLE_PLAYERS) + "\n```"

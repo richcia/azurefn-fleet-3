@@ -15,10 +15,12 @@ _ROSTER_PROMPT = (
 
 _COGSERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
 
+_DEFAULT_AZURE_CREDENTIAL = DefaultAzureCredential()
 
-def _get_bearer_token() -> str:
-    """Obtain an Azure AD bearer token using DefaultAzureCredential."""
-    credential = DefaultAzureCredential()
+
+def _get_bearer_token(credential=None) -> str:
+    """Obtain an Azure AD bearer token using a shared DefaultAzureCredential."""
+    credential = credential or _DEFAULT_AZURE_CREDENTIAL
     token = credential.get_token(_COGSERVICES_SCOPE)
     return token.token
 
@@ -37,8 +39,13 @@ def _parse_roster_content(content: str) -> list[dict]:
     try:
         players = json.loads(content)
     except json.JSONDecodeError as exc:
+        max_preview_chars = 200
+        preview = content[:max_preview_chars]
+        if len(content) > max_preview_chars:
+            preview += "..."
         raise ValueError(
-            f"Could not parse TRAPI response as JSON: {content!r}"
+            "Could not parse TRAPI response as JSON "
+            f"(content length={len(content)}, preview={preview!r})"
         ) from exc
 
     if not isinstance(players, list):
@@ -46,11 +53,22 @@ def _parse_roster_content(content: str) -> list[dict]:
             f"Expected a JSON array of players, got {type(players).__name__}"
         )
 
-    validated = [
-        player
-        for player in players
-        if isinstance(player, dict) and "name" in player and "position" in player
-    ]
+    validated = []
+    for index, player in enumerate(players):
+        if not isinstance(player, dict):
+            raise ValueError(
+                f"Invalid player entry at index {index}: expected object, "
+                f"got {type(player).__name__}"
+            )
+        missing_fields = [
+            field for field in ("name", "position") if field not in player
+        ]
+        if missing_fields:
+            raise ValueError(
+                f"Invalid player entry at index {index}: missing required field(s) "
+                f"{', '.join(missing_fields)}"
+            )
+        validated.append(player)
     return validated
 
 
@@ -103,7 +121,17 @@ def fetch_1985_yankees_roster() -> list[dict]:
             f"TRAPI request failed with HTTP {response.status_code}: {response.text}"
         )
 
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError as exc:
+        max_preview_chars = 200
+        preview = response.text[:max_preview_chars]
+        if len(response.text) > max_preview_chars:
+            preview += "..."
+        raise ValueError(
+            f"TRAPI returned HTTP {response.status_code} with non-JSON body "
+            f"(length={len(response.text)}, preview={preview!r})"
+        ) from exc
 
     try:
         content = data["choices"][0]["message"]["content"]

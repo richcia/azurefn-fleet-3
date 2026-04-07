@@ -58,6 +58,7 @@ def _parse_roster(content: str) -> list[dict[str, Any]]:
         if "name" not in item or "position" not in item:
             logger.warning("Skipping player entry missing required fields: %r", item)
             continue
+        # Intentionally keep only the required fields; extra model fields are discarded.
         validated.append({"name": str(item["name"]), "position": str(item["position"])})
 
     return validated

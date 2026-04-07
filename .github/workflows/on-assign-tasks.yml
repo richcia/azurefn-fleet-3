@@ -136,9 +136,8 @@ jobs:
                 echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
                 exit 1
               fi
+              gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"              
             fi
-
-            gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"
           done < ready_issues.txt
           
       - name: Mark Issues as Ready for Review
@@ -160,9 +159,39 @@ jobs:
               continue
             fi
 
+            echo "Adding @copilot as reviewer on PR #$pr_number"
+            gh pr edit "$pr_number" --add-reviewer "@copilot" >/dev/null
             echo "Running gh pr ready on PR #$pr_number"
             gh pr ready "$pr_number" >/dev/null
             ready_count=$((ready_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
 
           echo "Code review ready PRs: $ready_count"
+
+      - name: Resolve copilot review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh pr list --state open --limit 1000 --json number > all_open_prs.json
+
+          resolve_count=0
+          while IFS= read -r pr_number; do
+            [ -z "$pr_number" ] && continue
+
+            copilot_reviewed=false
+            if gh api --paginate -H "Accept: application/vnd.github+json" "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" --jq 'any(.[]; .event == "reviewed" and (.user.login == "Copilot" or .user.login == "copilot[bot]"))' | grep -Fq "true"; then
+              copilot_reviewed=true
+            fi
+
+            if [ "$copilot_reviewed" != true ]; then
+              continue
+            fi
+
+            echo "Requesting fix-all from Copilot on PR #$pr_number"
+            gh pr comment "$pr_number" --body "@copilot Please fix all review issues in this PR."
+            resolve_count=$((resolve_count + 1))
+          done < <(jq -r '.[].number' all_open_prs.json)
+
+          echo "PRs requested for Copilot fix-all: $resolve_count"

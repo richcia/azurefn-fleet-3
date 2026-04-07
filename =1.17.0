@@ -1,0 +1,40 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting azure-functions
+  Downloading azure_functions-1.24.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting azure-storage-blob
+  Downloading azure_storage_blob-12.28.0-py3-none-any.whl.metadata (26 kB)
+Collecting azure-identity
+  Downloading azure_identity-1.25.3-py3-none-any.whl.metadata (91 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 91.7/91.7 kB 28.5 MB/s eta 0:00:00
+Collecting werkzeug~=3.1.3 (from azure-functions)
+  Downloading werkzeug-3.1.8-py3-none-any.whl.metadata (4.0 kB)
+Collecting azure-core>=1.30.0 (from azure-storage-blob)
+  Downloading azure_core-1.39.0-py3-none-any.whl.metadata (48 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 48.6/48.6 kB 15.3 MB/s eta 0:00:00
+Requirement already satisfied: cryptography>=2.1.4 in /usr/lib/python3/dist-packages (from azure-storage-blob) (41.0.7)
+Requirement already satisfied: typing-extensions>=4.6.0 in /usr/lib/python3/dist-packages (from azure-storage-blob) (4.10.0)
+Collecting isodate>=0.6.1 (from azure-storage-blob)
+  Downloading isodate-0.7.2-py3-none-any.whl.metadata (11 kB)
+Collecting msal>=1.35.1 (from azure-identity)
+  Downloading msal-1.35.1-py3-none-any.whl.metadata (11 kB)
+Collecting msal-extensions>=1.2.0 (from azure-identity)
+  Downloading msal_extensions-1.3.1-py3-none-any.whl.metadata (7.8 kB)
+Requirement already satisfied: requests>=2.21.0 in /usr/lib/python3/dist-packages (from azure-core>=1.30.0->azure-storage-blob) (2.31.0)
+Requirement already satisfied: PyJWT<3,>=1.0.0 in /usr/lib/python3/dist-packages (from PyJWT[crypto]<3,>=1.0.0->msal>=1.35.1->azure-identity) (2.7.0)
+Requirement already satisfied: markupsafe>=2.1.1 in /usr/lib/python3/dist-packages (from werkzeug~=3.1.3->azure-functions) (2.1.5)
+Downloading azure_functions-1.24.0-py3-none-any.whl (108 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 108.3/108.3 kB 36.0 MB/s eta 0:00:00
+Downloading azure_storage_blob-12.28.0-py3-none-any.whl (431 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 431.5/431.5 kB 98.3 MB/s eta 0:00:00
+Downloading azure_identity-1.25.3-py3-none-any.whl (192 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 192.1/192.1 kB 56.9 MB/s eta 0:00:00
+Downloading azure_core-1.39.0-py3-none-any.whl (218 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 218.3/218.3 kB 58.0 MB/s eta 0:00:00
+Downloading isodate-0.7.2-py3-none-any.whl (22 kB)
+Downloading msal-1.35.1-py3-none-any.whl (119 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 119.9/119.9 kB 38.8 MB/s eta 0:00:00
+Downloading msal_extensions-1.3.1-py3-none-any.whl (20 kB)
+Downloading werkzeug-3.1.8-py3-none-any.whl (226 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 226.5/226.5 kB 61.1 MB/s eta 0:00:00
+Installing collected packages: werkzeug, isodate, azure-core, msal, azure-storage-blob, azure-functions, msal-extensions, azure-identity
+Successfully installed azure-core-1.39.0 azure-functions-1.24.0 azure-identity-1.25.3 azure-storage-blob-12.28.0 isodate-0.7.2 msal-1.35.1 msal-extensions-1.3.1 werkzeug-3.1.8

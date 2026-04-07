@@ -1,0 +1,57 @@
+name: Code Review - Complete
+
+on:
+  pull_request_review:
+    types:
+      - submitted
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      COPILOT_GITHUB_TOKEN:
+        required: false
+
+jobs:
+  resolve-copilot-review:
+    if: |
+      github.event_name != 'pull_request_review' ||
+      github.event.review.user.login == 'copilot[bot]' ||
+      github.event.review.user.login == 'Copilot' ||
+      github.event.review.user.login == 'copilot'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Configure GitHub Auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
+            echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+          else
+            echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Post Follow-up Comment
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REVIEW_URL="${{ github.event.review.html_url }}"
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "No pull_request context available; skipping."
+            exit 0
+          fi
+
+          if [ -z "$REVIEW_URL" ] || [ "$REVIEW_URL" = "null" ]; then
+            REVIEW_URL=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews?per_page=100" \
+              --jq '[.[] | select(.user.login == "copilot[bot]" or .user.login == "Copilot" or .user.login == "copilot")] | last | .html_url // empty')
+          fi
+
+          if [ -z "$REVIEW_URL" ]; then
+            echo "No Copilot review URL found for PR #$PR_NUMBER; skipping comment."
+            exit 0
+          fi
+
+          gh pr comment "$PR_NUMBER" --body "apply changes based on the comments in $REVIEW_URL"

@@ -1,0 +1,74 @@
+name: Code - Complete
+
+on:
+  workflow_call:
+    secrets:
+      COPILOT_GITHUB_TOKEN:
+        required: false
+  workflow_dispatch:
+
+jobs:
+  process-completed-code:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Configure GitHub Auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
+            echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+          else
+            echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Process Copilot Completed PRs
+        run: |
+          set -euo pipefail
+
+          gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
+
+          processed_count=0
+          while IFS= read -r pr_number; do
+            [ -z "$pr_number" ] && continue
+
+            copilot_work_finished=false
+            if gh api --paginate -H "Accept: application/vnd.github+json" \
+              "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
+              --jq '.[] | select(.event == "copilot_work_finished") | .event' \
+              | grep -Fq "copilot_work_finished"; then
+              copilot_work_finished=true
+            fi
+
+            if [ "$copilot_work_finished" != true ]; then
+              continue
+            fi
+
+            echo "Copilot finished work on PR #$pr_number — processing..."
+
+            # Step 1: Label the PR's linked issues with "Ready for Review"
+            while IFS= read -r issue_number; do
+              [ -z "$issue_number" ] && continue
+              echo "  Labelling issue #$issue_number with 'Ready for Review'"
+              gh issue edit "$issue_number" --add-label "Ready for Review" || true
+            done < <(jq -r --argjson pr "$pr_number" \
+              '.[] | select(.number == $pr) | .closingIssuesReferences[]?.number' \
+              all_open_prs.json)
+
+            # Step 2: Add Copilot as a reviewer
+            echo "  Adding @copilot as reviewer on PR #$pr_number"
+            gh pr edit "$pr_number" --add-reviewer "@copilot" >/dev/null
+
+            # Step 3: Mark PR as ready for review (undraft)
+            echo "  Marking PR #$pr_number as ready for review"
+            gh pr ready "$pr_number" >/dev/null
+
+            processed_count=$((processed_count + 1))
+          done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
+
+          echo "PRs processed: $processed_count"
+
+          echo "PRs requested for Copilot fix-all: $resolve_count"

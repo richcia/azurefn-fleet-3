@@ -34,7 +34,7 @@ jobs:
       - name: Configure GitHub Auth
         run: |
           set -euo pipefail
-          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ] && false ; then
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ] ; then
             echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
             echo "Using COPILOT_GITHUB_TOKEN secret for authentication."
           else

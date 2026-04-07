@@ -139,12 +139,12 @@ jobs:
             if [ "$already_assigned" = true ]; then
               echo "Issue #$issue_number is already assigned to copilot. Skipping assignment." 
             else
-              assignment_payload=$(jq -n --arg repo "${{ github.repository }}" '{
+              assignment_payload=$(jq -n --arg repo "${{ github.repository }}" --arg instructions "$COPILOT_PROMPT" '{
                 assignees: ["copilot-swe-agent[bot]"],
                 agent_assignment: {
                   target_repo: $repo,
                   base_branch: "main",
-                  custom_instructions: $COPILOT_PROMPT,
+                  custom_instructions: $instructions,
                   custom_agent: "",
                   model: ""
                 }

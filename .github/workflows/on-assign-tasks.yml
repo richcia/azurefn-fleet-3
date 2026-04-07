@@ -47,7 +47,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh issue list --state all --limit 1000 --json number,title,body,state,url > all_issues.json
+          {
+            gh issue list --state all --limit 1000 --json number,title,body,state,url > all_issues.json
+          } 2>&1 | tee -a gh_list_output.log
+          
+          {
+            echo "gh_list_output<<EOF"
+            cat gh_list_output.log
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
           declare -A TASK_STATE
           while IFS=$'\t' read -r task_id task_state; do
@@ -114,29 +122,42 @@ jobs:
 
       - name: Assign Code Ready Issues To Copilot
         if: steps.ready_issues.outputs.ready_count != '0'
+        id: assign_copilot
         run: |
           set -euo pipefail
+
+          ASSIGN_LOG=$(mktemp)
 
           while IFS= read -r issue_number; do
             [ -z "$issue_number" ] && continue
             echo "Assigning issue #$issue_number to Copilot flow"
 
             already_assigned=false
-            if gh issue view "$issue_number" --json assignees --jq '.assignees[]?.login' | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
+            if {
+              gh issue view "$issue_number" --json assignees --jq '.assignees[]?.login' 2>&1 | tee -a "$ASSIGN_LOG"
+            } | grep -Eqi '^copilot$|^copilot\[bot\]$'; then
               already_assigned=true
             fi
 
             if [ "$already_assigned" = true ]; then
-              echo "Issue #$issue_number is already assigned to copilot. Skipping assignment."
+              echo "Issue #$issue_number is already assigned to copilot. Skipping assignment." | tee -a "$ASSIGN_LOG"
             else
-              if gh issue edit "$issue_number" --add-assignee "@copilot" >/dev/null 2>&1; then
-                echo "Assigned issue #$issue_number to copilot"
+              if {
+                gh issue edit "$issue_number" --add-assignee "@copilot" 2>&1 | tee -a "$ASSIGN_LOG"
+              } >/dev/null 2>&1; then
+                echo "Assigned issue #$issue_number to copilot" | tee -a "$ASSIGN_LOG"
               else
-                echo "Error: Could not assign issue #$issue_number to copilot."
+                echo "Error: Could not assign issue #$issue_number to copilot." | tee -a "$ASSIGN_LOG"
                 echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
                 exit 1
               fi
-              gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}"              
+              gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}" 2>&1 | tee -a "$ASSIGN_LOG"
             fi
           done < ready_issues.txt
+
+          {
+            echo "gh_assign_output<<EOF"
+            cat "$ASSIGN_LOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
           

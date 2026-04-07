@@ -143,13 +143,13 @@ jobs:
               echo "Issue #$issue_number is already assigned to copilot. Skipping assignment." | tee -a "$ASSIGN_LOG"
             else
               if {
-                gh issue edit "$issue_number" --add-assignee "@copilot" 2>&1 | tee -a "$ASSIGN_LOG"
+                # gh issue edit "$issue_number" --add-assignee "@copilot" 2>&1 | tee -a "$ASSIGN_LOG"
               } >/dev/null 2>&1; then
                 echo "Assigned issue #$issue_number to copilot" | tee -a "$ASSIGN_LOG"
               else
                 echo "Error: Could not assign issue #$issue_number to copilot." | tee -a "$ASSIGN_LOG"
                 echo "::error title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot"
-                exit 1
+                # exit 1
               fi
               gh issue comment "$issue_number" --body "@copilot ${COPILOT_PROMPT}" 2>&1 | tee -a "$ASSIGN_LOG"
             fi

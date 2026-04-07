@@ -77,7 +77,9 @@ def _parse_roster(raw_content: str) -> list[dict]:
         content = "\n".join(lines).strip()
 
     players = json.loads(content)
-    if not isinstance(players, list) or len(players) == 0:
+    if not isinstance(players, list):
+        raise ValueError("Expected a JSON array of player objects")
+    if not players:
         raise ValueError("Expected a non-empty JSON array of player objects")
     return players
 

@@ -35,42 +35,67 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh pr list --state open --limit 1000 --json number,isDraft,labels > all_open_prs.json
+          # Build working sets: open issues with the review-ready label and all open PRs.
+          gh issue list --state open --limit 1000 --label "$READY_FOR_CODE_REVIEW_LABEL" --json number > labeled_issues.json
+          gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
 
+          # Track merge stats and prevent processing the same PR more than once.
           merged_count=0
-          while IFS= read -r pr_number; do
-            [ -z "$pr_number" ] && continue
+          declare -A SEEN_PRS=()
 
-            has_ready_label=$(jq -r --argjson pr "$pr_number" --arg label "$READY_FOR_CODE_REVIEW_LABEL" '.[] | select(.number == $pr) | any(.labels[]?; .name == $label)' all_open_prs.json)
-            if [ "$has_ready_label" != "true" ]; then
-              echo "PR #$pr_number does not have label '$READY_FOR_CODE_REVIEW_LABEL'; skipping."
+          # Iterate each labeled issue and find PRs that reference it as a closing issue.
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
+
+            issue_prs=$(jq -r --argjson issue "$issue_number" \
+              '.[] | select(any(.closingIssuesReferences[]?; .number == $issue)) | .number' \
+              all_open_prs.json)
+
+            if [ -z "$issue_prs" ]; then
+              echo "No open linked PR found for issue #$issue_number; skipping."
               continue
             fi
 
-            copilot_finished=false
-            if gh api --paginate -H "Accept: application/vnd.github+json" \
-              "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
-              --jq 'any(.[]; .event == "copilot_work_finished")' \
-              | grep -Fq "true"; then
-              copilot_finished=true
-            fi
+            # Evaluate each linked PR for merge eligibility.
+            while IFS= read -r pr_number; do
+              [ -z "$pr_number" ] && continue
 
-            if [ "$copilot_finished" != true ]; then
-              continue
-            fi
+              # Skip PRs already seen from another labeled issue.
+              if [ -n "${SEEN_PRS[$pr_number]:-}" ]; then
+                continue
+              fi
+              SEEN_PRS[$pr_number]=1
 
-            is_draft=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | .isDraft' all_open_prs.json)
-            if [ "$is_draft" = "true" ]; then
-              echo "PR #$pr_number is still draft; skipping merge."
-              continue
-            fi
+              # Require Copilot completion signal in timeline events before merge.
+              copilot_finished=false
+              if gh api --paginate -H "Accept: application/vnd.github+json" \
+                "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
+                --jq 'any(.[]; .event == "copilot_work_finished")' \
+                | grep -Fq "true"; then
+                copilot_finished=true
+              fi
 
-            echo "Merging PR #$pr_number after Copilot finished applying code suggestions"
-            if gh pr merge "$pr_number" --merge --delete-branch; then
-              merged_count=$((merged_count + 1))
-            else
-              echo "Could not merge PR #$pr_number (checks/review requirements may still be pending)."
-            fi
-          done < <(jq -r '.[].number' all_open_prs.json)
+              if [ "$copilot_finished" != true ]; then
+                echo "PR #$pr_number linked to issue #$issue_number has no copilot_work_finished event; skipping."
+                continue
+              fi
 
+              # Draft PRs are not mergeable; skip until ready.
+              is_draft=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | .isDraft' all_open_prs.json)
+              if [ "$is_draft" = "true" ]; then
+                echo "PR #$pr_number is still draft; skipping merge."
+                continue
+              fi
+
+              # Merge eligible PR and delete the branch after successful merge.
+              echo "Merging PR #$pr_number linked to issue #$issue_number after Copilot finished work"
+              if gh pr merge "$pr_number" --merge --delete-branch; then
+                merged_count=$((merged_count + 1))
+              else
+                echo "Could not merge PR #$pr_number (checks/review requirements may still be pending)."
+              fi
+            done <<< "$issue_prs"
+          done < <(jq -r '.[].number' labeled_issues.json)
+
+          # Emit final summary metric for the run.
           echo "PRs merged: $merged_count"

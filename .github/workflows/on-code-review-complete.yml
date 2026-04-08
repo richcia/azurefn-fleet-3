@@ -6,11 +6,11 @@ on:
     inputs:
       PR_NUMBER:
         description: Pull request number to process when called as a reusable workflow
-        required: false
+        required: true
         type: string
       REVIEW_URL:
         description: Review URL to reference in the follow-up comment when called as a reusable workflow
-        required: false
+        required: true
         type: string
     secrets:
       COPILOT_GITHUB_TOKEN:

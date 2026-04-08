@@ -13,6 +13,8 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
+    env:
+      READY_FOR_CODE_REVIEW_LABEL: Ready for Code Review
 
     steps:
       - name: Configure GitHub Auth
@@ -34,9 +36,9 @@ jobs:
           while IFS= read -r pr_number; do
             [ -z "$pr_number" ] && continue
 
-            has_ready_label=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | any(.labels[]?; .name == "Ready for Code Review")' all_open_prs.json)
+            has_ready_label=$(jq -r --argjson pr "$pr_number" --arg label "$READY_FOR_CODE_REVIEW_LABEL" '.[] | select(.number == $pr) | any(.labels[]?; .name == $label)' all_open_prs.json)
             if [ "$has_ready_label" != "true" ]; then
-              echo "PR #$pr_number does not have label 'Ready for Code Review'; skipping."
+              echo "PR #$pr_number does not have label '$READY_FOR_CODE_REVIEW_LABEL'; skipping."
               continue
             fi
 

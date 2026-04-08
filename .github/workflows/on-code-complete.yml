@@ -14,6 +14,8 @@ jobs:
       issues: write
       pull-requests: write
       contents: write
+    env:
+      READY_FOR_CODE_REVIEW_LABEL: Ready for Code Review
 
     steps:
       - name: Checkout Repository
@@ -34,12 +36,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! gh label list --limit 1000 --json name --jq '.[].name' | grep -Fxq "Ready for Code Review"; then
-            echo "Creating missing label: Ready for Code Review"
-            gh label create "Ready for Code Review" --color "0e8a16" --description "Issue is ready for code review"
+          if ! gh label list --limit 1000 --json name --jq '.[].name' | grep -Fxq "$READY_FOR_CODE_REVIEW_LABEL"; then
+            echo "Creating missing label: $READY_FOR_CODE_REVIEW_LABEL"
+            gh label create "$READY_FOR_CODE_REVIEW_LABEL" --color "0e8a16" --description "Issue is ready for code review"
           fi
 
-          gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
+          gh pr list --state open --limit 1000 --json number,isDraft,labels,closingIssuesReferences > all_open_prs.json
 
           processed_count=0
           while IFS= read -r pr_number; do
@@ -59,26 +61,33 @@ jobs:
 
             echo "Copilot finished work on PR #$pr_number — processing..."
 
-            # Step 1: Label the PR's linked issues with "Ready for Code Review"
+            # Step 1: Label the PR's linked issues with the review-ready label
             while IFS= read -r issue_number; do
               [ -z "$issue_number" ] && continue
-              echo "  Labelling issue #$issue_number with 'Ready for Code Review'"
-              gh issue edit "$issue_number" --add-label "Ready for Code Review" || true
+              echo "  Labelling issue #$issue_number with '$READY_FOR_CODE_REVIEW_LABEL'"
+              gh issue edit "$issue_number" --add-label "$READY_FOR_CODE_REVIEW_LABEL" || true
             done < <(jq -r --argjson pr "$pr_number" \
               '.[] | select(.number == $pr) | .closingIssuesReferences[]?.number' \
               all_open_prs.json)
+
+            has_ready_label=$(jq -r --argjson pr "$pr_number" --arg label "$READY_FOR_CODE_REVIEW_LABEL" \
+              '.[] | select(.number == $pr) | any(.labels[]?; .name == $label)' \
+              all_open_prs.json)
+            if [ "$has_ready_label" = "true" ]; then
+              echo "  PR #$pr_number already has '$READY_FOR_CODE_REVIEW_LABEL'; skipping reviewer assignment and ready transition."
+              processed_count=$((processed_count + 1))
+              continue
+            fi
 
             # Step 2: Add Copilot as a reviewer
             echo "  Adding @copilot as reviewer on PR #$pr_number"
             gh pr edit "$pr_number" --add-reviewer "@copilot" >/dev/null
 
-            # Step 3: Mark PR as Ready for Code Review (undraft)
-            echo "  Marking PR #$pr_number as Ready for Code Review"
+            # Step 3: Mark PR as review-ready (undraft)
+            echo "  Marking PR #$pr_number as $READY_FOR_CODE_REVIEW_LABEL"
             gh pr ready "$pr_number" >/dev/null
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
 
           echo "PRs processed: $processed_count"
-
-          echo "PRs requested for Copilot fix-all: $resolve_count"

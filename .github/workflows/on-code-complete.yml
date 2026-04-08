@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
       contents: write
     env:
-      READY_FOR_CODE_REVIEW_LABEL: Ready for Code Review
+      READY_FOR_CODE_REVIEW_LABEL: ready-for-code-review
 
     steps:
       - name: Checkout Repository

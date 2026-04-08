@@ -34,9 +34,9 @@ jobs:
           while IFS= read -r pr_number; do
             [ -z "$pr_number" ] && continue
 
-            has_ready_label=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | any(.labels[]?; .name == "Ready for Review")' all_open_prs.json)
+            has_ready_label=$(jq -r --argjson pr "$pr_number" '.[] | select(.number == $pr) | any(.labels[]?; .name == "Ready for Code Review")' all_open_prs.json)
             if [ "$has_ready_label" != "true" ]; then
-              echo "PR #$pr_number does not have label 'Ready for Review'; skipping."
+              echo "PR #$pr_number does not have label 'Ready for Code Review'; skipping."
               continue
             fi
 

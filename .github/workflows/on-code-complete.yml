@@ -34,6 +34,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          if ! gh label list --limit 1000 --json name --jq '.[].name' | grep -Fxq "Ready for Code Review"; then
+            echo "Creating missing label: Ready for Code Review"
+            gh label create "Ready for Code Review" --color "0e8a16" --description "Issue is ready for code review"
+          fi
+
           gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
 
           processed_count=0
@@ -54,11 +59,11 @@ jobs:
 
             echo "Copilot finished work on PR #$pr_number — processing..."
 
-            # Step 1: Label the PR's linked issues with "Ready for Review"
+            # Step 1: Label the PR's linked issues with "Ready for Code Review"
             while IFS= read -r issue_number; do
               [ -z "$issue_number" ] && continue
-              echo "  Labelling issue #$issue_number with 'Ready for Review'"
-              gh issue edit "$issue_number" --add-label "Ready for Review" || true
+              echo "  Labelling issue #$issue_number with 'Ready for Code Review'"
+              gh issue edit "$issue_number" --add-label "Ready for Code Review" || true
             done < <(jq -r --argjson pr "$pr_number" \
               '.[] | select(.number == $pr) | .closingIssuesReferences[]?.number' \
               all_open_prs.json)
@@ -67,8 +72,8 @@ jobs:
             echo "  Adding @copilot as reviewer on PR #$pr_number"
             gh pr edit "$pr_number" --add-reviewer "@copilot" >/dev/null
 
-            # Step 3: Mark PR as ready for review (undraft)
-            echo "  Marking PR #$pr_number as ready for review"
+            # Step 3: Mark PR as Ready for Code Review (undraft)
+            echo "  Marking PR #$pr_number as Ready for Code Review"
             gh pr ready "$pr_number" >/dev/null
 
             processed_count=$((processed_count + 1))

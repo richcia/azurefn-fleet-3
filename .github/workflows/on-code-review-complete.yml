@@ -47,6 +47,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "PR_NUMBER: ${PR_NUMBER:-}, REVIEW_URL: ${REVIEW_URL:-}"
+
           if [ -z "${PR_NUMBER:-}" ]; then
             PR_NUMBER="${{ github.event.pull_request.number }}"
           fi

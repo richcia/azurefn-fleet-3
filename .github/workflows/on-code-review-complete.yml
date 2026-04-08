@@ -55,8 +55,6 @@ jobs:
             REVIEW_URL="${{ inputs.REVIEW_URL }}"
           fi
 
-          echo "Processing PR #$PR_NUMBER with review URL: $REVIEW_URL"
-
           if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
             echo "No pull_request context available; skipping."
             exit 0
@@ -71,5 +69,7 @@ jobs:
             echo "No Copilot review URL found for PR #$PR_NUMBER; skipping comment."
             exit 0
           fi
+
+          echo "Posting follow-up comment on PR #$PR_NUMBER referencing review URL: $REVIEW_URL"
 
           gh pr comment "$PR_NUMBER" --body "apply changes based on the comments in $REVIEW_URL"

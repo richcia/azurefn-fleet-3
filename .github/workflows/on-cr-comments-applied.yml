@@ -37,9 +37,8 @@ jobs:
 
           echo "Step 1: Build working sets for labeled issues and open PRs"
           # Build working sets: open issues with the review-ready label and all open PRs.
-          gh issue list --state open --limit 1000 --json number,labels > labeled_issues.json
-          echo "Dump labeled_issues.json content:"
-          cat labeled_issues.json
+          gh issue list --state open --limit 1000 --json number,labels > all_open_issues.json
+          jq --arg label "$READY_FOR_CODE_REVIEW_LABEL" '[.[] | select(any(.labels[]?; .name == $label))]' all_open_issues.json > labeled_issues.json
           gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
 
           echo "Found $(jq length labeled_issues.json) issues with '$READY_FOR_CODE_REVIEW_LABEL' label."

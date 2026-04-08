@@ -2,7 +2,6 @@ name: Code Review - Complete
 
 on:
   workflow_dispatch:
-  workflow_call:
     inputs:
       PR_NUMBER:
         description: Pull request number to process when called as a reusable workflow
@@ -12,6 +11,7 @@ on:
         description: Review URL to reference in the follow-up comment when called as a reusable workflow
         required: true
         type: string
+  workflow_call:
     secrets:
       COPILOT_GITHUB_TOKEN:
         required: false

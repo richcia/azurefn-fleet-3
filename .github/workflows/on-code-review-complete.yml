@@ -47,23 +47,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "PR_NUMBER: ${PR_NUMBER:-}, REVIEW_URL: ${REVIEW_URL:-}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REVIEW_URL="${{ github.event.review.html_url }}"
 
-          if [ -z "${PR_NUMBER:-}" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-          fi
-
-          if [ -z "${REVIEW_URL:-}" ]; then
-            REVIEW_URL="${{ github.event.review.html_url }}"
-          fi
-
-          if [ "${{ github.event_name }}" = "workflow_call" ]; then
-            if [ -z "${PR_NUMBER:-}" ]; then
-              PR_NUMBER="${{ inputs.PR_NUMBER }}"
-            fi
-            if [ -z "${REVIEW_URL:-}" ]; then
-              REVIEW_URL="${{ inputs.REVIEW_URL }}"
-            fi
+          if [ "${{ github.event_name }}" = "workflow_call" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ inputs.PR_NUMBER }}"
+            REVIEW_URL="${{ inputs.REVIEW_URL }}"
           fi
 
           echo "Processing PR #$PR_NUMBER with review URL: $REVIEW_URL"

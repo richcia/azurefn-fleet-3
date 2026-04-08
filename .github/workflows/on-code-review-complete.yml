@@ -72,4 +72,4 @@ jobs:
 
           echo "Posting follow-up comment on PR #$PR_NUMBER referencing review URL: $REVIEW_URL"
 
-          gh pr comment "$PR_NUMBER" --body "apply changes based on the comments in $REVIEW_URL"
+          gh pr comment "$PR_NUMBER" --body "@copilot apply changes based on the comments in $REVIEW_URL"

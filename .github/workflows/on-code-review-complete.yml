@@ -1,11 +1,17 @@
 name: Code Review - Complete
 
 on:
-  pull_request_review:
-    types:
-      - submitted
   workflow_dispatch:
   workflow_call:
+    inputs:
+      PR_NUMBER:
+        description: Pull request number to process when called as a reusable workflow
+        required: false
+        type: string
+      REVIEW_URL:
+        description: Review URL to reference in the follow-up comment when called as a reusable workflow
+        required: false
+        type: string
     secrets:
       COPILOT_GITHUB_TOKEN:
         required: false
@@ -23,6 +29,11 @@ jobs:
       issues: write
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Configure GitHub Auth
         run: |
           set -euo pipefail
@@ -38,6 +49,11 @@ jobs:
 
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REVIEW_URL="${{ github.event.review.html_url }}"
+
+          if [ "${{ github.event_name }}" = "workflow_call" ]; then
+            PR_NUMBER="${{ inputs.PR_NUMBER }}"
+            REVIEW_URL="${{ inputs.REVIEW_URL }}"
+          fi
 
           if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
             echo "No pull_request context available; skipping."

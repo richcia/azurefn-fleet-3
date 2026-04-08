@@ -41,7 +41,7 @@ jobs:
           gh pr list --state open --limit 1000 --json number,isDraft,closingIssuesReferences > all_open_prs.json
 
           echo "Found $(jq length labeled_issues.json) issues with '$READY_FOR_CODE_REVIEW_LABEL' label."
-          echo "Found $(jq length all_open_prs.json) open PRs in the repository
+          echo "Found $(jq length all_open_prs.json) open PRs in the repository"
 
           echo "Step 2: Initialize merge counters and dedupe tracking"
           # Track merge stats and prevent processing the same PR more than once.

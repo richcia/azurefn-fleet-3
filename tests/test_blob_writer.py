@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import blob_writer
 from blob_writer import write_roster_blob
 
 
@@ -18,14 +17,13 @@ SAMPLE_ROSTER = [
 
 class TestWriteRosterBlob:
     @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer.DefaultAzureCredential")
+    @patch("blob_writer._CREDENTIAL")
     def test_success_returns_blob_name(self, mock_cred, mock_bsc, monkeypatch):
         """Returns blob name with expected pattern 'roster-YYYYMMDD.json' on successful upload."""
         import re
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
 
         mock_blob_client = MagicMock()
-        mock_container_client = MagicMock()
         mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
 
         result = write_roster_blob(SAMPLE_ROSTER)
@@ -36,7 +34,7 @@ class TestWriteRosterBlob:
         mock_blob_client.upload_blob.assert_called_once()
 
     @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer.DefaultAzureCredential")
+    @patch("blob_writer._CREDENTIAL")
     def test_upload_called_with_json_data(self, mock_cred, mock_bsc, monkeypatch):
         """The blob is uploaded with JSON-encoded roster data and overwrite=True."""
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
@@ -52,7 +50,7 @@ class TestWriteRosterBlob:
         assert call_args[1]["overwrite"] is True
 
     @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer.DefaultAzureCredential")
+    @patch("blob_writer._CREDENTIAL")
     def test_uses_correct_container(self, mock_cred, mock_bsc, monkeypatch):
         """Blob is stored in the 'yankees-roster' container."""
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
@@ -66,7 +64,7 @@ class TestWriteRosterBlob:
         assert call_kwargs["container"] == "yankees-roster"
 
     @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer.DefaultAzureCredential")
+    @patch("blob_writer._CREDENTIAL")
     def test_account_url_uses_storage_account_name(self, mock_cred, mock_bsc, monkeypatch):
         """BlobServiceClient is created with the correct account URL."""
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
@@ -84,7 +82,7 @@ class TestWriteRosterBlob:
             write_roster_blob(SAMPLE_ROSTER)
 
     @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer.DefaultAzureCredential")
+    @patch("blob_writer._CREDENTIAL")
     def test_empty_roster_uploaded(self, mock_cred, mock_bsc, monkeypatch):
         """An empty roster list is uploaded as a JSON array with a valid blob name."""
         import re

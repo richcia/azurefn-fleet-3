@@ -37,5 +37,5 @@ def nightly_roster_sync(timer: func.TimerRequest) -> None:
             "nightly_roster_sync: roster written to blob '%s'", blob_name
         )
     except Exception as exc:
-        logger.error("nightly_roster_sync: error - %s", exc)
+        logger.exception("nightly_roster_sync: error - %s", exc)
         raise

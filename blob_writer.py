@@ -11,12 +11,18 @@ from azure.storage.blob import BlobServiceClient
 logger = logging.getLogger(__name__)
 
 _CONTAINER_NAME = "yankees-roster"
+# Reused across invocations to avoid repeated token acquisition overhead.
+_CREDENTIAL = DefaultAzureCredential()
 
 
 def write_roster_blob(roster: list[dict]) -> str:
     """Write the roster JSON to Azure Blob Storage.
 
     Uses ``DefaultAzureCredential`` for authentication — no storage keys required.
+
+    The ``yankees-roster`` container must exist before this function is called.
+    It is provisioned automatically by the Bicep infrastructure templates under
+    ``/infra/modules/storage.bicep``.
 
     Environment variables:
         STORAGE_ACCOUNT_NAME: Azure Storage account name (required).
@@ -37,9 +43,8 @@ def write_roster_blob(roster: list[dict]) -> str:
             "Set it to your Azure Storage account name."
         )
 
-    credential = DefaultAzureCredential()
     account_url = f"https://{account_name}.blob.core.windows.net"
-    client = BlobServiceClient(account_url=account_url, credential=credential)
+    client = BlobServiceClient(account_url=account_url, credential=_CREDENTIAL)
 
     blob_name = f"roster-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
     blob_client = client.get_blob_client(container=_CONTAINER_NAME, blob=blob_name)

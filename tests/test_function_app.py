@@ -30,10 +30,16 @@ class TestNightlyRosterSync:
         """fetch_1985_yankees_roster is called before write_roster_blob."""
         timer = _make_timer_request()
 
+        calls = MagicMock()
+        calls.attach_mock(mock_fetch, "fetch")
+        calls.attach_mock(mock_write, "write")
+
         nightly_roster_sync(timer)
 
-        mock_fetch.assert_called_once()
-        mock_write.assert_called_once_with(SAMPLE_ROSTER)
+        assert calls.mock_calls == [
+            call.fetch(),
+            call.write(SAMPLE_ROSTER),
+        ]
 
     @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
     @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)

@@ -83,8 +83,8 @@ jobs:
             fi
 
             # Step 2: Add Copilot as a reviewer
-            echo "  Adding copilot-swe-agent[bot] as reviewer on PR #$pr_number"
-            output=$(gh pr edit "$pr_number" --add-reviewer "copilot-swe-agent[bot]" 2>&1) || echo "::error::Failed to add copilot-swe-agent[bot] as reviewer to PR #$pr_number: $output"
+            echo "  Adding copilot as reviewer on PR #$pr_number"
+            output=$(gh pr edit "$pr_number" --add-reviewer "copilot" 2>&1) || echo "::error::Failed to add copilot-swe-agent[bot] as reviewer to PR #$pr_number: $output"
 
             # Step 3: Mark PR as review-ready (undraft)
             echo "  Marking PR #$pr_number as $READY_FOR_CODE_REVIEW_LABEL"

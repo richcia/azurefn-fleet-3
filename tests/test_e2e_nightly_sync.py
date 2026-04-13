@@ -13,13 +13,14 @@ Acceptance Criteria covered:
   AC-5  Second triggered run produces an overwrite of the same blob name
 """
 
-import json
 import logging
+import re
 import time
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+import blob_writer
 from function_app import nightly_roster_sync
 
 
@@ -95,17 +96,28 @@ class TestEndToEndHappyPath:
         # Should not raise
         nightly_roster_sync(timer)
 
-    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-19850101.json")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
     @patch(
         "function_app.trapi_client.fetch_1985_yankees_roster",
         return_value=MOCK_1985_YANKEES_ROSTER,
     )
-    def test_blob_written_to_yankees_roster_container(self, mock_fetch, mock_write):
-        """AC-2: write_roster_blob is called with the full roster after a successful TRAPI call."""
+    def test_blob_written_to_yankees_roster_container(self, mock_fetch, mock_cred, mock_bsc, monkeypatch):
+        """AC-2: Blob is written to the 'yankees-roster' container after a successful TRAPI call."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+
         timer = _make_timer_request()
         nightly_roster_sync(timer)
 
-        mock_write.assert_called_once_with(MOCK_1985_YANKEES_ROSTER)
+        call_kwargs = mock_bsc.return_value.get_blob_client.call_args[1]
+        assert call_kwargs["container"] == "yankees-roster", (
+            f"AC-2: Expected blob to be written to 'yankees-roster' container, "
+            f"got '{call_kwargs['container']}'"
+        )
+        mock_blob_client.upload_blob.assert_called_once()
 
     @patch("function_app.blob_writer.write_roster_blob", return_value="roster-19850101.json")
     @patch(
@@ -271,39 +283,46 @@ class TestSecondRunOverwriteBehavior:
             "AC-5: Expected write_roster_blob to be called once per invocation"
         )
 
-    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-19850101.json")
+    @patch("blob_writer.datetime")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
     @patch(
         "function_app.trapi_client.fetch_1985_yankees_roster",
         return_value=MOCK_1985_YANKEES_ROSTER,
     )
-    def test_second_run_writes_same_blob_name_convention(self, mock_fetch, mock_write):
-        """AC-5: Both runs write a blob following the roster-YYYYMMDD.json naming convention."""
-        import re
-
-        timer = _make_timer_request()
-
-        nightly_roster_sync(timer)
-        nightly_roster_sync(timer)
-
-        for i, call_args in enumerate(mock_write.call_args_list):
-            # Verify the roster passed to write_roster_blob on each call is a non-empty list
-            roster_arg = call_args[0][0]
-            assert isinstance(roster_arg, list), (
-                f"AC-5: Run {i + 1} — write_roster_blob received non-list argument: "
-                f"{type(roster_arg).__name__}"
-            )
-            assert len(roster_arg) > 0, (
-                f"AC-5: Run {i + 1} — write_roster_blob received an empty roster"
-            )
-
-    @patch("blob_writer.BlobServiceClient")
-    @patch("blob_writer._CREDENTIAL")
-    def test_blob_upload_uses_overwrite_true(self, mock_cred, mock_bsc, monkeypatch):
-        """AC-5: Blob upload uses overwrite=True so a second run replaces the existing blob."""
-        import blob_writer
-
+    def test_second_run_writes_same_blob_name_convention(
+        self, mock_fetch, mock_cred, mock_bsc, mock_dt, monkeypatch
+    ):
+        """AC-5: Both runs produce a blob with the roster-YYYYMMDD.json name; same name on same day."""
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
 
+        mock_dt.now.return_value.strftime.return_value = "19850101"
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+
+        timer = _make_timer_request()
+        nightly_roster_sync(timer)
+        nightly_roster_sync(timer)
+
+        assert mock_bsc.return_value.get_blob_client.call_count == 2
+        blob_names = [c[1]["blob"] for c in mock_bsc.return_value.get_blob_client.call_args_list]
+        assert blob_names[0] == blob_names[1], (
+            f"AC-5: Both nightly runs must write to the same blob name on the same day, "
+            f"got run1='{blob_names[0]}' run2='{blob_names[1]}'"
+        )
+        assert re.fullmatch(r"roster-\d{8}\.json", blob_names[0]), (
+            f"AC-5: Blob name '{blob_names[0]}' does not follow the expected "
+            "'roster-YYYYMMDD.json' naming convention"
+        )
+
+    @patch("blob_writer.datetime")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_blob_upload_uses_overwrite_true(self, mock_cred, mock_bsc, mock_dt, monkeypatch):
+        """AC-5: Both runs target the same (container, blob) and upload_blob is called with overwrite=True."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_dt.now.return_value.strftime.return_value = "19850101"
         mock_blob_client = MagicMock()
         mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
 
@@ -318,13 +337,23 @@ class TestSecondRunOverwriteBehavior:
                 "nightly run correctly replaces the existing blob"
             )
 
+        # Both runs must target the same container and blob name
+        get_blob_calls = mock_bsc.return_value.get_blob_client.call_args_list
+        assert len(get_blob_calls) == 2
+        container_names = [c[1]["container"] for c in get_blob_calls]
+        blob_names = [c[1]["blob"] for c in get_blob_calls]
+        assert container_names[0] == container_names[1] == "yankees-roster", (
+            f"AC-5: Both runs must target the 'yankees-roster' container, got {container_names}"
+        )
+        assert blob_names[0] == blob_names[1], (
+            f"AC-5: Both runs must overwrite the same blob on the same day, "
+            f"got run1='{blob_names[0]}' run2='{blob_names[1]}'"
+        )
+
     @patch("blob_writer.BlobServiceClient")
     @patch("blob_writer._CREDENTIAL")
     def test_blob_name_follows_naming_convention(self, mock_cred, mock_bsc, monkeypatch):
         """AC-5: Blob name follows the roster-YYYYMMDD.json convention."""
-        import re
-        import blob_writer
-
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
 
         mock_blob_client = MagicMock()

@@ -4,6 +4,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+from azure.core.exceptions import HttpResponseError, ServiceRequestError
 
 from blob_writer import write_roster_blob
 
@@ -98,3 +99,29 @@ class TestWriteRosterBlob:
         assert re.fullmatch(r"roster-\d{8}\.json", result), (
             f"Blob name '{result}' does not match expected pattern 'roster-YYYYMMDD.json'"
         )
+
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_storage_sdk_http_error_propagates(self, mock_cred, mock_bsc, monkeypatch):
+        """HttpResponseError from the storage SDK is propagated to the caller."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = HttpResponseError(message="403 Forbidden")
+
+        with pytest.raises(HttpResponseError):
+            write_roster_blob(SAMPLE_ROSTER)
+
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_storage_sdk_service_request_error_propagates(self, mock_cred, mock_bsc, monkeypatch):
+        """ServiceRequestError (e.g. network failure) from the storage SDK is propagated to the caller."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = ServiceRequestError(message="Connection timeout")
+
+        with pytest.raises(ServiceRequestError):
+            write_roster_blob(SAMPLE_ROSTER)

@@ -90,6 +90,10 @@ jobs:
             echo "  Adding @copilot as reviewer on PR #$pr_number"
             output=$(gh pr edit "$pr_number" --add-reviewer "@copilot" 2>&1) || echo "::error::Failed to add @copilot as reviewer to PR #$pr_number: $output"
 
+            # Step 4: Request Copilot review via PR comment
+            echo "  Requesting Copilot review on PR #$pr_number"
+            output=$(gh pr comment "$pr_number" --body "@copilot review this PR" 2>&1) || echo "::error::Failed to comment on PR #$pr_number: $output"
+
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
 

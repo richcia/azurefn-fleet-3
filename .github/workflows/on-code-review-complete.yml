@@ -1,6 +1,8 @@
 name: Code Review - Complete
 
 on:
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
     inputs:
       PR_NUMBER:

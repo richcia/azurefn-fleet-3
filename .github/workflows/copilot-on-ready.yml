@@ -1,0 +1,25 @@
+name: Re-request Copilot on Ready for Review
+
+on:
+  pull_request:
+    types:
+      - ready_for_review
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  request-copilot-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Re-request Copilot review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Re-requesting Copilot review for PR #${{ github.event.pull_request.number }}"
+
+          gh pr edit \
+            "${{ github.event.pull_request.html_url }}" \
+            --add-reviewer copilot

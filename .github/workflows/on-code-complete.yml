@@ -81,11 +81,11 @@ jobs:
 
             # Step 2: Add Copilot as a reviewer
             echo "  Adding @copilot as reviewer on PR #$pr_number"
-            gh pr edit "$pr_number" --add-reviewer "@copilot" >/dev/null
+            gh pr edit "$pr_number" --add-reviewer "@copilot"
 
             # Step 3: Mark PR as review-ready (undraft)
             echo "  Marking PR #$pr_number as $READY_FOR_CODE_REVIEW_LABEL"
-            gh pr ready "$pr_number" >/dev/null
+            gh pr ready "$pr_number"
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)

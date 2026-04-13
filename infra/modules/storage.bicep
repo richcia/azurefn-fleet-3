@@ -1,5 +1,5 @@
 @description('Azure region for the Storage Account.')
-param location string = resourceGroup().location
+param location string
 
 @description('Name of the Storage Account (must be globally unique, 3-24 lowercase alphanumeric chars).')
 param storageAccountName string

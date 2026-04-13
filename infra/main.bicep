@@ -18,6 +18,7 @@ var tags = {
 
 // Storage Account names must be 3-24 lowercase alphanumeric characters and globally unique.
 // uniqueString produces a deterministic 13-char hash from the resource group ID.
+// 'st' (2) + uniqueString (13) = 15 chars — within the 3-24 char limit.
 var storageAccountName = 'st${uniqueString(resourceGroup().id)}'
 
 // ---------------------------------------------------------------------------

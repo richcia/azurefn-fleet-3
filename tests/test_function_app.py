@@ -164,8 +164,8 @@ class TestStructuredLogging:
 
     @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
     @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
-    def test_blob_write_complete_has_blob_name(self, mock_fetch, mock_write, caplog):
-        """blob_write_complete log record carries the blob_name and player_count in custom_dimensions."""
+    def test_blob_write_complete_has_blob_name_and_player_count(self, mock_fetch, mock_write, caplog):
+        """blob_write_complete log record carries both blob_name and player_count in custom_dimensions."""
         timer = _make_timer_request()
 
         with caplog.at_level(logging.INFO, logger="function_app"):

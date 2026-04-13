@@ -1,5 +1,7 @@
   # 1985 NY Yankees Roster — Nightly Azure Function
 
+[![CI](https://github.com/richcia/azurefn-fleet-3/actions/workflows/ci.yml/badge.svg)](https://github.com/richcia/azurefn-fleet-3/actions/workflows/ci.yml)
+
 Nightly Azure Function that fetches the 1985 New York Yankees roster from an Azure OpenAI TRAPI endpoint and persists it as a JSON blob in Azure Blob Storage.
 
 ## Architecture

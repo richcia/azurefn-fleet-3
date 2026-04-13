@@ -31,12 +31,13 @@ def _make_ok_response(players: list) -> MagicMock:
     return mock_resp
 
 
-def _make_error_response(status_code: int, text: str = "Internal Server Error") -> MagicMock:
+def _make_error_response(status_code: int, text: str = "Internal Server Error", headers: dict = None) -> MagicMock:
     """Return a mock requests.Response representing an HTTP error."""
     mock_resp = MagicMock()
     mock_resp.ok = False
     mock_resp.status_code = status_code
     mock_resp.text = text
+    mock_resp.headers = headers or {}
     return mock_resp
 
 
@@ -143,15 +144,18 @@ class TestFetch1985YankeesRoster:
 
         assert roster == []
 
+    @patch("trapi_client.time.sleep")
     @patch("trapi_client._get_bearer_token", return_value="fake-token")
     @patch("trapi_client.requests.post")
-    def test_http_500_raises_runtime_error(self, mock_post, mock_token, monkeypatch):
-        """RuntimeError raised on HTTP 500."""
+    def test_http_500_raises_runtime_error(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """RuntimeError raised on HTTP 500 after exhausting all retries."""
         monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
         mock_post.return_value = _make_error_response(500, "Internal Server Error")
 
         with pytest.raises(RuntimeError, match="TRAPI request failed with HTTP 500"):
             fetch_1985_yankees_roster()
+
+        assert mock_post.call_count == 4  # 1 initial + 3 retries
 
     @patch("trapi_client._get_bearer_token", return_value="fake-token")
     @patch("trapi_client.requests.post")
@@ -163,15 +167,111 @@ class TestFetch1985YankeesRoster:
         with pytest.raises(RuntimeError, match="TRAPI request failed with HTTP 401"):
             fetch_1985_yankees_roster()
 
+    @patch("trapi_client.time.sleep")
     @patch("trapi_client._get_bearer_token", return_value="fake-token")
     @patch("trapi_client.requests.post")
-    def test_http_429_raises_runtime_error(self, mock_post, mock_token, monkeypatch):
-        """RuntimeError raised on HTTP 429 Too Many Requests (rate limiting)."""
+    def test_http_429_raises_runtime_error(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """RuntimeError raised on HTTP 429 Too Many Requests after exhausting all retries."""
         monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
         mock_post.return_value = _make_error_response(429, "Too Many Requests")
 
         with pytest.raises(RuntimeError, match="TRAPI request failed with HTTP 429"):
             fetch_1985_yankees_roster()
+
+        assert mock_post.call_count == 4  # 1 initial + 3 retries
+
+    @patch("trapi_client.time.sleep")
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_http_429_retries_and_succeeds(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """HTTP 429 without Retry-After uses exponential backoff and succeeds on second attempt."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.side_effect = [
+            _make_error_response(429, "Too Many Requests"),  # no Retry-After header
+            _make_ok_response(SAMPLE_PLAYERS),
+        ]
+
+        roster = fetch_1985_yankees_roster()
+
+        assert roster == SAMPLE_PLAYERS
+        assert mock_post.call_count == 2
+        mock_sleep.assert_called_once_with(1)  # 2^0 = 1 second (exponential backoff)
+
+    @patch("trapi_client.time.sleep")
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_http_429_uses_retry_after_header(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """HTTP 429 with a Retry-After header uses the header value as the sleep delay."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.side_effect = [
+            _make_error_response(429, "Too Many Requests", headers={"Retry-After": "15"}),
+            _make_ok_response(SAMPLE_PLAYERS),
+        ]
+
+        roster = fetch_1985_yankees_roster()
+
+        assert roster == SAMPLE_PLAYERS
+        mock_sleep.assert_called_once_with(15)  # value from Retry-After header
+
+    @patch("trapi_client.time.sleep")
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_http_429_non_integer_retry_after_falls_back_to_backoff(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """HTTP 429 with non-integer Retry-After (e.g. HTTP-date) falls back to exponential backoff."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.side_effect = [
+            _make_error_response(429, "Too Many Requests", headers={"Retry-After": "Wed, 21 Oct 2099 07:28:00 GMT"}),
+            _make_ok_response(SAMPLE_PLAYERS),
+        ]
+
+        roster = fetch_1985_yankees_roster()
+
+        assert roster == SAMPLE_PLAYERS
+        mock_sleep.assert_called_once_with(1)  # 2^0 = 1 second (fallback exponential backoff)
+
+    @patch("trapi_client.time.sleep")
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_http_500_retries_and_succeeds(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """HTTP 500 is retried and succeeds on the third attempt."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.side_effect = [
+            _make_error_response(500, "Internal Server Error"),
+            _make_error_response(500, "Internal Server Error"),
+            _make_ok_response(SAMPLE_PLAYERS),
+        ]
+
+        roster = fetch_1985_yankees_roster()
+
+        assert roster == SAMPLE_PLAYERS
+        assert mock_post.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    @patch("trapi_client.time.sleep")
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_exponential_backoff_delays(self, mock_post, mock_token, mock_sleep, monkeypatch):
+        """Retry delays follow exponential backoff: 1s, 2s, 4s."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.return_value = _make_error_response(500, "Internal Server Error")
+
+        with pytest.raises(RuntimeError):
+            fetch_1985_yankees_roster()
+
+        sleep_calls = [c.args[0] for c in mock_sleep.call_args_list]
+        assert sleep_calls == [1, 2, 4]
+
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_http_401_does_not_retry(self, mock_post, mock_token, monkeypatch):
+        """HTTP 401 (non-retryable) raises RuntimeError immediately without retrying."""
+        monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
+        mock_post.return_value = _make_error_response(401, "Unauthorized")
+
+        with pytest.raises(RuntimeError, match="TRAPI request failed with HTTP 401"):
+            fetch_1985_yankees_roster()
+
+        assert mock_post.call_count == 1  # no retries
 
     def test_missing_endpoint_raises_value_error(self, monkeypatch):
         """ValueError raised when TRAPI_ENDPOINT is not set."""

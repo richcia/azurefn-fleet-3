@@ -195,10 +195,7 @@ jobs:
             ISSUE_TITLE="[Task ${TASK_ID}] ${TASK_TITLE}"
             echo "Issue title: $ISSUE_TITLE"
 
-            ISSUE_STATE="closed"
-            if [ "${TASK_TYPE,,}" = "app" ]; then
-              ISSUE_STATE="open"
-            fi
+            ISSUE_STATE="open"
             echo "Task type: ${TASK_TYPE:-unknown}; target issue state: $ISSUE_STATE"
 
             LABELS=$(jq -r '(.labels // [])[]' <<< "$task")

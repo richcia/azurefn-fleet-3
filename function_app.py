@@ -13,7 +13,7 @@ logger = logging.getLogger("function_app")
 
 
 @app.timer_trigger(
-    schedule="0 0 0 * * *",
+    schedule="0 0 0 * * *",  # Six-field Azure CRON: second minute hour day month dayOfWeek — runs at 00:00:00 UTC daily
     arg_name="mytimer",
     run_on_startup=False,
     use_monitor=False,

@@ -315,7 +315,9 @@ class TestFetch1985YankeesRoster:
         with pytest.raises(ValueError, match="non-JSON body"):
             fetch_1985_yankees_roster()
 
-
+    @patch("trapi_client._get_bearer_token", return_value="fake-token")
+    @patch("trapi_client.requests.post")
+    def test_markdown_fenced_content_is_parsed(self, mock_post, mock_token, monkeypatch):
         """Content wrapped in markdown fences is correctly parsed."""
         monkeypatch.setenv("TRAPI_ENDPOINT", "https://trapi.example.com")
         fenced = "```json\n" + json.dumps(SAMPLE_PLAYERS) + "\n```"

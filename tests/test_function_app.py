@@ -52,8 +52,10 @@ class TestNightlyRosterSync:
 
         messages = [r.message for r in caplog.records]
         assert any("nightly_roster_sync: starting" in m for m in messages), "Expected 'starting' log entry"
+        assert any("initiating TRAPI call" in m for m in messages), "Expected 'initiating TRAPI call' log entry"
         assert any("fetched 3 players" in m for m in messages), "Expected roster count (3) in log"
         assert any("roster-20240101.json" in m for m in messages), "Expected blob name in log"
+        assert any("nightly_roster_sync: complete" in m for m in messages), "Expected 'complete' log entry"
 
     @patch("function_app.trapi_client.fetch_1985_yankees_roster", side_effect=RuntimeError("TRAPI down"))
     def test_fetch_error_is_logged_and_re_raised(self, mock_fetch, caplog):

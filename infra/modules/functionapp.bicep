@@ -16,6 +16,9 @@ param trapiDeploymentName string
 @description('TRAPI API version.')
 param trapiApiVersion string
 
+@description('Application Insights connection string for telemetry.')
+param appInsightsConnectionString string
+
 @description('Resource tags applied to all resources in this module.')
 param tags object = {}
 
@@ -84,6 +87,10 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'python'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsightsConnectionString
         }
       ]
     }

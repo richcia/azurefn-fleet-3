@@ -1,5 +1,15 @@
 # Copilot Review Instructions (Repository-wide)
 
+## General Guidelines for Generating Code
+
+- All code should follow the project's coding standards and best practices.
+- Ensure code is well-documented, with clear comments explaining complex logic.
+- Write unit tests for new functionality and ensure existing tests pass.
+- Keep functions and methods small and focused on a single responsibility.
+- Use meaningful variable and function names that convey intent.
+- All code files should be created in /src folder
+
+
 ## General Guidelines for Reviewing Pull Requests in this Repository
 
 When reviewing pull requests in this repository:

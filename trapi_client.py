@@ -1,8 +1,10 @@
 """TRAPI client for querying GPT-4o via Azure OpenAI endpoint."""
 
 import json
+import logging
 import os
 import re
+import time
 
 import requests
 from azure.identity import DefaultAzureCredential
@@ -11,9 +13,17 @@ from azure.identity import DefaultAzureCredential
 # Authentication
 # ---------------------------------------------------------------------------
 
+logger = logging.getLogger("trapi_client")
+
 _DEFAULT_AZURE_CREDENTIAL = DefaultAzureCredential()
 
 _TRAPI_SCOPE = "https://cognitiveservices.azure.com/.default"
+
+# ---------------------------------------------------------------------------
+# Retry configuration
+# ---------------------------------------------------------------------------
+
+_MAX_RETRIES = 3  # maximum number of retry attempts after the initial request
 
 
 def _get_bearer_token() -> str:
@@ -153,10 +163,35 @@ def fetch_1985_yankees_roster() -> list:
         "temperature": 0,
     }
 
-    response = requests.post(url, headers=headers, json=payload, timeout=60)
+    for attempt in range(_MAX_RETRIES + 1):
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
 
-    if not response.ok:
+        if response.ok:
+            break
+
+        retryable = response.status_code == 429 or 500 <= response.status_code < 600
+        if retryable and attempt < _MAX_RETRIES:
+            delay = 2 ** attempt  # 1 s, 2 s, 4 s
+            logger.warning(
+                "TRAPI request returned HTTP %s (attempt %d/%d); "
+                "retrying in %ds — endpoint=%s",
+                response.status_code,
+                attempt + 1,
+                _MAX_RETRIES + 1,
+                delay,
+                url,
+            )
+            time.sleep(delay)
+            continue
+
         body_preview = response.text[:200] + ("..." if len(response.text) > 200 else "")
+        logger.error(
+            "TRAPI request failed — endpoint=%s, status=%s, body_length=%d: %s",
+            url,
+            response.status_code,
+            len(response.text),
+            body_preview,
+        )
         raise RuntimeError(
             f"TRAPI request failed with HTTP {response.status_code} "
             f"(body length={len(response.text)}): {body_preview}"

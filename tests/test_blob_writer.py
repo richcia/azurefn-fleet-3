@@ -113,10 +113,11 @@ class TestWriteRosterBlob:
         with pytest.raises(HttpResponseError):
             write_roster_blob(SAMPLE_ROSTER)
 
+    @patch("blob_writer.time.sleep")
     @patch("blob_writer.BlobServiceClient")
     @patch("blob_writer._CREDENTIAL")
-    def test_storage_sdk_service_request_error_propagates(self, mock_cred, mock_bsc, monkeypatch):
-        """ServiceRequestError (e.g. network failure) from the storage SDK is propagated to the caller."""
+    def test_storage_sdk_service_request_error_propagates(self, mock_cred, mock_bsc, mock_sleep, monkeypatch):
+        """ServiceRequestError (e.g. network failure) is retried and re-raised after max retries."""
         monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
 
         mock_blob_client = MagicMock()
@@ -125,3 +126,83 @@ class TestWriteRosterBlob:
 
         with pytest.raises(ServiceRequestError):
             write_roster_blob(SAMPLE_ROSTER)
+
+        assert mock_blob_client.upload_blob.call_count == 4  # 1 initial + 3 retries
+        assert mock_sleep.call_count == 3
+
+    @patch("blob_writer.time.sleep")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_service_request_error_retries_and_succeeds(self, mock_cred, mock_bsc, mock_sleep, monkeypatch):
+        """ServiceRequestError on first attempt is retried and succeeds on second attempt."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = [
+            ServiceRequestError(message="Connection timeout"),
+            None,  # success on second attempt
+        ]
+
+        result = write_roster_blob(SAMPLE_ROSTER)
+
+        assert result is not None
+        assert mock_blob_client.upload_blob.call_count == 2
+        mock_sleep.assert_called_once_with(1)  # 2^0 = 1 second delay
+
+    @patch("blob_writer.time.sleep")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_service_unavailable_503_retries_and_succeeds(self, mock_cred, mock_bsc, mock_sleep, monkeypatch):
+        """HttpResponseError with status 503 is retried and succeeds on the next attempt."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        transient_503 = HttpResponseError(message="ServiceUnavailable")
+        transient_503.status_code = 503
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = [transient_503, None]
+
+        result = write_roster_blob(SAMPLE_ROSTER)
+
+        assert result is not None
+        assert mock_blob_client.upload_blob.call_count == 2
+        mock_sleep.assert_called_once_with(1)
+
+    @patch("blob_writer.time.sleep")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_service_unavailable_503_exhausts_retries_and_raises(self, mock_cred, mock_bsc, mock_sleep, monkeypatch):
+        """HttpResponseError with status 503 exhausts all retries and re-raises."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        transient_503 = HttpResponseError(message="ServiceUnavailable")
+        transient_503.status_code = 503
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = transient_503
+
+        with pytest.raises(HttpResponseError):
+            write_roster_blob(SAMPLE_ROSTER)
+
+        assert mock_blob_client.upload_blob.call_count == 4  # 1 initial + 3 retries
+        assert mock_sleep.call_count == 3
+
+    @patch("blob_writer.time.sleep")
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_exponential_backoff_delays_for_blob(self, mock_cred, mock_bsc, mock_sleep, monkeypatch):
+        """Retry delays follow exponential backoff: 1s, 2s, 4s."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+        mock_blob_client.upload_blob.side_effect = ServiceRequestError(message="timeout")
+
+        with pytest.raises(ServiceRequestError):
+            write_roster_blob(SAMPLE_ROSTER)
+
+        sleep_calls = [c.args[0] for c in mock_sleep.call_args_list]
+        assert sleep_calls == [1, 2, 4]

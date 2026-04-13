@@ -64,8 +64,13 @@ def _parse_roster_content(content: str) -> list:
     """
     stripped = content.strip()
 
-    # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
-    fenced = re.match(r"^```(?:json)?\s*\n?(.*?)\n?```$", stripped, re.DOTALL)
+    # Strip markdown code fences if present (for example ```json ... ```,
+    # ``` JSON ... ```, ``` json ... ```, or ``` ... ```).
+    fenced = re.match(
+        r"^```\s*(?:json)?\s*\n?(.*?)\n?```$",
+        stripped,
+        re.DOTALL | re.IGNORECASE,
+    )
     if fenced:
         stripped = fenced.group(1).strip()
 
@@ -151,8 +156,10 @@ def fetch_1985_yankees_roster() -> list:
     response = requests.post(url, headers=headers, json=payload, timeout=60)
 
     if not response.ok:
+        body_preview = response.text[:200] + ("..." if len(response.text) > 200 else "")
         raise RuntimeError(
-            f"TRAPI request failed with HTTP {response.status_code}: {response.text}"
+            f"TRAPI request failed with HTTP {response.status_code} "
+            f"(body length={len(response.text)}): {body_preview}"
         )
 
     try:
@@ -166,8 +173,9 @@ def fetch_1985_yankees_roster() -> list:
     try:
         content = body["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
+        top_keys = list(body.keys()) if isinstance(body, dict) else type(body).__name__
         raise ValueError(
-            f"Unexpected TRAPI response structure: {body}"
+            f"Unexpected TRAPI response structure (top-level keys: {top_keys})"
         ) from exc
 
     return _parse_roster_content(content)

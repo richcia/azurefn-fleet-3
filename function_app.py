@@ -16,7 +16,7 @@ logger = logging.getLogger("function_app")
     schedule="0 0 0 * * *",  # Six-field Azure CRON: second minute hour day month dayOfWeek — runs at 00:00:00 UTC daily
     arg_name="mytimer",
     run_on_startup=False,
-    use_monitor=False,
+    use_monitor=True,
 )
 def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
     """Fetch the 1985 Yankees roster from TRAPI and persist it to Blob Storage."""
@@ -29,5 +29,5 @@ def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
         blob_name = blob_writer.write_roster_blob(roster)
         logger.info("nightly_roster_sync: roster written to blob %s", blob_name)
     except Exception as exc:
-        logger.error("nightly_roster_sync: failed — %s", exc)
+        logger.exception("nightly_roster_sync: failed — %s", exc)
         raise

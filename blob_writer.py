@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timezone
 
 from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContentSettings
 
 _CREDENTIAL = DefaultAzureCredential()
 
@@ -41,6 +41,10 @@ def write_roster_blob(roster: list) -> str:
 
     client = BlobServiceClient(account_url=account_url, credential=_CREDENTIAL)
     blob_client = client.get_blob_client(container=_CONTAINER_NAME, blob=blob_name)
-    blob_client.upload_blob(json.dumps(roster), overwrite=True)
+    blob_client.upload_blob(
+        json.dumps(roster),
+        overwrite=True,
+        content_settings=ContentSettings(content_type="application/json; charset=utf-8"),
+    )
 
     return blob_name

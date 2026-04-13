@@ -33,18 +33,89 @@ Nightly Azure Function that fetches the 1985 New York Yankees roster from an Azu
         └── alerts.bicep
 ```
 
+## Prerequisites
+
+| Tool | Version | Notes |
+|---|---|---|
+| Python | 3.11 | `python --version` |
+| Azure Functions Core Tools | v4 | `func --version` — [install guide](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) |
+| Azure CLI | latest | `az --version` — [install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
+
 ## Local Development
 
 ```bash
+# 1. Clone and install dependencies
 pip install -r requirements.txt
+
+# 2. Create local settings file and fill in values
 cp local.settings.json.example local.settings.json
-# fill in values in local.settings.json
-python -m pytest tests/ -v --cov=function_app --cov=blob_writer --cov=trapi_client --cov-report=term-missing
+# Edit local.settings.json with your TRAPI endpoint, storage account name, etc.
+
+# 3. (Optional) Run the function locally with Core Tools
+func start
+
+# 4. Run unit tests with coverage
+python -m pytest tests/ -v \
+  --cov=function_app --cov=blob_writer --cov=trapi_client \
+  --cov-report=term-missing
 ```
+
+> **Note**: `DefaultAzureCredential` is used for both blob storage and TRAPI authentication. Run `az login` before starting the function locally to authenticate via the Azure CLI.
+
+## Environment Variables
+
+All settings live under `Values` in `local.settings.json` (local) or as App Settings in the Function App (production).
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `AzureWebJobsStorage__accountName` | Yes | — | Storage account name for identity-based AzureWebJobs storage (no connection string / shared key). |
+| `FUNCTIONS_WORKER_RUNTIME` | Yes | `python` | Must be `python` for Python Azure Functions. |
+| `FUNCTIONS_EXTENSION_VERSION` | Yes | `~4` | Azure Functions runtime version. Must be `~4`. |
+| `STORAGE_ACCOUNT_NAME` | Yes | — | Storage account name where the `yankees-roster` blob container lives. Same value as `AzureWebJobsStorage__accountName`. |
+| `TRAPI_ENDPOINT` | Yes | — | Azure OpenAI endpoint URL, e.g. `https://<resource>.openai.azure.com`. |
+| `TRAPI_DEPLOYMENT_NAME` | No | `gpt-4o` | Azure OpenAI deployment (model alias). |
+| `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Injected automatically in production via Bicep. Required for telemetry. |
 
 ## Deployment
 
-See [`infra/README.md`](infra/README.md) for full Bicep deployment instructions.
+### 1. Provision infrastructure
+
+```bash
+# Log in and set your subscription
+az login
+az account set --subscription <subscription-id>
+
+# Create a resource group (if it doesn't exist)
+az group create --name <resource-group-name> --location eastus
+
+# Deploy Bicep templates
+az deployment group create \
+  --resource-group <resource-group-name> \
+  --template-file infra/main.bicep \
+  --parameters trapiEndpoint=https://<your-aoai-endpoint>
+```
+
+Optional Bicep parameters:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `location` | Resource group region | Azure region for all resources |
+| `trapiEndpoint` | *(required)* | Azure OpenAI endpoint URL |
+| `trapiDeploymentName` | `gpt-4o` | Azure OpenAI deployment name |
+| `trapiApiVersion` | `2024-02-01` | Azure OpenAI API version |
+| `alertEmailAddress` | `ops-alerts@example.com` | Email address for exception alert notifications |
+
+See [`infra/README.md`](infra/README.md) for full infrastructure details and outputs.
+
+### 2. Deploy function code
+
+```bash
+# Publish using Azure Functions Core Tools
+func azure functionapp publish <function-app-name>
+```
+
+The `storageAccountName` and `functionAppName` values are emitted as outputs from the Bicep deployment.
 
 ---
 

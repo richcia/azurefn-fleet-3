@@ -51,7 +51,9 @@ class TestNightlyRosterSync:
             nightly_roster_sync(timer)
 
         messages = [r.message for r in caplog.records]
-        assert any("nightly_roster_sync: starting" in m for m in messages), "Expected 'starting' log entry"
+        assert any("nightly_roster_sync: starting" in m and "past_due=False" in m for m in messages), (
+            "Expected 'starting' log entry with past_due=False"
+        )
         assert any("initiating TRAPI call" in m for m in messages), "Expected 'initiating TRAPI call' log entry"
         assert any("fetched 3 players" in m for m in messages), "Expected roster count (3) in log"
         assert any("roster-20240101.json" in m for m in messages), "Expected blob name in log"
@@ -94,6 +96,18 @@ class TestNightlyRosterSync:
         messages = [r.message for r in caplog.records]
         assert any("nightly_roster_sync: starting" in m for m in messages), "Expected 'starting' log entry"
         assert any("fetched 0 players" in m for m in messages), "Expected count 0 in log"
+
+    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
+    @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
+    def test_past_due_logged_in_starting_message(self, mock_fetch, mock_write, caplog):
+        """past_due flag is included in the starting log for operational visibility."""
+        timer = _make_timer_request(past_due=True)
+
+        with caplog.at_level(logging.INFO, logger="function_app"):
+            nightly_roster_sync(timer)
+
+        messages = [r.message for r in caplog.records]
+        assert any("past_due=True" in m for m in messages), "Expected past_due=True in starting log"
 
     def test_timer_trigger_schedule_is_nightly_midnight(self):
         """Timer Trigger CRON expression matches the agreed nightly midnight schedule."""

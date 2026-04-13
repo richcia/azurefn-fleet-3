@@ -20,7 +20,7 @@ logger = logging.getLogger("function_app")
 )
 def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
     """Fetch the 1985 Yankees roster from TRAPI and persist it to Blob Storage."""
-    logger.info("nightly_roster_sync: starting")
+    logger.info("nightly_roster_sync: starting (past_due=%s)", mytimer.past_due)
 
     try:
         logger.info("nightly_roster_sync: initiating TRAPI call")

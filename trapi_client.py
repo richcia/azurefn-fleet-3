@@ -171,7 +171,16 @@ def fetch_1985_yankees_roster() -> list:
 
         retryable = response.status_code == 429 or 500 <= response.status_code < 600
         if retryable and attempt < _MAX_RETRIES:
-            delay = 2 ** attempt  # 1 s, 2 s, 4 s
+            # For 429, honour the server-provided Retry-After header when present;
+            # fall back to exponential backoff for 5xx or when the header is absent.
+            delay = 2 ** attempt  # default: 1 s, 2 s, 4 s
+            if response.status_code == 429:
+                retry_after = response.headers.get("Retry-After")
+                if retry_after is not None:
+                    try:
+                        delay = int(retry_after)
+                    except (ValueError, TypeError):
+                        pass  # non-integer format (e.g. HTTP-date); keep exponential backoff
             logger.warning(
                 "TRAPI request returned HTTP %s (attempt %d/%d); "
                 "retrying in %ds — endpoint=%s",

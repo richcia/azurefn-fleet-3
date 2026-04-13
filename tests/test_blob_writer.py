@@ -75,6 +75,20 @@ class TestWriteRosterBlob:
         call_kwargs = mock_bsc.call_args[1]
         assert call_kwargs["account_url"] == "https://myaccount.blob.core.windows.net"
 
+    @patch("blob_writer.BlobServiceClient")
+    @patch("blob_writer._CREDENTIAL")
+    def test_sdk_retries_disabled(self, mock_cred, mock_bsc, monkeypatch):
+        """BlobServiceClient is created with retry_total=0 to disable SDK built-in retries."""
+        monkeypatch.setenv("STORAGE_ACCOUNT_NAME", "myaccount")
+
+        mock_blob_client = MagicMock()
+        mock_bsc.return_value.get_blob_client.return_value = mock_blob_client
+
+        write_roster_blob(SAMPLE_ROSTER)
+
+        call_kwargs = mock_bsc.call_args[1]
+        assert call_kwargs["retry_total"] == 0
+
     def test_missing_storage_account_name_raises_value_error(self, monkeypatch):
         """ValueError raised when STORAGE_ACCOUNT_NAME is not set."""
         monkeypatch.delenv("STORAGE_ACCOUNT_NAME", raising=False)

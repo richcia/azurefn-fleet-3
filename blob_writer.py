@@ -42,6 +42,11 @@ def write_roster_blob(roster: list) -> str:
 
     Raises:
         ValueError: If STORAGE_ACCOUNT_NAME is not set.
+        ServiceRequestError: If a transient network error persists after all
+            retries are exhausted (e.g. connection timeout, DNS failure).
+        HttpResponseError: If Azure Storage returns a non-transient HTTP error
+            (e.g. 403 Forbidden), or returns 503 ServiceUnavailable and all
+            retries are exhausted.
     """
     account_name = os.environ.get("STORAGE_ACCOUNT_NAME")
     if not account_name:
@@ -50,7 +55,9 @@ def write_roster_blob(roster: list) -> str:
     account_url = f"https://{account_name}.blob.core.windows.net"
     blob_name = f"roster-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
 
-    client = BlobServiceClient(account_url=account_url, credential=_CREDENTIAL)
+    client = BlobServiceClient(
+        account_url=account_url, credential=_CREDENTIAL, retry_total=0
+    )
     blob_client = client.get_blob_client(container=_CONTAINER_NAME, blob=blob_name)
 
     for attempt in range(_MAX_RETRIES + 1):

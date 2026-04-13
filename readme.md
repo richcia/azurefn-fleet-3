@@ -75,7 +75,7 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 | `TRAPI_ENDPOINT` | Yes | — | Azure OpenAI endpoint URL, e.g. `https://<resource>.openai.azure.com`. |
 | `TRAPI_DEPLOYMENT_NAME` | No | `gpt-4o` | Azure OpenAI deployment (model alias). |
 | `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Injected automatically in production via Bicep. Required for telemetry. |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Optional (recommended); if unset, telemetry is disabled locally. Injected automatically in production via Bicep. |
 
 ## Deployment
 
@@ -96,15 +96,15 @@ az deployment group create \
   --parameters trapiEndpoint=https://<your-aoai-endpoint>
 ```
 
-Optional Bicep parameters:
+Bicep parameters:
 
-| Parameter | Default | Description |
-|---|---|---|
-| `location` | Resource group region | Azure region for all resources |
-| `trapiEndpoint` | *(required)* | Azure OpenAI endpoint URL |
-| `trapiDeploymentName` | `gpt-4o` | Azure OpenAI deployment name |
-| `trapiApiVersion` | `2024-02-01` | Azure OpenAI API version |
-| `alertEmailAddress` | `ops-alerts@example.com` | Email address for exception alert notifications |
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| `trapiEndpoint` | Yes | — | Azure OpenAI endpoint URL |
+| `location` | No | Resource group region | Azure region for all resources |
+| `trapiDeploymentName` | No | `gpt-4o` | Azure OpenAI deployment name |
+| `trapiApiVersion` | No | `2024-02-01` | Azure OpenAI API version |
+| `alertEmailAddress` | No | `ops-alerts@example.com` | Email address for exception alert notifications |
 
 See [`infra/README.md`](infra/README.md) for full infrastructure details and outputs.
 

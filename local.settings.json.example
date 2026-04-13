@@ -6,6 +6,7 @@
     "STORAGE_ACCOUNT_NAME": "<your-storage-account-name>",
     "TRAPI_ENDPOINT": "https://<your-azure-openai-endpoint>",
     "TRAPI_DEPLOYMENT_NAME": "gpt-4o",
-    "TRAPI_API_VERSION": "2024-02-01"
+    "TRAPI_API_VERSION": "2024-02-01",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=<key>;IngestionEndpoint=https://<region>.in.applicationinsights.azure.com/"
   }
 }

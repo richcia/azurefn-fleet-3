@@ -20,16 +20,38 @@ logger = logging.getLogger("function_app")
 )
 def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
     """Fetch the 1985 Yankees roster from TRAPI and persist it to Blob Storage."""
-    logger.info("nightly_roster_sync: starting (past_due=%s)", mytimer.past_due)
+    logger.info(
+        "nightly_roster_sync: starting (past_due=%s)",
+        mytimer.past_due,
+        extra={"custom_dimensions": {"event": "function_start", "past_due": mytimer.past_due}},
+    )
 
     try:
-        logger.info("nightly_roster_sync: initiating TRAPI call")
+        logger.info(
+            "nightly_roster_sync: initiating TRAPI call",
+            extra={"custom_dimensions": {"event": "trapi_call_start"}},
+        )
         roster = trapi_client.fetch_1985_yankees_roster()
-        logger.info("nightly_roster_sync: fetched %d players", len(roster))
+        logger.info(
+            "nightly_roster_sync: fetched %d players",
+            len(roster),
+            extra={"custom_dimensions": {"event": "trapi_call_complete", "player_count": len(roster)}},
+        )
 
         blob_name = blob_writer.write_roster_blob(roster)
-        logger.info("nightly_roster_sync: roster written to blob %s", blob_name)
-        logger.info("nightly_roster_sync: complete")
+        logger.info(
+            "nightly_roster_sync: roster written to blob %s",
+            blob_name,
+            extra={"custom_dimensions": {"event": "blob_write_complete", "blob_name": blob_name}},
+        )
+        logger.info(
+            "nightly_roster_sync: complete",
+            extra={"custom_dimensions": {"event": "function_complete"}},
+        )
     except Exception as exc:
-        logger.exception("nightly_roster_sync: failed — %s", exc)
+        logger.exception(
+            "nightly_roster_sync: failed — %s",
+            exc,
+            extra={"custom_dimensions": {"event": "function_error", "error": str(exc)}},
+        )
         raise

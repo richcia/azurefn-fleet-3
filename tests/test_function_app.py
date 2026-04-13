@@ -125,3 +125,71 @@ class TestNightlyRosterSync:
         assert schedule == "0 0 0 * * *", (
             f"Expected nightly CRON '0 0 0 * * *', got '{schedule}'"
         )
+
+
+class TestStructuredLogging:
+    """Verify that structured custom_dimensions are attached to log records."""
+
+    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
+    @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
+    def test_function_start_has_custom_dimensions(self, mock_fetch, mock_write, caplog):
+        """function_start log record carries past_due in custom_dimensions."""
+        timer = _make_timer_request(past_due=False)
+
+        with caplog.at_level(logging.INFO, logger="function_app"):
+            nightly_roster_sync(timer)
+
+        start_records = [
+            r for r in caplog.records
+            if hasattr(r, "custom_dimensions") and r.custom_dimensions.get("event") == "function_start"
+        ]
+        assert start_records, "Expected a log record with event=function_start in custom_dimensions"
+        assert start_records[0].custom_dimensions.get("past_due") is False
+
+    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
+    @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
+    def test_trapi_call_complete_has_player_count(self, mock_fetch, mock_write, caplog):
+        """trapi_call_complete log record carries the player_count in custom_dimensions."""
+        timer = _make_timer_request()
+
+        with caplog.at_level(logging.INFO, logger="function_app"):
+            nightly_roster_sync(timer)
+
+        trapi_records = [
+            r for r in caplog.records
+            if hasattr(r, "custom_dimensions") and r.custom_dimensions.get("event") == "trapi_call_complete"
+        ]
+        assert trapi_records, "Expected a log record with event=trapi_call_complete in custom_dimensions"
+        assert trapi_records[0].custom_dimensions.get("player_count") == len(SAMPLE_ROSTER)
+
+    @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
+    @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
+    def test_blob_write_complete_has_blob_name(self, mock_fetch, mock_write, caplog):
+        """blob_write_complete log record carries the blob_name in custom_dimensions."""
+        timer = _make_timer_request()
+
+        with caplog.at_level(logging.INFO, logger="function_app"):
+            nightly_roster_sync(timer)
+
+        blob_records = [
+            r for r in caplog.records
+            if hasattr(r, "custom_dimensions") and r.custom_dimensions.get("event") == "blob_write_complete"
+        ]
+        assert blob_records, "Expected a log record with event=blob_write_complete in custom_dimensions"
+        assert blob_records[0].custom_dimensions.get("blob_name") == "roster-20240101.json"
+
+    @patch("function_app.trapi_client.fetch_1985_yankees_roster", side_effect=RuntimeError("TRAPI down"))
+    def test_function_error_has_error_in_custom_dimensions(self, mock_fetch, caplog):
+        """function_error log record carries the error message in custom_dimensions."""
+        timer = _make_timer_request()
+
+        with caplog.at_level(logging.ERROR, logger="function_app"):
+            with pytest.raises(RuntimeError, match="TRAPI down"):
+                nightly_roster_sync(timer)
+
+        error_records = [
+            r for r in caplog.records
+            if hasattr(r, "custom_dimensions") and r.custom_dimensions.get("event") == "function_error"
+        ]
+        assert error_records, "Expected a log record with event=function_error in custom_dimensions"
+        assert "TRAPI down" in error_records[0].custom_dimensions.get("error", "")

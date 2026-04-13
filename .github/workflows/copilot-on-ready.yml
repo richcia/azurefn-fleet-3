@@ -22,4 +22,4 @@ jobs:
 
           gh pr edit \
             "${{ github.event.pull_request.html_url }}" \
-            --add-reviewer copilot
+            --add-reviewer copilot-swe-agent[bot]

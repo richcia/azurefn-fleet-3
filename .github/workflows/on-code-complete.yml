@@ -84,7 +84,13 @@ jobs:
 
             # Step 2: Mark PR as review-ready (undraft)
             echo "  Marking PR #$pr_number as $READY_FOR_CODE_REVIEW_LABEL"
-            output=$(gh pr ready "$pr_number" 2>&1) || echo "::error::Failed to mark PR #$pr_number as ready: $output"
+            pr_node_id=$(gh api "repos/${{ github.repository }}/pulls/$pr_number" --jq '.node_id' 2>&1) || {
+              echo "::error::Failed to get node_id for PR #$pr_number: $pr_node_id"
+              continue
+            }
+            output=$(gh api graphql \
+              -f query='mutation($pullRequestId: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) { pullRequest { number isDraft } } }' \
+              -f pullRequestId="$pr_node_id" 2>&1) || echo "::error::Failed to mark PR #$pr_number as ready via API: $output"
 
             # Step 3: Add Copilot as a reviewer
             echo "  Adding copilot-swe-agent[bot] as requested reviewer on PR #$pr_number"

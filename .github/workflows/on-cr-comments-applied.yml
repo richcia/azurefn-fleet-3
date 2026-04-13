@@ -11,6 +11,7 @@ jobs:
   merge-copilot-updated-prs:
     runs-on: ubuntu-latest
     permissions:
+      issues: write
       pull-requests: write
       contents: write
     env:
@@ -103,6 +104,12 @@ jobs:
               echo "Merging PR #$pr_number linked to issue #$issue_number after Copilot finished work"
               if gh pr merge "$pr_number" --merge --delete-branch; then
                 merged_count=$((merged_count + 1))
+                echo "  Step 3d: Close parent issue #$issue_number"
+                if gh issue close "$issue_number" --reason completed; then
+                  echo "Closed issue #$issue_number after merging PR #$pr_number."
+                else
+                  echo "Could not close issue #$issue_number after merging PR #$pr_number."
+                fi
               else
                 echo "Could not merge PR #$pr_number (checks/review requirements may still be pending)."
               fi

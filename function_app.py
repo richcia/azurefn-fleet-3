@@ -43,7 +43,7 @@ def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
         logger.info(
             "nightly_roster_sync: roster written to blob %s",
             blob_name,
-            extra={"custom_dimensions": {"event": "blob_write_complete", "blob_name": blob_name}},
+            extra={"custom_dimensions": {"event": "blob_write_complete", "blob_name": blob_name, "player_count": player_count}},
         )
         logger.info(
             "nightly_roster_sync: complete",

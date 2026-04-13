@@ -165,7 +165,7 @@ class TestStructuredLogging:
     @patch("function_app.blob_writer.write_roster_blob", return_value="roster-20240101.json")
     @patch("function_app.trapi_client.fetch_1985_yankees_roster", return_value=SAMPLE_ROSTER)
     def test_blob_write_complete_has_blob_name(self, mock_fetch, mock_write, caplog):
-        """blob_write_complete log record carries the blob_name in custom_dimensions."""
+        """blob_write_complete log record carries the blob_name and player_count in custom_dimensions."""
         timer = _make_timer_request()
 
         with caplog.at_level(logging.INFO, logger="function_app"):
@@ -177,6 +177,9 @@ class TestStructuredLogging:
         ]
         assert blob_records, "Expected a log record with event=blob_write_complete in custom_dimensions"
         assert blob_records[0].custom_dimensions.get("blob_name") == "roster-20240101.json"
+        assert blob_records[0].custom_dimensions.get("player_count") == len(SAMPLE_ROSTER), (
+            "blob_write_complete must carry player_count for traceability"
+        )
 
     @patch("function_app.trapi_client.fetch_1985_yankees_roster", side_effect=RuntimeError("TRAPI down"))
     def test_function_error_has_error_in_custom_dimensions(self, mock_fetch, caplog):

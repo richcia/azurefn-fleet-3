@@ -21,8 +21,6 @@ jobs:
         in Acceptance Criteria is met
         2. Build and run all unit tests related to the task, validate Acceptance Criteria is achieved and ensure test coverage 
         goals are met. If tests are failing, fix the code until all tests pass.
-        3. Once step 2 is complete, label the Issue with "Ready for Review" and comment on the issue to @Copilot with a request 
-        to review the code changes.
 
     steps:
       - name: Checkout Repository

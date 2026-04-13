@@ -1,0 +1,58 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write   # Required for OIDC token acquisition
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Function App to Azure
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install production dependencies
+        run: |
+          pip install \
+            --target=".python_packages/lib/site-packages" \
+            -r requirements-prod.txt
+
+      - name: Create deployment zip package
+        run: |
+          zip -r deploy.zip . \
+            --exclude "*.git*" \
+            --exclude "tests/*" \
+            --exclude ".github/*" \
+            --exclude "infra/*" \
+            --exclude "local.settings.json*" \
+            --exclude "*.md" \
+            --exclude "coverage.xml" \
+            --exclude '*__pycache__*' \
+            --exclude '*.pyc'
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy zip package to Azure Function App
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          package: deploy.zip

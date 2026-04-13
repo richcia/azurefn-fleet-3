@@ -8,6 +8,8 @@ param actionGroupName string
 param alertEmailAddress string
 
 @description('Short name for the Action Group (max 12 chars).')
+@minLength(1)
+@maxLength(12)
 param actionGroupShortName string = 'FnAlerts'
 
 @description('Name of the scheduled query alert rule for function exceptions.')

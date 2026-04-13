@@ -32,10 +32,11 @@ def nightly_roster_sync(mytimer: func.TimerRequest) -> None:
             extra={"custom_dimensions": {"event": "trapi_call_start"}},
         )
         roster = trapi_client.fetch_1985_yankees_roster()
+        player_count = len(roster)
         logger.info(
             "nightly_roster_sync: fetched %d players",
-            len(roster),
-            extra={"custom_dimensions": {"event": "trapi_call_complete", "player_count": len(roster)}},
+            player_count,
+            extra={"custom_dimensions": {"event": "trapi_call_complete", "player_count": player_count}},
         )
 
         blob_name = blob_writer.write_roster_blob(roster)

@@ -87,12 +87,22 @@ jobs:
             output=$(gh pr ready "$pr_number" 2>&1) || echo "::error::Failed to mark PR #$pr_number as ready: $output"
 
             # Step 3: Add Copilot as a reviewer
-            echo "  Adding @copilot as reviewer on PR #$pr_number"
-            output=$(gh pr edit "$pr_number" --add-reviewer "@copilot" 2>&1) || echo "::error::Failed to add @copilot as reviewer to PR #$pr_number: $output"
-
-            # Step 4: Request Copilot review via PR comment
-            echo "  Requesting Copilot review on PR #$pr_number"
-            output=$(gh pr comment "$pr_number" --body "@copilot review this PR" 2>&1) || echo "::error::Failed to comment on PR #$pr_number: $output"
+            echo "  Adding copilot-swe-agent[bot] as requested reviewer on PR #$pr_number"
+            reviewer_response_file=$(mktemp)
+            reviewer_status=$(curl -sS \
+              -o "$reviewer_response_file" \
+              -w "%{http_code}" \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/pulls/$pr_number/requested_reviewers" \
+              -d '{"reviewers":["copilot-swe-agent[bot]"]}' 2>&1)
+            if ! [[ "$reviewer_status" =~ ^2 ]]; then
+              output=$(cat "$reviewer_response_file")
+              echo "::error::Failed to add copilot-swe-agent[bot] as requested reviewer to PR #$pr_number: HTTP $reviewer_status $output"
+            fi
+            rm -f "$reviewer_response_file"
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)

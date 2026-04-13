@@ -34,24 +34,27 @@ jobs:
 
       - name: Process Copilot Completed PRs
         run: |
-          set -euo pipefail
+          set -uo pipefail
 
           if ! gh label list --limit 1000 --json name --jq '.[].name' | grep -Fxq "$READY_FOR_CODE_REVIEW_LABEL"; then
             echo "Creating missing label: $READY_FOR_CODE_REVIEW_LABEL"
-            gh label create "$READY_FOR_CODE_REVIEW_LABEL" --color "0e8a16" --description "Issue is ready for code review"
+            output=$(gh label create "$READY_FOR_CODE_REVIEW_LABEL" --color "0e8a16" --description "Issue is ready for code review" 2>&1) || echo "::error::Failed to create label: $output"
           fi
 
-          gh pr list --state open --limit 1000 --json number,isDraft,labels,closingIssuesReferences > all_open_prs.json
+          output=$(gh pr list --state open --limit 1000 --json number,isDraft,labels,closingIssuesReferences > all_open_prs.json 2>&1) || echo "::error::Failed to list pull requests: $output"
 
           processed_count=0
           while IFS= read -r pr_number; do
             [ -z "$pr_number" ] && continue
 
             copilot_work_finished=false
-            if gh api --paginate -H "Accept: application/vnd.github+json" \
+            output=$(gh api --paginate -H "Accept: application/vnd.github+json" \
               "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
-              --jq '.[] | select(.event == "copilot_work_finished") | .event' \
-              | grep -Fq "copilot_work_finished"; then
+              --jq '.[] | select(.event == "copilot_work_finished") | .event' 2>&1) || {
+              echo "::error::Failed to check copilot work status for PR #$pr_number: $output"
+              continue
+            }
+            if echo "$output" | grep -Fq "copilot_work_finished"; then
               copilot_work_finished=true
             fi
 
@@ -65,7 +68,7 @@ jobs:
             while IFS= read -r issue_number; do
               [ -z "$issue_number" ] && continue
               echo "  Labelling issue #$issue_number with '$READY_FOR_CODE_REVIEW_LABEL'"
-              gh issue edit "$issue_number" --add-label "$READY_FOR_CODE_REVIEW_LABEL" || true
+              output=$(gh issue edit "$issue_number" --add-label "$READY_FOR_CODE_REVIEW_LABEL" 2>&1) || echo "::error::Failed to add label to issue #$issue_number: $output"
             done < <(jq -r --argjson pr "$pr_number" \
               '.[] | select(.number == $pr) | .closingIssuesReferences[]?.number' \
               all_open_prs.json)
@@ -81,11 +84,11 @@ jobs:
 
             # Step 2: Add Copilot as a reviewer
             echo "  Adding @copilot as reviewer on PR #$pr_number"
-            gh pr edit "$pr_number" --add-reviewer "@copilot"
+            output=$(gh pr edit "$pr_number" --add-reviewer "@copilot" 2>&1) || echo "::error::Failed to add @copilot as reviewer to PR #$pr_number: $output"
 
             # Step 3: Mark PR as review-ready (undraft)
             echo "  Marking PR #$pr_number as $READY_FOR_CODE_REVIEW_LABEL"
-            gh pr ready "$pr_number"
+            output=$(gh pr ready "$pr_number" 2>&1) || echo "::error::Failed to mark PR #$pr_number as ready: $output"
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)

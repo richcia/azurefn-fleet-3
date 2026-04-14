@@ -70,6 +70,7 @@ jobs:
 
           echo "::group::Create and prepare working branch"
 
+          git pull
           git checkout -b "$BRANCH_NAME"
           echo "::endgroup::"
 

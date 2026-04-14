@@ -49,4 +49,29 @@ jobs:
             exit 1
           fi
 
+          BASE_BRANCH="${{ github.ref_name }}"
+          RUN_ID="${{ github.run_id }}"
+          BRANCH_NAME="copilot/design-review-${RUN_ID}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          git checkout "$BASE_BRANCH" -- "$DESIGN_SPEC_FILE"
+
           gh copilot --agent design-review-agent --prompt "Perform a design review of $DESIGN_SPEC_FILE and create a PR with suggested changes. Only use spec.md as input and do not review other files in the repo"
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes produced by design review; skipping commit and PR creation."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "docs: apply design review updates for $DESIGN_SPEC_FILE"
+          git push --set-upstream origin "$BRANCH_NAME"
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$BRANCH_NAME" \
+            --title "Design review updates for $DESIGN_SPEC_FILE" \
+            --body "Automated design review updates generated from $DESIGN_SPEC_FILE by design-review-agent."

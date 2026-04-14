@@ -30,11 +30,17 @@ jobs:
           exec > >(tee -a "$LOG_FILE") 2>&1
           trap 'EXIT_CODE=$?; echo "::group::Configure GitHub Auth failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
 
+          echo "::notice::[on-design] Starting authentication setup"
+
           if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ] && false; then
             echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+            echo "::notice::[on-design] Using COPILOT_GITHUB_TOKEN"
           else
             echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+            echo "::notice::[on-design] Using github.token"
           fi
+
+          echo "::notice::[on-design] Authentication setup complete"
 
       - name: Run Design Review Agent
         run: |
@@ -43,7 +49,10 @@ jobs:
           exec > >(tee -a "$LOG_FILE") 2>&1
           trap 'EXIT_CODE=$?; echo "::group::Run Design Review Agent failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
 
+          echo "::notice::[on-design] Starting design review workflow"
+
           DESIGN_SPEC_FILE="${{ inputs.design_spec_file }}"
+          echo "::notice::[on-design] Input design spec file: $DESIGN_SPEC_FILE"
           if [ ! -f "$DESIGN_SPEC_FILE" ]; then
             echo "Design spec file not found: $DESIGN_SPEC_FILE"
             exit 1
@@ -53,25 +62,42 @@ jobs:
           RUN_ID="${{ github.run_id }}"
           BRANCH_NAME="copilot/design-review-${RUN_ID}"
 
+          echo "::notice::[on-design] Base branch: $BASE_BRANCH"
+          echo "::notice::[on-design] Working branch: $BRANCH_NAME"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          echo "::group::Create and prepare working branch"
+
           git checkout -b "$BRANCH_NAME"
           git checkout "$BASE_BRANCH" -- "$DESIGN_SPEC_FILE"
+          echo "::endgroup::"
+
+          echo "::group::Run design review agent"
 
           gh copilot --agent design-review-agent --prompt "Perform a design review of $DESIGN_SPEC_FILE and create a PR with suggested changes. Only use spec.md as input and do not review other files in the repo"
+          echo "::endgroup::"
 
           if [ -z "$(git status --porcelain)" ]; then
             echo "No changes produced by design review; skipping commit and PR creation."
             exit 0
           fi
 
+          echo "::group::Commit and push changes"
+
           git add -A
           git commit -m "docs: apply design review updates for $DESIGN_SPEC_FILE"
           git push --set-upstream origin "$BRANCH_NAME"
+          echo "::endgroup::"
+
+          echo "::group::Create pull request"
 
           gh pr create \
             --base "$BASE_BRANCH" \
             --head "$BRANCH_NAME" \
             --title "Design review updates for $DESIGN_SPEC_FILE" \
             --body "Automated design review updates generated from $DESIGN_SPEC_FILE by design-review-agent."
+          echo "::endgroup::"
+
+          echo "::notice::[on-design] Design review workflow completed successfully"

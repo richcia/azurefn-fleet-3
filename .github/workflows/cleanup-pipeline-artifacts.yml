@@ -127,6 +127,33 @@ jobs:
             find src -mindepth 1 -delete
           fi
 
+      - name: Delete All Files In infra
+        run: |
+          set -euo pipefail
+
+          if [ -d "infra" ]; then
+            find infra -mindepth 1 -delete
+          fi
+
+      - name: Delete All Files In tests
+        run: |
+          set -euo pipefail
+
+          if [ -d "tests" ]; then
+            find tests -mindepth 1 -delete
+          fi
+
+      - name: Delete CI.yml and CD.yml workflows
+        run: |
+          set -euo pipefail
+
+          if [ -f ".github/workflows/CI.yml" ]; then
+            rm -f .github/workflows/CI.yml
+          fi
+          if [ -f ".github/workflows/CD.yml" ]; then
+            rm -f .github/workflows/CD.yml
+          fi
+
       - name: Commit Cleanup Changes
         run: |
           set -euo pipefail

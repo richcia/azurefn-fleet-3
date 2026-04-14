@@ -30,7 +30,7 @@ jobs:
           exec > >(tee -a "$LOG_FILE") 2>&1
           trap 'EXIT_CODE=$?; echo "::group::Configure GitHub Auth failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
 
-          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ] && false; then
             echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
           else
             echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"

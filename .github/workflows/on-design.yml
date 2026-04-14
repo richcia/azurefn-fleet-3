@@ -76,7 +76,7 @@ jobs:
 
           echo "::group::Run design review agent"
 
-          gh copilot --agent design-review-agent --prompt "Perform a design review of $DESIGN_SPEC_FILE and create a PR with suggested changes. Only use spec.md as input and do not review other files in the repo"
+          gh copilot --agent design-review-agent --prompt "Perform a design review of $DESIGN_SPEC_FILE and create a PR with suggested changes. Only use spec.md as input and do not review other files in the repo" 2>&1 | tee -a "$LOG_FILE"
           echo "::endgroup::"
 
           if [ -z "$(git status --porcelain)" ]; then

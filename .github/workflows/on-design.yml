@@ -85,19 +85,5 @@ jobs:
           fi
 
           echo "::group::Commit and push changes"
-
-          git add -A
-          git commit -m "docs: apply design review updates for $DESIGN_SPEC_FILE"
-          git push --set-upstream origin "$BRANCH_NAME"
-          echo "::endgroup::"
-
-          echo "::group::Create pull request"
-
-          gh pr create \
-            --base "$BASE_BRANCH" \
-            --head "$BRANCH_NAME" \
-            --title "Design review updates for $DESIGN_SPEC_FILE" \
-            --body "Automated design review updates generated from $DESIGN_SPEC_FILE by design-review-agent."
-          echo "::endgroup::"
-
           echo "::notice::[on-design] Design review workflow completed successfully"
+          

@@ -214,3 +214,20 @@ To validate that the alert rule fires correctly, inject a test failure by tempor
 - [ ] Run the KQL queries above after the first nightly execution to confirm traces appear
 - [ ] Inject a test failure and confirm alert notification is received
 
+
+
+
+
+          git add -A
+          git commit -m "docs: apply design review updates for $DESIGN_SPEC_FILE"
+          git push --set-upstream origin "$BRANCH_NAME"
+          echo "::endgroup::"
+
+          echo "::group::Create pull request"
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$BRANCH_NAME" \
+            --title "Design review updates for $DESIGN_SPEC_FILE" \
+            --body "Automated design review updates generated from $DESIGN_SPEC_FILE by design-review-agent."
+          echo "::endgroup::"

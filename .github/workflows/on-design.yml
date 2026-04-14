@@ -71,7 +71,6 @@ jobs:
           echo "::group::Create and prepare working branch"
 
           git checkout -b "$BRANCH_NAME"
-          git checkout "$BASE_BRANCH" -- "$DESIGN_SPEC_FILE"
           echo "::endgroup::"
 
           echo "::group::Run design review agent"

@@ -1,4 +1,4 @@
-name: Design - Review Spec and Create PR
+name: Design - Review Spec
 
 on:
   workflow_dispatch:
@@ -26,6 +26,10 @@ jobs:
       - name: Configure GitHub Auth
         run: |
           set -euo pipefail
+          LOG_FILE=$(mktemp)
+          exec > >(tee -a "$LOG_FILE") 2>&1
+          trap 'EXIT_CODE=$?; echo "::group::Configure GitHub Auth failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
+
           if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
             echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
           else
@@ -35,6 +39,9 @@ jobs:
       - name: Run Design Review Agent
         run: |
           set -euo pipefail
+          LOG_FILE=$(mktemp)
+          exec > >(tee -a "$LOG_FILE") 2>&1
+          trap 'EXIT_CODE=$?; echo "::group::Run Design Review Agent failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
 
           DESIGN_SPEC_FILE="${{ inputs.design_spec_file }}"
           if [ ! -f "$DESIGN_SPEC_FILE" ]; then

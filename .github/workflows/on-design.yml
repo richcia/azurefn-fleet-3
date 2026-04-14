@@ -1,0 +1,45 @@
+name: Design - Review Spec and Create PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      design_spec_file:
+        description: Design spec filename to review
+        required: true
+        default: spec.md
+        type: string
+
+jobs:
+  design-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure GitHub Auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.COPILOT_GITHUB_TOKEN }}" ]; then
+            echo "GH_TOKEN=${{ secrets.COPILOT_GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+          else
+            echo "GH_TOKEN=${{ github.token }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run Design Review Agent
+        run: |
+          set -euo pipefail
+
+          DESIGN_SPEC_FILE="${{ inputs.design_spec_file }}"
+          if [ ! -f "$DESIGN_SPEC_FILE" ]; then
+            echo "Design spec file not found: $DESIGN_SPEC_FILE"
+            exit 1
+          fi
+
+          gh copilot --agent design-review-agent --prompt "Perform a design review of $DESIGN_SPEC_FILE and create a PR with suggested changes. Only use spec.md as input and do not review other files in the repo"

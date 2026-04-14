@@ -1,4 +1,4 @@
-name: Code Review - Complete
+name: Implement - Apply Code Review Changes
 
 on:
   pull_request_review:

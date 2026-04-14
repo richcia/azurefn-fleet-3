@@ -1,4 +1,4 @@
-name: Assign Tasks
+name: Assign - Assign Tasks to Agents for Implementation
 
 on:
   workflow_call:

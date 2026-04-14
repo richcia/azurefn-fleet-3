@@ -1,4 +1,4 @@
-name: Design - Complete
+name: Plan - Generate Plan for Agents
 
 on:
   push:

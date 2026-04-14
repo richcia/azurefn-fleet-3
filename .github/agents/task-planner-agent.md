@@ -20,7 +20,8 @@ Your job is to transform a design/spec document into an implementation-ready eng
 - Include application and infrastructure tasks required to ship and operate the solution.
 - Cover build/test/release and operational readiness tasks when required by the spec.
 - Explicitly call out unknowns, assumptions, and external dependencies that can block implementation.
-- Include an explicit task with the title of "Review and approve implementation task plan" to approve this task plan. Automatically mark it complete if the input spec specifies that the plan should be automatically approved. Include a visual dependency graph of the tasks in the plan.
+- Include an explicit task with the title of "Review and approve implementation task plan" to approve this task plan. Automatically mark it complete if the input spec specifies that the plan should be automatically approved. 
+- In "Review and approve implementation task plan" include a visual dependency graph of all the tasks in the plan
 
 ## Planning Principles
 1. Derive tasks directly from explicit requirements and constraints in the spec.

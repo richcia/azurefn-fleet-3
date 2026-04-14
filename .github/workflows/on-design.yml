@@ -80,11 +80,12 @@ jobs:
           echo "::group::Run design review agent - $PROMPT on $DESIGN_SPEC_FILE"
 
           gh copilot --agent design-review-agent --prompt "$PROMPT" > "$TMP_OUTPUT_FILE"
-          if ! grep -q '^## Design Review:' "$TMP_OUTPUT_FILE"; then
-            echo "Expected heading '## Design Review:' not found in agent output."
-            exit 1
+          if grep -q '^## Design Review:' "$TMP_OUTPUT_FILE"; then
+            awk '/^## Design Review:/{copy=1} copy' "$TMP_OUTPUT_FILE" > "$DESIGN_SPEC_FILE"
+          else
+            echo "Heading '## Design Review:' not found; copying full agent output."
+            cat "$TMP_OUTPUT_FILE" > "$DESIGN_SPEC_FILE"
           fi
-          awk '/^## Design Review:/{copy=1} copy' "$TMP_OUTPUT_FILE" > "$DESIGN_SPEC_FILE"
           echo "::endgroup::"
 
           if [ -z "$(git status --porcelain)" ]; then

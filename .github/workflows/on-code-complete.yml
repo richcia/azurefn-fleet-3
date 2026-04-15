@@ -47,6 +47,8 @@ jobs:
           while IFS= read -r pr_number; do
             [ -z "$pr_number" ] && continue
 
+            echo "Processing PR #$pr_number"
+
             copilot_work_finished=false
             output=$(gh api --paginate -H "Accept: application/vnd.github+json" \
               "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
@@ -54,11 +56,15 @@ jobs:
               echo "::error::Failed to check copilot work status for PR #$pr_number: $output"
               continue
             }
+
+            echo "  Checking if Copilot has finished work on PR #$pr_number"
+
             if echo "$output" | grep -Fq "copilot_work_finished"; then
               copilot_work_finished=true
             fi
 
             if [ "$copilot_work_finished" != true ]; then
+              echo "  Copilot has not finished work on PR #$pr_number — skipping..."
               continue
             fi
 

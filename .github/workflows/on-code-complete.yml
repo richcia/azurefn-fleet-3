@@ -92,6 +92,25 @@ jobs:
               -f query='mutation($pullRequestId: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) { pullRequest { number isDraft } } }' \
               -f pullRequestId="$pr_node_id" 2>&1) || echo "::error::Failed to mark PR #$pr_number as ready via API: $output"
 
+            # Step 3: Ask code-review-agent to review this PR and post results
+            echo "  Running Code Review Agent for PR #$pr_number"
+            REVIEW_PROMPT=$(cat <<EOF
+            Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review.
+            Focus on correctness, regressions, security risks, and missing tests.
+            Include file-level findings with severity and actionable recommendations.
+            EOF
+            )
+
+            REVIEW_OUTPUT_FILE=$(mktemp)
+            output=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {
+              echo "::error::Failed to run code-review-agent for PR #$pr_number: $output"
+              continue
+            }
+            printf "%s\n" "$output" > "$REVIEW_OUTPUT_FILE"
+
+            output=$(gh pr comment "$pr_number" --body-file "$REVIEW_OUTPUT_FILE" 2>&1) || \
+              echo "::error::Failed to post code review comment to PR #$pr_number: $output"
+
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
 

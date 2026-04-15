@@ -94,12 +94,8 @@ jobs:
 
             # Step 3: Ask code-review-agent to review this PR and post results
             echo "  Running Code Review Agent for PR #$pr_number"
-            REVIEW_PROMPT=$(cat <<EOF
-               Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review.
-               Focus on correctness, regressions, security risks, and missing tests.
-               Include file-level findings with severity and actionable recommendations.
-            EOF
-            )
+
+            REVIEW_PROMPT="Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review. Focus on correctness, regressions, security risks, and missing tests. Include file-level findings with severity and actionable recommendations."
 
             REVIEW_OUTPUT_FILE=$(mktemp)
             output=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {

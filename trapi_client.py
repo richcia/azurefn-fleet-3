@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import pathlib
 import re
 import time
 
@@ -42,15 +43,19 @@ _SYSTEM_PROMPT = (
     "\"name\" (string) and \"position\" (string)."
 )
 
-_USER_PROMPT = (
-    "List every player on the 1985 New York Yankees roster. "
-    "Return ONLY a JSON array where each element has the keys "
-    "\"name\" and \"position\". Do not include any markdown, explanation, "
-    "or additional text—only the raw JSON array."
-)
+_PROMPTS_DIR = pathlib.Path(__file__).parent / "prompts"
+_USER_PROMPT_FILE = _PROMPTS_DIR / "get_1985_yankees.txt"
+
+
+def _load_user_prompt() -> str:
+    """Load the user prompt from prompts/get_1985_yankees.txt at runtime."""
+    return _USER_PROMPT_FILE.read_text(encoding="utf-8").strip()
+
 
 _DEFAULT_DEPLOYMENT = "gpt-4o"
+_DEFAULT_MODEL_VERSION = "gpt-4o-2024-08-06"
 _DEFAULT_API_VERSION = "2024-02-01"
+_REQUEST_TIMEOUT = 45  # seconds
 
 
 # ---------------------------------------------------------------------------
@@ -156,15 +161,33 @@ def fetch_1985_yankees_roster() -> list:
         "Content-Type": "application/json",
     }
     payload = {
+        "model": os.environ.get("TRAPI_MODEL_VERSION", _DEFAULT_MODEL_VERSION),
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": _USER_PROMPT},
+            {"role": "user", "content": _load_user_prompt()},
         ],
         "temperature": 0,
     }
 
     for attempt in range(_MAX_RETRIES + 1):
-        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=_REQUEST_TIMEOUT)
+        except requests.exceptions.Timeout as exc:
+            if attempt < _MAX_RETRIES:
+                delay = 2 ** attempt
+                logger.warning(
+                    "TRAPI request timed out (attempt %d/%d); retrying in %ds — endpoint=%s",
+                    attempt + 1,
+                    _MAX_RETRIES + 1,
+                    delay,
+                    url,
+                )
+                time.sleep(delay)
+                continue
+            raise RuntimeError(
+                f"TRAPI request timed out after {_REQUEST_TIMEOUT}s "
+                f"(all {_MAX_RETRIES + 1} attempts exhausted)"
+            ) from exc
 
         if response.ok:
             break

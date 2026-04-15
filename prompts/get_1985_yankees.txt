@@ -1,0 +1,1 @@
+List every player on the 1985 New York Yankees roster. Return ONLY a JSON array where each element has the keys "name" and "position". Do not include any markdown, explanation, or additional text—only the raw JSON array.

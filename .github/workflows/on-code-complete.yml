@@ -102,7 +102,7 @@ jobs:
             # Step 3: Ask code-review-agent to review this PR and post results
             echo "  Running Code Review Agent for PR #$pr_number"
 
-            REVIEW_PROMPT="Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review. Focus on correctness, regressions, security risks, and missing tests. Include file-level findings with severity and actionable recommendations."
+            REVIEW_PROMPT="Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review. Focus on correctness, regressions, security risks, and missing tests. Include file-level findings with severity and actionable recommendations. Create a review in the specified PR and add each code review comment to the PR using the GitHub API at correct location in code."
 
             echo "::group::Code Review Agent output for PR #$pr_number"
             REVIEW_OUTPUT=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {

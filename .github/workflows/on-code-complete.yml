@@ -104,24 +104,20 @@ jobs:
 
             REVIEW_PROMPT="Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review. Focus on correctness, regressions, security risks, and missing tests. Include file-level findings with severity and actionable recommendations."
 
-            REVIEW_OUTPUT_FILE=$(mktemp)
-            REVIEW_STDERR_FILE=$(mktemp)
             echo "::group::Code Review Agent output for PR #$pr_number"
-            gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" \
-              2> >(tee "$REVIEW_STDERR_FILE" >&2) | tee "$REVIEW_OUTPUT_FILE" || {
+            REVIEW_OUTPUT=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {
               echo "::endgroup::"
               echo "::error::Failed to run code-review-agent for PR #$pr_number"
               continue
             }
+            echo "$REVIEW_OUTPUT"
             echo "::endgroup::"
 
-            output=$(gh pr comment "$pr_number" --body-file "$REVIEW_OUTPUT_FILE" 2>&1) || {
-              echo "::endgroup::"
-              echo "::error::Failed to post code review comment to PR #$pr_number: $output"
+            echo "$REVIEW_OUTPUT" | gh pr comment "$pr_number" --body-file - 2>&1 || {
+              echo "::error::Failed to post code review comment to PR #$pr_number"
               continue
             }
             echo "::notice::Successfully posted code review to PR #$pr_number"
-            echo "::endgroup::"
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)

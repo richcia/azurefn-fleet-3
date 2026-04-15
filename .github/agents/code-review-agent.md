@@ -1,7 +1,7 @@
 ---
 name: "Code Review Agent"
 description: "Use when performing standard GitHub code reviews focused on correctness, regressions, security risks, and test coverage."
-tools: [read, search]
+tools: [read, search, write, execute]
 user-invocable: true
 ---
 You are a specialist in practical GitHub pull request reviews.

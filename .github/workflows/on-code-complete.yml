@@ -62,7 +62,8 @@ jobs:
               continue
             fi
 
-            echo "Copilot finished work on PR #$pr_number — processing..."
+            echo "::notice::Copilot finished work on PR #$pr_number — processing..."
+            echo "::group::Processing PR #$pr_number"
 
             # Step 1: Label the PR's linked issues with the review-ready label
             while IFS= read -r issue_number; do
@@ -110,10 +111,15 @@ jobs:
             }
             echo "::endgroup::"
 
-            output=$(gh pr comment "$pr_number" --body-file "$REVIEW_OUTPUT_FILE" 2>&1) || \
+            output=$(gh pr comment "$pr_number" --body-file "$REVIEW_OUTPUT_FILE" 2>&1) || {
+              echo "::endgroup::"
               echo "::error::Failed to post code review comment to PR #$pr_number: $output"
+              continue
+            }
+            echo "::notice::Successfully posted code review to PR #$pr_number"
+            echo "::endgroup::"
 
             processed_count=$((processed_count + 1))
           done < <(jq -r '.[] | select(.isDraft == true) | .number' all_open_prs.json)
 
-          echo "PRs processed: $processed_count"
+          echo "::notice::Workflow complete. PRs processed: $processed_count"

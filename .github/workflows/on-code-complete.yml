@@ -98,11 +98,17 @@ jobs:
             REVIEW_PROMPT="Review pull request #$pr_number in repository ${{ github.repository }} and provide a typical GitHub code review. Focus on correctness, regressions, security risks, and missing tests. Include file-level findings with severity and actionable recommendations."
 
             REVIEW_OUTPUT_FILE=$(mktemp)
-            output=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {
-              echo "::error::Failed to run code-review-agent for PR #$pr_number: $output"
+            REVIEW_STDERR_FILE=$(mktemp)
+            echo "::group::Code Review Agent output for PR #$pr_number"
+            gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" \
+              > >(tee "$REVIEW_OUTPUT_FILE") \
+              2> >(tee "$REVIEW_STDERR_FILE" >&2) || {
+              echo "::endgroup::"
+              echo "::error::Failed to run code-review-agent for PR #$pr_number"
+              cat "$REVIEW_STDERR_FILE"
               continue
             }
-            printf "%s\n" "$output" > "$REVIEW_OUTPUT_FILE"
+            echo "::endgroup::"
 
             output=$(gh pr comment "$pr_number" --body-file "$REVIEW_OUTPUT_FILE" 2>&1) || \
               echo "::error::Failed to post code review comment to PR #$pr_number: $output"

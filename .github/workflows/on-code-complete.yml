@@ -108,9 +108,9 @@ jobs:
             REVIEW_OUTPUT=$(gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" 2>&1) || {
               echo "::endgroup::"
               echo "::error::Failed to run code-review-agent for PR #$pr_number"
+              echo "::error::output - $REVIEW_OUTPUT"
               continue
             }
-            echo "$REVIEW_OUTPUT"
             echo "::endgroup::"
 
             echo "$REVIEW_OUTPUT" | gh pr comment "$pr_number" --body-file - 2>&1 || {

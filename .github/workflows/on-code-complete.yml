@@ -108,11 +108,9 @@ jobs:
             REVIEW_STDERR_FILE=$(mktemp)
             echo "::group::Code Review Agent output for PR #$pr_number"
             gh copilot --agent code-review-agent --prompt "$REVIEW_PROMPT" \
-              > >(tee "$REVIEW_OUTPUT_FILE") \
-              2> >(tee "$REVIEW_STDERR_FILE" >&2) || {
+              2> >(tee "$REVIEW_STDERR_FILE" >&2) | tee "$REVIEW_OUTPUT_FILE" || {
               echo "::endgroup::"
               echo "::error::Failed to run code-review-agent for PR #$pr_number"
-              cat "$REVIEW_STDERR_FILE"
               continue
             }
             echo "::endgroup::"

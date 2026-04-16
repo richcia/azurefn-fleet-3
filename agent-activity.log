@@ -1,0 +1,10 @@
+Step 1 - Implement Tasks
+- Reviewed issue INF-03 requirements and inspected repository context.
+- Added infra/modules/keyvault.bicep with Key Vault provisioning and outputs.
+- Added infra/modules/functionapp.bicep with Function App app settings including Key Vault reference syntax.
+- Added infra/main.bicep wiring conditional Key Vault provisioning, module linkage, and keyVaultUri output.
+
+Step 2 - Build and Test
+- Ran dependency install and baseline pytest command; observed tests directory missing in current branch baseline.
+- Ran az bicep build validation on newly added infra templates.
+- Added focused pytest coverage for INF-03 infra acceptance criteria and Bicep compile validation.

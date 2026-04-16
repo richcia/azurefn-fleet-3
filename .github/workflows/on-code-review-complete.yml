@@ -23,6 +23,7 @@ jobs:
     if: |
       github.event_name != 'pull_request_review' ||
       github.event.review.user.login == 'copilot[bot]' ||
+      github.event.review.user.login == 'copilot-swe-agent[bot]' ||
       github.event.review.user.login == 'Copilot' ||
       github.event.review.user.login == 'copilot'
     runs-on: ubuntu-latest
@@ -64,7 +65,7 @@ jobs:
 
           if [ -z "$REVIEW_URL" ] || [ "$REVIEW_URL" = "null" ]; then
             REVIEW_URL=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews?per_page=100" \
-              --jq '[.[] | select(.user.login == "copilot[bot]" or .user.login == "Copilot" or .user.login == "copilot")] | last | .html_url // empty')
+              --jq '[.[] | select(.user.login == "copilot[bot]" or .user.login == "copilot-swe-agent[bot]" or .user.login == "Copilot" or .user.login == "copilot")] | last | .html_url // empty')
           fi
 
           if [ -z "$REVIEW_URL" ]; then

@@ -1,3 +1,5 @@
+@minLength(3)
+@maxLength(24)
 param storageAccountName string
 param location string = resourceGroup().location
 param tags object = {}

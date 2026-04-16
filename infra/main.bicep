@@ -1,7 +1,11 @@
 param location string = resourceGroup().location
 @description('Function App host storage account name (AzureWebJobsStorage).')
+@minLength(3)
+@maxLength(24)
 param hostStorageAccountName string
 @description('Dedicated storage account name for application roster data.')
+@minLength(3)
+@maxLength(24)
 param rosterStorageAccountName string = 'roster${uniqueString(resourceGroup().id)}'
 param tags object = {
   project: '1985-NY-Yankees'
@@ -11,7 +15,7 @@ param tags object = {
 var normalizedHostStorageName = toLower(hostStorageAccountName)
 var normalizedRosterStorageName = toLower(rosterStorageAccountName)
 var effectiveRosterStorageAccountName = normalizedRosterStorageName == normalizedHostStorageName
-  ? take('${normalizedRosterStorageName}data', 24)
+  ? '${take(normalizedRosterStorageName, 11)}${take(uniqueString(resourceGroup().id, normalizedHostStorageName, 'roster'), 13)}'
   : normalizedRosterStorageName
 
 module rosterStorage './modules/storage.bicep' = {

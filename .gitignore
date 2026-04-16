@@ -13,3 +13,7 @@ build/
 .coverage.*
 htmlcov/
 .pytest_cache/
+
+# Bicep build outputs
+infra/main.json
+infra/modules/*.json

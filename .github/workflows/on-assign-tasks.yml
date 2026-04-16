@@ -27,10 +27,8 @@ jobs:
 
     env:
       COPILOT_PROMPT: >-
-        1. Complete tasks in Issue's Description section, produce all artifacts in Outputs section, and ensure all criteria 
+        Complete tasks in Issue's Description section, produce all artifacts in Outputs section, and ensure all criteria 
         in Acceptance Criteria is met
-        2. Build and run all unit tests related to the task, validate Acceptance Criteria is achieved and ensure test coverage 
-        goals are met. If tests are failing, fix the code until all tests pass.
 
     steps:
       - name: Checkout Repository
@@ -179,7 +177,7 @@ jobs:
                   target_repo: $repo,
                   base_branch: "main",
                   custom_instructions: $instructions,
-                  custom_agent: "",
+                  custom_agent: "code-implementor-agent",
                   model: ""
                 }
               }')

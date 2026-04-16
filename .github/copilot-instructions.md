@@ -28,7 +28,7 @@ When reviewing pull requests in this repository:
 
 - For Markdown spec/design docs (i.e. spec.md, design.md, etc.):
 
-  - Follow `Required workflow for Markdown spec/design reviews` when reviewing Markdown files related to project specifications, design documents, and other planning artifacts. The goal is actionable, contextual feedback.
+- Follow `Required workflow for Markdown spec/design reviews` when reviewing Markdown files related to project specifications, design documents, and other planning artifacts. The goal is actionable, contextual feedback.
 
 ## Required workflow for Markdown spec/design reviews
 

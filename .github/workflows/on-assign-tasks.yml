@@ -28,8 +28,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
       COPILOT_PROMPT: >-
-        Complete tasks in Issue's Description section, produce all artifacts in Outputs section, and ensure all criteria 
-        in Acceptance Criteria is met
+        Fully implement, test, review, apply review feedback, and merge the tasks described in the specified GitHub Issue
 
     steps:
       - name: Checkout Repository

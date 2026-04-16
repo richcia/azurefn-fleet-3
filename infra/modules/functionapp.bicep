@@ -13,37 +13,22 @@ param storageAccountName string
 @description('Connection string from the monitoring module output')
 param applicationInsightsConnectionString string
 
-@description('Optional Key Vault URI used to build TRAPI setting references')
-param keyVaultUri string = ''
+@description('TRAPI endpoint setting value. Pass plain endpoint text or a Key Vault reference string.')
+@minLength(1)
+param trapiEndpointSetting string
 
-@description('TRAPI endpoint value when not using Key Vault references')
-param trapiEndpoint string = ''
-
-@description('TRAPI auth scope value when not using Key Vault references')
-param trapiAuthScope string = ''
-
-@description('Key Vault secret name for TRAPI endpoint')
-param trapiEndpointSecretName string = 'trapi-endpoint'
-
-@description('Key Vault secret name for TRAPI auth scope')
-param trapiAuthScopeSecretName string = 'trapi-auth-scope'
+@description('TRAPI auth scope setting value. Pass plain scope text or a Key Vault reference string.')
+@minLength(1)
+param trapiAuthScopeSetting string
 
 @description('Optional staging slot override for TRAPI endpoint')
-param stagingTrapiEndpoint string = ''
+param stagingTrapiEndpointSetting string = ''
 
 @description('Optional staging slot override for TRAPI auth scope')
-param stagingTrapiAuthScope string = ''
+param stagingTrapiAuthScopeSetting string = ''
 
-var productionTrapiEndpoint = empty(keyVaultUri)
-  ? trapiEndpoint
-  : '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/${trapiEndpointSecretName}/)'
-
-var productionTrapiAuthScope = empty(keyVaultUri)
-  ? trapiAuthScope
-  : '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/${trapiAuthScopeSecretName}/)'
-
-var stagingTrapiEndpointValue = empty(stagingTrapiEndpoint) ? productionTrapiEndpoint : stagingTrapiEndpoint
-var stagingTrapiAuthScopeValue = empty(stagingTrapiAuthScope) ? productionTrapiAuthScope : stagingTrapiAuthScope
+var stagingTrapiEndpointValue = empty(stagingTrapiEndpointSetting) ? trapiEndpointSetting : stagingTrapiEndpointSetting
+var stagingTrapiAuthScopeValue = empty(stagingTrapiAuthScopeSetting) ? trapiAuthScopeSetting : stagingTrapiAuthScopeSetting
 
 resource functionPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: '${functionAppName}-plan'
@@ -97,11 +82,11 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         }
         {
           name: 'TRAPI_ENDPOINT'
-          value: productionTrapiEndpoint
+          value: trapiEndpointSetting
         }
         {
           name: 'TRAPI_AUTH_SCOPE'
-          value: productionTrapiAuthScope
+          value: trapiAuthScopeSetting
         }
       ]
     }
@@ -109,7 +94,8 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
 }
 
 resource functionAppStagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
-  name: '${functionApp.name}/staging'
+  name: 'staging'
+  parent: functionApp
   location: location
   tags: tags
   kind: 'functionapp,linux'
@@ -158,7 +144,8 @@ resource functionAppStagingSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
 }
 
 resource slotConfigNames 'Microsoft.Web/sites/config@2022-09-01' = {
-  name: '${functionApp.name}/slotConfigNames'
+  name: 'slotConfigNames'
+  parent: functionApp
   properties: {
     appSettingNames: [
       'TRAPI_ENDPOINT'

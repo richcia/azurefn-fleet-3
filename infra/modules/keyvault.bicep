@@ -21,6 +21,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enablePurgeProtection: true
     sku: {
       family: 'A'
+      // Standard Key Vault is zone-redundant in Azure Availability Zone-enabled regions.
       name: 'standard'
     }
   }

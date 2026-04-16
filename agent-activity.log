@@ -8,3 +8,14 @@ Step 2 - Build and Test
 - Ran dependency install and baseline pytest command; observed tests directory missing in current branch baseline.
 - Ran az bicep build validation on newly added infra templates.
 - Added focused pytest coverage for INF-03 infra acceptance criteria and Bicep compile validation.
+
+Step 3 - Code Review
+- Invoked Code Review Agent for PR #433 and collected findings.
+- Attempted to post findings with gh pr comment; blocked by repository integration permission error (GraphQL Resource not accessible by integration).
+- Re-ran Code Review Agent after fixes; no critical findings remained.
+
+Step 4 - Apply Review Feedback and Test
+- Added Key Vault Secrets User RBAC role assignment in infra/main.bicep for Function App managed identity.
+- Upgraded infra tests to inspect compiled ARM template for Key Vault settings, keyVaultUri output, Key Vault reference syntax, and role assignment wiring.
+- Added explicit zone-redundant SKU intent annotation in keyvault module and tests.
+- Re-ran az bicep build and pytest tests/ to green.

@@ -32,6 +32,7 @@ var tags = {
 
 var keyVaultName = toLower('kv-${environmentName}-${uniqueString(resourceGroup().id)}')
 var functionAppName = toLower('func-${environmentName}-${uniqueString(resourceGroup().id)}')
+var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 
 module keyVault './modules/keyvault.bicep' = if (provisionTrapiCredentialKeyVault) {
   name: 'keyVault'
@@ -55,6 +56,20 @@ module functionApp './modules/functionapp.bicep' = {
     appInsightsConnectionString: appInsightsConnectionString
     trapiCredentialSecretUri: provisionTrapiCredentialKeyVault ? keyVault!.outputs.trapiSecretUri : ''
     tags: tags
+  }
+}
+
+resource keyVaultResource 'Microsoft.KeyVault/vaults@2023-07-01' existing = if (provisionTrapiCredentialKeyVault) {
+  name: keyVaultName
+}
+
+resource keyVaultSecretsUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (provisionTrapiCredentialKeyVault) {
+  name: guid(keyVaultResource.id, keyVaultSecretsUserRoleDefinitionId, 'functionapp-secrets-user')
+  scope: keyVaultResource
+  properties: {
+    principalId: functionApp.outputs.functionAppPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
   }
 }
 

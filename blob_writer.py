@@ -6,7 +6,7 @@ import os
 import time
 from datetime import datetime, timezone
 
-from azure.core.exceptions import HttpResponseError, ServiceRequestError
+from azure.core.exceptions import HttpResponseError, ResourceExistsError, ServiceRequestError
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 
@@ -23,11 +23,12 @@ _CONTAINER_NAME = "yankees-roster"
 _MAX_RETRIES = 3  # maximum number of retry attempts after the initial request
 
 
-def write_roster_blob(roster: list) -> str:
+def write_roster_blob(roster: object, *, failed: bool = False) -> str:
     """Write the roster list as a JSON blob to Azure Blob Storage.
 
-    The blob is named ``roster-YYYYMMDD.json`` using today's UTC date and
-    stored in the ``yankees-roster`` container.
+    The blob is named ``YYYY-MM-DD.json`` using today's UTC date and stored in
+    the ``yankees-roster`` container. Failed payloads are routed to the
+    ``failed/`` blob prefix.
 
     Configuration is read from environment variables:
         STORAGE_ACCOUNT_NAME - Azure Storage account name (required)
@@ -35,10 +36,11 @@ def write_roster_blob(roster: list) -> str:
     Authentication uses DefaultAzureCredential — no connection strings or keys.
 
     Args:
-        roster: List of player dicts to serialise and upload.
+        roster: JSON-serializable payload to upload.
+        failed: Whether to route the payload to ``failed/{run_date_utc}.json``.
 
     Returns:
-        The blob name (e.g. ``roster-20240101.json``).
+        The blob name (e.g. ``2026-03-31.json`` or ``failed/2026-03-31.json``).
 
     Raises:
         ValueError: If STORAGE_ACCOUNT_NAME is not set.
@@ -53,7 +55,8 @@ def write_roster_blob(roster: list) -> str:
         raise ValueError("STORAGE_ACCOUNT_NAME environment variable is not set")
 
     account_url = f"https://{account_name}.blob.core.windows.net"
-    blob_name = f"roster-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+    run_date_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    blob_name = f"{'failed/' if failed else ''}{run_date_utc}.json"
 
     client = BlobServiceClient(
         account_url=account_url, credential=_CREDENTIAL, retry_total=0
@@ -65,10 +68,22 @@ def write_roster_blob(roster: list) -> str:
         try:
             blob_client.upload_blob(
                 json.dumps(roster),
-                overwrite=True,
+                overwrite=False,
+                if_none_match="*",
                 content_settings=ContentSettings(content_type="application/json; charset=utf-8"),
             )
+            logger.info(
+                "blob_write_succeeded",
+                extra={
+                    "custom_dimensions": {
+                        "event": "blob_write_succeeded",
+                        "blob_uri": blob_client.url,
+                    }
+                },
+            )
             return blob_name
+        except ResourceExistsError:
+            raise
         except ServiceRequestError as exc:
             if attempt < _MAX_RETRIES:
                 logger.warning(

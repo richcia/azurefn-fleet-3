@@ -22,6 +22,7 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 3. Verify each Acceptance Criteria item is satisfied by the implementation before proceeding.
 4. Follow the project's coding standards, conventions, and `.github/copilot-instructions.md`.
 5. All new source files must be created under the `/src` folder unless the issue explicitly says otherwise.
+6. Wait for any asynchronous operations to complete before proceeding to the next step
 
 ---
 
@@ -33,14 +34,26 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 4. If test coverage goals are specified, measure coverage and confirm they are met.
 5. **If any test fails, fix the implementation code — do not modify tests to force them to pass — and re-run until all tests pass.**
 6. Do not proceed to Step 3 until the full test suite is green.
+7. Wait for any asynchronous operations to complete before proceeding to the next step
 
 ---
 
 ## Step 3 — Code Review
 
-1. Invoke the **Code Review Agent** (`code-review-agent.md`) and pass it all code produced in Steps 1–2.
-2. Use a **different model** than the one used in Steps 1–2 for the review.
-3. Collect all findings from the code review (critical issues and suggestions).
+
+1. Use the **`task` tool** with the following parameters to launch the Code Review Agent:
+   - `agent_type`: `"code-review-agent"`
+   - `name`: `"code-review"`
+   - `description`: `"Review implementation for Issue #${{ inputs.issue_id }}"`
+   - `model`: a **different model** than the one used in Steps 1–2
+     (e.g., if you used `claude-sonnet-4.5`, use `claude-opus-4.6` here)
+   - `prompt`: include all of the following:
+     - Link to the PR created in steps 1 and 2
+     - The issue's Acceptance Criteria
+     - A request to return findings categorized as **critical issues** and **suggestions**
+2. Record all findings (critical issues and suggestions) as comments in the PR before proceeding to Step 4.
+3. Do **not** use `parallel_validation` as a substitute for this step.
+4. Wait for the sub-agent to return its findings.
 
 ---
 
@@ -49,7 +62,8 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 1. Apply every change proposed by the code review (critical issues first, then suggestions).
 2. Re-run the full unit test suite after applying changes.
 3. **If any test fails, fix the implementation code and re-run until all tests pass.**
-4. Do not proceed to Step 5 until all tests pass with the review changes applied.
+4. Wait for any asynchronous operations to complete before proceeding to the next step.
+5. Do not proceed to Step 5 until all tests pass with the review changes applied.
 
 ---
 

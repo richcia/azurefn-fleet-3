@@ -47,7 +47,7 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
    - The issue's Acceptance Criteria
    - A request to return findings categorized as **critical issues** and **suggestions**
 3. If no PR exists yet, use `create_pull_request` to create it and push the branch before invoking the Code Review Agent.
-4. Record all findings (critical issues and suggestions) as comments in the PR before proceeding to Step 4. Use `create_issue_comment` for PR discussion comments when available; otherwise use `execute` with `gh pr comment`.
+4. Record all findings (critical issues and suggestions) as comments in the PR before proceeding to Step 4. Use `execute` to run `gh pr comment <PR_NUMBER> --body "<findings>"`, or use `create_issue_comment` if available. Do **not** use the `addComment` GraphQL mutation directly.
 5. Do **not** use `parallel_validation` as a substitute for this step.
 6. Wait for the sub-agent to return its findings.
 
@@ -68,8 +68,10 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 1. Use the pull request created earlier with `create_pull_request`. If no PR exists, return to Step 3 and create it before proceeding.
 2. Ensure the PR branch is up to date with the base branch (rebase or merge as appropriate).
 3. Confirm that all required status checks and CI jobs pass.
-4. Merge the PR using `execute` with the repository's supported merge mechanism (for example `gh pr merge`) and a squash-merge or merge commit consistent with the repository's merge strategy.
-5. Close the originating issue if it is not automatically closed by the PR merge.
+4. Use `execute` to run `gh pr ready <PR_NUMBER>` to mark the PR as ready for review (removes draft status).
+5. Use `execute` to run `gh pr merge <PR_NUMBER> --squash --auto` to merge the PR. Use `--merge` instead of `--squash` if the repository enforces merge commits.
+6. Do **not** call GitHub GraphQL mutations (`mergePullRequest`, `markPullRequestReadyForReview`, `addComment`) directly — use `gh` CLI commands only, so that `GH_TOKEN` from the environment is used rather than the agent's integration token.
+7. Close the originating issue if it is not automatically closed by the PR merge (`gh issue close <ISSUE_NUMBER>`).
 
 ---
 

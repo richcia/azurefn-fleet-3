@@ -183,7 +183,6 @@ jobs:
                 echo "Warning: Could not assign issue #$issue_number to copilot-swe-agent[bot]."
                 echo "::warning title=Issue Assignment Failed::Could not assign issue #$issue_number to copilot-swe-agent[bot]"
               fi
-              gh issue comment "$issue_number" --body "@Copilot ${COPILOT_PROMPT}"
             fi
           done < ready_issues.txt
 

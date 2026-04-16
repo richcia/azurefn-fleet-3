@@ -1,0 +1,127 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "11462091950679194982"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for alert resources."
+      }
+    },
+    "actionGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Action Group name."
+      }
+    },
+    "alertRuleName": {
+      "type": "string",
+      "metadata": {
+        "description": "Scheduled query alert rule name."
+      }
+    },
+    "workspaceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Log Analytics workspace resource ID."
+      }
+    },
+    "alertEmailAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address for alert notifications."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags applied to resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('actionGroupName')]",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "enabled": true,
+        "groupShortName": "[take(replace(parameters('actionGroupName'), '-', ''), 12)]",
+        "emailReceivers": [
+          {
+            "name": "primaryEmail",
+            "emailAddress": "[parameters('alertEmailAddress')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[parameters('alertRuleName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Triggers when exceptions are detected in the last 24 hours.",
+        "enabled": true,
+        "severity": 1,
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "evaluationFrequency": "PT1H",
+        "windowSize": "P1D",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "exceptions | count",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]"
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "actionGroupName": {
+      "type": "string",
+      "value": "[parameters('actionGroupName')]"
+    },
+    "actionGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]"
+    },
+    "alertRuleName": {
+      "type": "string",
+      "value": "[parameters('alertRuleName')]"
+    },
+    "alertRuleId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', parameters('alertRuleName'))]"
+    }
+  }
+}

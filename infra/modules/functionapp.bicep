@@ -61,6 +61,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: storageAccountName
         }
         {
+          name: 'AzureWebJobsStorage__credential'
+          value: 'managedidentity'
+        }
+        {
           name: 'STORAGE_ACCOUNT_NAME'
           value: storageAccountName
         }

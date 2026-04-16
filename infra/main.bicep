@@ -118,4 +118,6 @@ output exceptionAlertRuleName string = alerts.outputs.alertRuleName
 output exceptionAlertRuleId string = alerts.outputs.alertRuleId
 
 output storageBlobDataContributorAssignmentId string = rbac.outputs.storageBlobDataContributorAssignmentId
+output storageQueueDataContributorAssignmentId string = rbac.outputs.storageQueueDataContributorAssignmentId
+output storageTableDataContributorAssignmentId string = rbac.outputs.storageTableDataContributorAssignmentId
 output keyVaultSecretsUserAssignmentId string = rbac.outputs.keyVaultSecretsUserAssignmentId

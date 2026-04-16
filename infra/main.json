@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "5898127859697990631"
+      "templateHash": "4946909350440621342"
     }
   },
   "parameters": {
@@ -415,7 +415,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "15442227408648781802"
+              "templateHash": "10594974916129474025"
             }
           },
           "parameters": {
@@ -507,6 +507,10 @@
                       "value": "[parameters('storageAccountName')]"
                     },
                     {
+                      "name": "AzureWebJobsStorage__credential",
+                      "value": "managedidentity"
+                    },
+                    {
                       "name": "STORAGE_ACCOUNT_NAME",
                       "value": "[parameters('storageAccountName')]"
                     },
@@ -575,7 +579,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "14353586005161522739"
+              "templateHash": "8099609684400034821"
             }
           },
           "parameters": {
@@ -600,7 +604,9 @@
           },
           "variables": {
             "storageBlobDataContributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-            "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
+            "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+            "storageQueueDataContributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')]",
+            "storageTableDataContributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')]"
           },
           "resources": [
             {
@@ -611,6 +617,28 @@
               "properties": {
                 "principalId": "[parameters('functionPrincipalId')]",
                 "roleDefinitionId": "[variables('storageBlobDataContributorRoleDefinitionId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionPrincipalId'), variables('storageQueueDataContributorRoleDefinitionId'))]",
+              "properties": {
+                "principalId": "[parameters('functionPrincipalId')]",
+                "roleDefinitionId": "[variables('storageQueueDataContributorRoleDefinitionId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionPrincipalId'), variables('storageTableDataContributorRoleDefinitionId'))]",
+              "properties": {
+                "principalId": "[parameters('functionPrincipalId')]",
+                "roleDefinitionId": "[variables('storageTableDataContributorRoleDefinitionId')]",
                 "principalType": "ServicePrincipal"
               }
             },
@@ -630,6 +658,14 @@
             "storageBlobDataContributorAssignmentId": {
               "type": "string",
               "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionPrincipalId'), variables('storageBlobDataContributorRoleDefinitionId')))]"
+            },
+            "storageQueueDataContributorAssignmentId": {
+              "type": "string",
+              "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionPrincipalId'), variables('storageQueueDataContributorRoleDefinitionId')))]"
+            },
+            "storageTableDataContributorAssignmentId": {
+              "type": "string",
+              "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionPrincipalId'), variables('storageTableDataContributorRoleDefinitionId')))]"
             },
             "keyVaultSecretsUserAssignmentId": {
               "type": "string",
@@ -882,6 +918,14 @@
     "storageBlobDataContributorAssignmentId": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'rbac'), '2025-04-01').outputs.storageBlobDataContributorAssignmentId.value]"
+    },
+    "storageQueueDataContributorAssignmentId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'rbac'), '2025-04-01').outputs.storageQueueDataContributorAssignmentId.value]"
+    },
+    "storageTableDataContributorAssignmentId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'rbac'), '2025-04-01').outputs.storageTableDataContributorAssignmentId.value]"
     },
     "keyVaultSecretsUserAssignmentId": {
       "type": "string",

@@ -186,4 +186,75 @@ jobs:
               gh issue comment "$issue_number" --body "@Copilot ${COPILOT_PROMPT}"
             fi
           done < ready_issues.txt
+
+      - name: Wait For Copilot To Finish Assigned Issues
+        if: steps.ready_issues.outputs.ready_count != '0'
+        run: |
+          set -euo pipefail
+
+          POLL_SECONDS=60
+          TIMEOUT_SECONDS=7200
+
+          wait_for_issue_completion() {
+            local issue_number="$1"
+            local start_ts
+            start_ts=$(date +%s)
+
+            echo "Waiting for Copilot to complete work for issue #$issue_number"
+
+            while true; do
+              local now_ts
+              now_ts=$(date +%s)
+              if [ $((now_ts - start_ts)) -ge "$TIMEOUT_SECONDS" ]; then
+                echo "::error::Timed out waiting for Copilot to complete issue #$issue_number"
+                return 1
+              fi
+
+              pr_json=$(gh pr list --state all --limit 1000 --json number,state,mergedAt,url,closingIssuesReferences | jq -c --argjson issue_number "$issue_number" '
+                [ .[]
+                  | select(any(.closingIssuesReferences[]?; .number == $issue_number))
+                ]
+                | sort_by(.number)
+                | last // empty
+              ')
+
+              if [ -z "$pr_json" ]; then
+                echo "No PR linked to issue #$issue_number yet; checking again in ${POLL_SECONDS}s"
+                sleep "$POLL_SECONDS"
+                continue
+              fi
+
+              pr_number=$(jq -r '.number' <<< "$pr_json")
+              pr_state=$(jq -r '.state' <<< "$pr_json")
+              pr_merged_at=$(jq -r '.mergedAt // empty' <<< "$pr_json")
+              pr_url=$(jq -r '.url' <<< "$pr_json")
+
+              if [ -n "$pr_merged_at" ]; then
+                echo "PR #$pr_number for issue #$issue_number is merged: $pr_url"
+                return 0
+              fi
+
+              copilot_finished=$(gh api --paginate -H "Accept: application/vnd.github+json" \
+                "repos/${{ github.repository }}/issues/$pr_number/timeline?per_page=100" \
+                --jq '.[] | select(.event == "copilot_work_finished") | .event' || true)
+
+              if echo "$copilot_finished" | grep -Fq "copilot_work_finished"; then
+                echo "Copilot finished work on PR #$pr_number for issue #$issue_number: $pr_url"
+                return 0
+              fi
+
+              if [ "$pr_state" = "CLOSED" ]; then
+                echo "::error::PR #$pr_number for issue #$issue_number was closed before Copilot finished: $pr_url"
+                return 1
+              fi
+
+              echo "PR #$pr_number exists for issue #$issue_number, but Copilot is still working; checking again in ${POLL_SECONDS}s"
+              sleep "$POLL_SECONDS"
+            done
+          }
+
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
+            wait_for_issue_completion "$issue_number"
+          done < ready_issues.txt
           

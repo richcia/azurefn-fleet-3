@@ -28,7 +28,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
       COPILOT_PROMPT: >-
-        Implement task
+        Execute all five phases end-to-end for this issue: (1) fully implement tasks, (2) build and test to green, (3) run Code Review Agent and capture findings, (4) apply review feedback and re-test to green, and (5) merge the PR and close the issue.
 
     steps:
       - name: Checkout Repository

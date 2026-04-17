@@ -166,7 +166,7 @@ jobs:
                   target_repo: $repo,
                   base_branch: "main",
                   custom_instructions: $instructions,
-                  custom_agent: "",
+                  custom_agent: "Code Implementor Agent",
                   model: ""
                 }
               }')

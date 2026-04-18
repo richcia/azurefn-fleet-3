@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy Function App to Azure
+    name: Test, deploy to staging, smoke test, and swap
     runs-on: ubuntu-latest
     environment: production
 
@@ -24,6 +24,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+
+      - name: Install test dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest unit tests
+        run: python -m pytest tests/ -v
 
       - name: Install production dependencies
         run: |
@@ -52,8 +58,39 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy zip package to Azure Function App
+      - name: Deploy zip package to staging slot
         uses: azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          slot-name: staging
           package: deploy.zip
+
+      - name: Smoke test staging slot endpoint
+        run: |
+          STAGING_URL="https://${{ secrets.AZURE_FUNCTIONAPP_NAME }}-staging.azurewebsites.net"
+          STATUS_CODE="$(curl -sS -o /dev/null -w "%{http_code}" "$STAGING_URL")"
+          case "$STATUS_CODE" in
+            200|204|302|401|403|404)
+              echo "Smoke test passed with HTTP $STATUS_CODE from $STAGING_URL"
+              ;;
+            *)
+              echo "Smoke test failed with HTTP $STATUS_CODE from $STAGING_URL"
+              exit 1
+              ;;
+          esac
+
+      - name: Swap staging slot to production
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            RESOURCE_GROUP="$(az resource list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-type "Microsoft.Web/sites" --query "[0].resourceGroup" -o tsv)"
+            if [ -z "$RESOURCE_GROUP" ]; then
+              echo "Unable to determine resource group for ${{ secrets.AZURE_FUNCTIONAPP_NAME }}"
+              exit 1
+            fi
+
+            az functionapp deployment slot swap \
+              --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" \
+              --resource-group "$RESOURCE_GROUP" \
+              --slot staging \
+              --target-slot production

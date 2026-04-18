@@ -216,6 +216,10 @@ To validate that the alert rule fires correctly, inject a test failure by tempor
 
 
 
+## Additional Documentation
+
+- [GitHub PAT write access for `richcia/azurefn-fleet-3`](docs/token-permissions.md)
+
 
 
           git add -A

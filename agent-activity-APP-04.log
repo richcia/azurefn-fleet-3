@@ -16,3 +16,13 @@ Step 2 - Build and Test
 - Added tests in tests/test_blob_writer.py for APP-04 acceptance criteria.
 - Ran targeted tests: tests/test_blob_writer.py -> 6 passed.
 - Ran full suite after implementation: 42 passed, 1 skipped.
+
+Step 3 - Code Review
+- Ran Code Review Agent against compare link: https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/app-04-implement-blob-writer
+- Review result: no critical issues, one major suggestion on blob key double-prefixing.
+- Captured findings in code_review_findings_APP-04_NA.json.
+- Captured prompt improvements in prompt_improvements_APP-04_NA.json.
+
+Step 4 - Apply Code Review Feedback and Re-test
+- Updated blob_writer.py to use blob keys: {run_date_utc}.json and failed/{run_date_utc}.json within container yankees-roster.
+- Updated tests to assert corrected blob names and URI format.

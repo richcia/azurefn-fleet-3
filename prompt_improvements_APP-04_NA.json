@@ -1,0 +1,10 @@
+{
+  "issue_number": "APP-04",
+  "pr_number": "NA",
+  "improvements": [
+    "Explicitly state whether yankees-roster is the container name or a virtual folder prefix to avoid double-prefix path bugs.",
+    "Require at least one test assertion on the exact blob name passed to get_blob_client when container is fixed.",
+    "Require acceptance-criteria mapping tests to include both final blob URI and logical blob key assertions.",
+    "When specifying blob paths in requirements, clarify examples as '<container>/<blob-name>' versus '<blob-name>' to avoid ambiguity."
+  ]
+}

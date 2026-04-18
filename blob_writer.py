@@ -58,8 +58,8 @@ def _upload_json(blob_name: str, payload: Any) -> str:
 def write_roster_blob(response_payload: Any, validation_result: ValidationResult, run_date_utc: str | None = None) -> str:
     run_date = _resolve_run_date_utc(run_date_utc)
     blob_name = (
-        f"yankees-roster/{run_date}.json"
+        f"{run_date}.json"
         if validation_result.is_valid
-        else f"yankees-roster/failed/{run_date}.json"
+        else f"failed/{run_date}.json"
     )
     return _upload_json(blob_name=blob_name, payload=response_payload)

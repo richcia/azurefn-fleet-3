@@ -47,10 +47,10 @@ def test_write_valid_roster_to_primary_prefix_with_conditional_put(monkeypatch):
     result = blob_writer.write_roster_blob(payload, ValidationResult(is_valid=True, player_count=1), "2026-04-18")
 
     assert dummy_service.container == "yankees-roster"
-    assert dummy_service.blob == "yankees-roster/2026-04-18.json"
+    assert dummy_service.blob == "2026-04-18.json"
     assert dummy_service.blob_client.upload_calls[0]["if_none_match"] == "*"
     assert dummy_service.blob_client.upload_calls[0]["overwrite"] is False
-    assert result.endswith("/yankees-roster/yankees-roster/2026-04-18.json")
+    assert result.endswith("/yankees-roster/2026-04-18.json")
 
 
 
@@ -90,7 +90,7 @@ def test_failed_validation_writes_to_failed_prefix(monkeypatch):
         "2026-04-18",
     )
 
-    assert dummy_service.blob == "yankees-roster/failed/2026-04-18.json"
+    assert dummy_service.blob == "failed/2026-04-18.json"
 
 
 
@@ -158,4 +158,4 @@ def test_default_run_date_uses_utc_date(monkeypatch):
         ValidationResult(is_valid=True, player_count=0),
     )
 
-    assert dummy_service.blob == "yankees-roster/2026-04-18.json"
+    assert dummy_service.blob == "2026-04-18.json"

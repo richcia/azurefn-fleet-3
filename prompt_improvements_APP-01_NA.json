@@ -4,6 +4,8 @@
   "improvements": [
     "Require the implementor to include a verifiable manual/integration TRAPI validation path for acceptance criteria that depend on external model output.",
     "Require tests to validate schema semantics (field presence and type intent) instead of brittle exact-string schema literals.",
+    "Require external/manual tests to be explicit opt-in (for example RUN_MANUAL_TRAPI_TESTS=true) so CI remains deterministic.",
+    "Require integration tests to load prompt content from the version-controlled prompt artifact being validated.",
     "When PR creation tooling is unavailable, require recording an explicit compare URL and a placeholder PR identifier."
   ]
 }

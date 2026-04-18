@@ -2,23 +2,78 @@
   "issue_number": "APP-01",
   "pr_number": "NA",
   "pr_link": "https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/app-01-create-prompts-get-1985-yankees",
-  "critical_issues": [],
-  "suggestions": [
+  "review_rounds": [
     {
-      "severity": "major",
-      "file": "tests/test_get_1985_yankees_prompt.py",
-      "line_start": 11,
-      "line_end": 18,
-      "title": "Acceptance criterion #4 is not verifiable from current tests",
-      "recommendation": "Add an integration/manual validation path that calls TRAPI and validates Mattingly/Winfield/Henderson are present."
+      "round": 1,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "severity": "major",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 11,
+          "line_end": 18,
+          "title": "Acceptance criterion #4 is not verifiable from current tests",
+          "recommendation": "Add an integration/manual validation path that calls TRAPI and validates Mattingly/Winfield/Henderson are present.",
+          "status": "resolved"
+        },
+        {
+          "severity": "minor",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 15,
+          "line_end": 15,
+          "title": "Schema assertion is ambiguous for jersey_number typing",
+          "recommendation": "Assert explicit schema keys and integer requirement instead of exact literal with \"integer\" token.",
+          "status": "resolved"
+        }
+      ]
     },
     {
-      "severity": "minor",
-      "file": "tests/test_get_1985_yankees_prompt.py",
-      "line_start": 15,
-      "line_end": 15,
-      "title": "Schema assertion is ambiguous for jersey_number typing",
-      "recommendation": "Assert explicit schema keys and integer requirement instead of exact literal with \"integer\" token."
+      "round": 2,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "severity": "major",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 30,
+          "line_end": 60,
+          "title": "Live TRAPI test should be explicit opt-in to avoid CI flakiness",
+          "recommendation": "Gate the manual TRAPI test behind an explicit opt-in environment variable.",
+          "status": "resolved"
+        },
+        {
+          "severity": "minor",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 57,
+          "line_end": 60,
+          "title": "Manual test should validate schema keys and jersey_number type",
+          "recommendation": "Assert key set and field types for each player entry.",
+          "status": "resolved"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "severity": "major",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 42,
+          "line_end": 53,
+          "title": "Manual TRAPI test should use checked-in prompt artifact",
+          "recommendation": "Load and send system/user message content from prompts/get_1985_yankees.txt.",
+          "status": "resolved"
+        },
+        {
+          "severity": "minor",
+          "file": "tests/test_get_1985_yankees_prompt.py",
+          "line_start": 59,
+          "line_end": 61,
+          "title": "Add response shape assertions for clearer failures",
+          "recommendation": "Assert TRAPI response structure before indexing nested keys.",
+          "status": "resolved"
+        }
+      ]
     }
   ]
 }

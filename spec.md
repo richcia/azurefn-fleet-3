@@ -20,7 +20,7 @@ rciapala
 ### Functional Requirements
 
 #### Requirement 1: Get Players
-- **Description:** Query GPT-4o via TRAPI using a pinned, version-controlled prompt template to retrieve the 1985 New York Yankees roster. The response must be validated for completeness (expected player count: 24–28 active roster members) before proceeding. If validation fails, write the raw response to a `failed/` blob prefix and raise an alert — do not write to the primary output path.
+- **Description:** Query GPT-4o via TRAPI using a pinned, version-controlled prompt template to retrieve the 1985 New York Yankees roster. **Player scope is active roster players only** (exclude coaching staff, front-office personnel, and injured-list entries). The response must be validated for completeness (expected player count: 24–28 active roster members) before proceeding. If validation fails, write the raw response to a `failed/` blob prefix and raise an alert — do not write to the primary output path.
 - **Prompt Template:** Stored in `prompts/get_1985_yankees.txt` in source control. Pinned to a specific GPT-4o model version to ensure deterministic output.
 - **Expected Response Schema:**
   ```json
@@ -124,7 +124,7 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 ### Alerting
 - **Execution failure alert:** Application Insights alert rule — fires when function execution failure count > 0 in a 1-hour window; notifies rciapala via email
 - **Duration alert:** Alert when function execution duration > 90 seconds (signals TRAPI slowness)
-- **Data quality alert:** Custom metric `player_count_returned` — alert if value < 24 or > 40 (GPT output drift)
+- **Data quality alert:** Custom metric `player_count_returned` — alert if value < 24 or > 28 (outside active-roster scope)
 
 ### Logging
 - Structured logging via ILogger / OpenTelemetry SDK
@@ -163,7 +163,7 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 
 1. **TRAPI auth mechanism:** Does TRAPI support Azure AD Managed Identity bearer tokens? If not, what credential type is required and where will it be stored (Key Vault)? — *Owner: rciapala to confirm with TRAPI team*
 2. **TRAPI endpoint and API version:** What is the base URL and API version for the TRAPI GPT-4o endpoint? — *Required before implementation*
-3. **Player scope:** Should the roster include only the 25-man active roster, or also coaching staff, front-office personnel, and injured list? — *Affects prompt template and validation thresholds*
+3. **Player scope (Resolved in PRJ-02):** Include **active roster players only**. Exclude coaching staff, front-office personnel, and injured-list entries. Validation threshold remains **24–28** players, and known anchor players remain **Don Mattingly, Dave Winfield, Rickey Henderson**.
 4. **Networking:** Is TRAPI accessible over public internet or does it require VNet integration? — *Affects infrastructure design*
 5. **Consumption Plan vs. Premium Plan:** Is there a strict SLA on the 2 AM execution time? If yes, Premium Plan with always-ready instances is required to eliminate cold-start risk.
 

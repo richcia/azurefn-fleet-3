@@ -1,10 +1,29 @@
 targetScope = 'resourceGroup'
 
-@description('Azure region for all resources.')
-param location string = resourceGroup().location
+@description('Azure region for all resources. Must support zone-redundant Key Vault.')
+@allowed([
+  'australiaeast'
+  'brazilsouth'
+  'canadacentral'
+  'centralus'
+  'eastus'
+  'eastus2'
+  'francecentral'
+  'japaneast'
+  'koreacentral'
+  'northeurope'
+  'southcentralus'
+  'southeastasia'
+  'swedencentral'
+  'uksouth'
+  'westeurope'
+  'westus2'
+  'westus3'
+])
+param location string
 
 @description('TRAPI endpoint URL used by the function app.')
-param trapiEndpoint string
+param trapiEndpoint string = 'https://example.openai.azure.com'
 
 @description('TRAPI deployment name used by the function app.')
 param trapiDeploymentName string = 'gpt-4o'

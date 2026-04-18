@@ -1,0 +1,27 @@
+[Step 1 - Implement Tasks]
+- Reviewed issue INF-01 requirements and spec/readme context.
+- Added infra/main.bicep and modules for storage, functionapp, monitoring, and keyvault.
+- Wired APPLICATIONINSIGHTS_CONNECTION_STRING and AzureWebJobsStorage__accountName into Function App settings.
+
+[Step 2 - Build and Test]
+- Installed dependencies from requirements.txt.
+- Ran baseline pytest command; repository has no tests/ directory in current branch.
+- Validated Bicep syntax with az bicep build for main template and each module.
+
+[Step 3 - Code Review]
+- Ran Code Review Agent against PR #486 with INF-01 acceptance criteria.
+- Captured review findings in code_review_findings_470_486.json.
+- Captured prompt improvements in prompt_improvements_470_486.json.
+
+[Step 4 - Apply Feedback and Re-test]
+- Added allowed region constraints for zone-redundant Key Vault alignment.
+- Updated Application Insights sampling percentage to 20.
+- Added default trapiEndpoint to reduce deployment-time parameter omission failures.
+- Applied second-round critical review fixes:
+  - Added containerDeleteRetentionPolicy (7 days) for storage account blob service.
+  - Added AzureWebJobsStorage managed identity settings for blob/queue URIs.
+  - Added Storage Blob Data Owner and Storage Queue Data Contributor RBAC assignments for Function App managed identity.
+- Re-validated Bicep templates with az bicep build.
+- Re-ran Code Review Agent; no remaining critical issues.
+- Attempted `python -m pytest -v`; no tests are present in this branch (0 collected).
+- Attempted `az deployment group create`; blocked by missing Azure login in this environment.

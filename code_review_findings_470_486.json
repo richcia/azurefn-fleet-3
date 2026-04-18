@@ -1,0 +1,59 @@
+{
+  "issue_number": 470,
+  "pr_number": 486,
+  "findings": {
+    "critical_issues": [
+      {
+        "title": "Key Vault zone-redundancy not guaranteed",
+        "file": "infra/main.bicep",
+        "line_start": 3,
+        "line_end": 23,
+        "details": "Location was previously unconstrained, allowing deployment to regions that may not provide zone-redundant Key Vault.",
+        "status": "addressed"
+      },
+      {
+        "title": "Container soft-delete retention not configured",
+        "file": "infra/modules/storage.bicep",
+        "line_start": 30,
+        "line_end": 42,
+        "details": "Blob service had blob delete retention only; containerDeleteRetentionPolicy was missing.",
+        "status": "addressed"
+      },
+      {
+        "title": "Function host storage identity access incomplete",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 60,
+        "line_end": 149,
+        "details": "AzureWebJobsStorage identity settings and storage data-plane RBAC assignments were incomplete for allowSharedKeyAccess:false.",
+        "status": "addressed"
+      }
+    ],
+    "suggestions": [
+      {
+        "title": "Application Insights sampling should be enabled with effective sampling",
+        "file": "infra/modules/monitoring.bicep",
+        "line_start": 38,
+        "line_end": 38,
+        "details": "SamplingPercentage was set to 100, which does not effectively reduce telemetry volume.",
+        "status": "addressed"
+      },
+      {
+        "title": "Deployment ergonomics for required trapiEndpoint parameter",
+        "file": "infra/main.bicep",
+        "line_start": 26,
+        "line_end": 26,
+        "details": "trapiEndpoint had no default and could cause deployment failure if omitted.",
+        "status": "addressed"
+      },
+      {
+        "title": "Add explicit deployment evidence for az deployment group create",
+        "file": "infra/main.bicep",
+        "line_start": 1,
+        "line_end": 106,
+        "details": "Template compilation succeeds, but a live deployment execution log is still required to fully evidence acceptance criterion #6.",
+        "status": "open",
+        "note": "Cannot be executed in this environment because Azure login/subscription context is unavailable."
+      }
+    ]
+  }
+}

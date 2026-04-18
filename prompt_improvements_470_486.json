@@ -1,0 +1,22 @@
+{
+  "issue_number": 470,
+  "pr_number": 486,
+  "prompt_improvements": [
+    {
+      "category": "acceptance-criteria-hardening",
+      "improvement": "Explicitly require region constraints or validation when acceptance criteria depend on region-specific capabilities (for example zone-redundant Key Vault)."
+    },
+    {
+      "category": "operability",
+      "improvement": "Require explicit verification of telemetry sampling effectiveness instead of only setting an Application Insights property."
+    },
+    {
+      "category": "deployment-ux",
+      "improvement": "Ask for either defaults or an example parameter file for required deployment parameters to reduce deployment-time failures."
+    },
+    {
+      "category": "identity-storage-auth",
+      "improvement": "When requiring allowSharedKeyAccess:false, explicitly require all AzureWebJobsStorage managed identity settings and required storage data-plane RBAC role assignments in the same issue."
+    }
+  ]
+}

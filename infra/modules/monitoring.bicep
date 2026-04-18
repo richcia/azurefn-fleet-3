@@ -35,7 +35,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
     WorkspaceResourceId: workspace.id
     RetentionInDays: 30
     IngestionMode: 'LogAnalytics'
-    SamplingPercentage: 100
+    SamplingPercentage: 20
   }
 }
 

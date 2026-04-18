@@ -62,7 +62,6 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 4. Re-run the full unit test suite after applying changes.
 5. **If any test fails, fix the implementation code and re-run until all tests pass.**
 6. Wait for any asynchronous operations to complete before proceeding to the next step.
-7. Do not proceed to Step 5 until all tests pass with the review changes applied.
 
 
 ---

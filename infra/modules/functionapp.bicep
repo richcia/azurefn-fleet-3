@@ -21,9 +21,7 @@ param keyVaultName string
 param trapiEndpointSecretName string = 'TRAPI-ENDPOINT'
 
 @description('TRAPI auth scope used by DefaultAzureCredential for bearer tokens.')
-@allowed([
-  'https://cognitiveservices.azure.com/.default'
-])
+@minLength(1)
 param trapiAuthScope string = 'https://cognitiveservices.azure.com/.default'
 
 @description('Key Vault secret name for data storage account name.')

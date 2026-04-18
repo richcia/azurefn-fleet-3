@@ -57,7 +57,7 @@ def _load_prompt_template() -> dict[str, str]:
 
 
 def _get_bearer_token() -> str:
-    auth_scope = os.getenv("TRAPI_AUTH_SCOPE", DEFAULT_TRAPI_AUTH_SCOPE)
+    auth_scope = os.getenv("TRAPI_AUTH_SCOPE", "").strip() or DEFAULT_TRAPI_AUTH_SCOPE
     token = _DEFAULT_AZURE_CREDENTIAL.get_token(auth_scope)
     return token.token
 

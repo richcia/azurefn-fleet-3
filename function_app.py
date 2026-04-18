@@ -12,7 +12,7 @@ from blob_writer import write_failed, write_roster
 from response_validator import validate_response
 from trapi_client import fetch_roster
 
-os.environ.setdefault("TZ", "UTC")
+os.environ["TZ"] = "UTC"
 if hasattr(time, "tzset"):
     time.tzset()
 
@@ -39,6 +39,7 @@ def get_and_store_yankees_roster(mytimer: func.TimerRequest) -> None:
     )
 
     raw_response: str | None = None
+    player_count = 0
 
     try:
         prompt_text = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
@@ -49,15 +50,24 @@ def get_and_store_yankees_roster(mytimer: func.TimerRequest) -> None:
         )
 
         raw_response = fetch_roster(str(PROMPT_PATH))
-        is_valid, data, error = validate_response(raw_response)
+        payload = json.loads(raw_response)
+        total_tokens = payload.get("usage", {}).get("total_tokens") if isinstance(payload, dict) else None
 
+        roster_payload = payload
+        if isinstance(payload, dict) and "players" not in payload:
+            choices = payload.get("choices")
+            first_choice = choices[0] if isinstance(choices, list) and choices else {}
+            content = first_choice.get("message", {}).get("content")
+            if isinstance(content, str):
+                try:
+                    roster_payload = json.loads(content)
+                except json.JSONDecodeError:
+                    roster_payload = {}
+            elif isinstance(content, dict):
+                roster_payload = content
+
+        is_valid, data, error = validate_response(json.dumps(roster_payload))
         player_count = len(data["players"]) if is_valid and data else 0
-        total_tokens = None
-        try:
-            payload = json.loads(raw_response)
-            total_tokens = payload.get("usage", {}).get("total_tokens")
-        except json.JSONDecodeError:
-            total_tokens = None
 
         _log_event(
             "trapi_response_received",
@@ -76,8 +86,16 @@ def get_and_store_yankees_roster(mytimer: func.TimerRequest) -> None:
 
         _log_event("blob_write_succeeded", blob_uri=blob_uri, player_count=player_count)
     except Exception as exc:
-        failure_payload = raw_response if raw_response is not None else str(exc)
+        response_text = getattr(getattr(exc, "response", None), "text", None)
+        failure_payload = raw_response or response_text or str(exc)
         blob_uri = write_failed(failure_payload, run_date)
+        _log_event(
+            "trapi_response_received",
+            token_count=None,
+            latency_ms=int((time.monotonic() - start) * 1000),
+            player_count=0,
+            error=str(exc),
+        )
         _log_event("blob_write_succeeded", blob_uri=blob_uri, player_count=0)
         raise
     finally:

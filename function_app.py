@@ -4,6 +4,7 @@ import time
 
 import azure.functions as func
 from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry import metrics
 
 from blob_writer import write_roster_blob
 from trapi_client import fetch_roster
@@ -11,6 +12,12 @@ from validator import validate
 
 LOGGER = logging.getLogger(__name__)
 _AZURE_MONITOR_CONFIGURED = False
+_METER = metrics.get_meter(__name__)
+_PLAYER_COUNT_RETURNED_COUNTER = _METER.create_counter(
+    "player_count_returned",
+    unit="1",
+    description="Count of players returned after successful roster validation.",
+)
 
 
 def _configure_azure_monitor_if_available() -> None:
@@ -74,6 +81,7 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
         )
 
     blob_uri = write_roster_blob(response_payload, validation_result)
+    _PLAYER_COUNT_RETURNED_COUNTER.add(validation_result.player_count)
     LOGGER.info(
         "Function completed",
         extra={

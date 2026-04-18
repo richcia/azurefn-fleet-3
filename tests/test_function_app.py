@@ -81,3 +81,56 @@ def test_get_and_store_yankees_roster_raises_on_validation_failure(monkeypatch):
 
     assert write_calls["response"] == payload
     assert write_calls["result"].is_valid is False
+
+
+def test_get_and_store_yankees_roster_emits_player_count_metric_on_success(monkeypatch):
+    payload = _valid_payload()
+    metric_calls = []
+
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (payload, 123))
+    monkeypatch.setattr(
+        function_app,
+        "validate",
+        lambda response: ValidationResult(is_valid=True, player_count=len(response["players"])),
+    )
+    monkeypatch.setattr(function_app, "write_roster_blob", lambda response, result: "https://storage/yankees-roster/2026-04-18.json")
+    monkeypatch.setattr(function_app.LOGGER, "info", lambda _message, extra: None)
+
+    class CounterStub:
+        def add(self, value):
+            metric_calls.append(value)
+
+    monkeypatch.setattr(function_app, "_PLAYER_COUNT_RETURNED_COUNTER", CounterStub())
+
+    function_app.get_and_store_yankees_roster(TimerStub(past_due=False))
+
+    assert metric_calls == [len(payload["players"])]
+
+
+def test_get_and_store_yankees_roster_does_not_emit_player_count_metric_on_validation_failure(monkeypatch):
+    payload = {"players": []}
+    metric_calls = []
+
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (payload, 0))
+    monkeypatch.setattr(
+        function_app,
+        "validate",
+        lambda _response: ValidationResult(
+            is_valid=False,
+            player_count=0,
+            error_message="missing required players",
+            error_code="missing_required_players",
+        ),
+    )
+    monkeypatch.setattr(function_app, "write_roster_blob", lambda _response, _result: "https://storage/yankees-roster/failed/2026-04-18.json")
+
+    class CounterStub:
+        def add(self, value):
+            metric_calls.append(value)
+
+    monkeypatch.setattr(function_app, "_PLAYER_COUNT_RETURNED_COUNTER", CounterStub())
+
+    with pytest.raises(RuntimeError, match="Roster validation failed"):
+        function_app.get_and_store_yankees_roster(TimerStub(past_due=True))
+
+    assert metric_calls == []

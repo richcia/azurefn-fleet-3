@@ -1,0 +1,773 @@
+{
+  "summary": "Implementation plan for the 1985-NY-Yankees Azure Function: a nightly Timer-triggered Python 3.11 function that queries GPT-4o via TRAPI, validates the 1985 New York Yankees roster response, and persists it to dedicated Azure Blob Storage using Managed Identity for all service authentication. The plan covers IaC provisioning, TRAPI integration, blob write logic, CI/CD pipeline, observability, security hardening, and release readiness.",
+  "assumptions": [
+    "TRAPI supports Azure AD Managed Identity bearer token authentication; if not, a Key Vault secret fallback will be used.",
+    "TRAPI endpoint and GPT-4o model version will be confirmed by rciapala before APP-01 begins.",
+    "Player scope is limited to the 25-man active roster (24–28 range accounts for roster edge cases).",
+    "TRAPI is accessible over the public internet; no VNet integration required for initial deployment.",
+    "Consumption Plan is acceptable; cold-start risk at 2 AM UTC is acceptable given best-effort SLA.",
+    "A staging deployment slot is available on the Consumption Plan (requires Standard or higher for slots — owner to confirm or use a separate staging Function App).",
+    "GitHub Actions OIDC federated identity is used for Azure deployments (no long-lived service principal secrets).",
+    "Existing infra/ Bicep modules (storage, functionapp, rbac, monitoring, alerts) will be extended, not replaced.",
+    "The host.json functionTimeout will be set to 120 seconds; maxConcurrentCalls = 1.",
+    "Application Insights sampling is enabled at the SDK level to control ingestion cost."
+  ],
+  "open_questions": [
+    "Does TRAPI support Azure AD Managed Identity bearer tokens, or is a client credential / API key required?",
+    "What is the TRAPI base URL and GPT-4o API version/model deployment name to pin in the prompt template?",
+    "Should the roster include coaching staff, front-office, or IL players, or strictly the 25-man active roster?",
+    "Is TRAPI network-restricted (requiring VNet integration and private endpoint for storage)?",
+    "Does the Consumption Plan support deployment slots, or should a separate staging Function App be provisioned?"
+  ],
+  "waves": [
+    {
+      "name": "Foundation",
+      "objective": "Resolve external blockers, confirm TRAPI access, provision all Azure infrastructure, and establish CI/CD skeleton so all other work can proceed in parallel.",
+      "entry_criteria": [
+        "spec.md reviewed and open questions triaged",
+        "Azure subscription and resource group available",
+        "GitHub Actions OIDC credentials configured for the repository"
+      ],
+      "exit_criteria": [
+        "TRAPI endpoint, model version, and auth scope confirmed in writing",
+        "All Azure resources provisioned via Bicep (Function App, dedicated storage, Key Vault, App Insights, RBAC)",
+        "CI/CD pipeline deploys a stub function to staging slot successfully",
+        "Task PM-01 (plan approval) completed"
+      ]
+    },
+    {
+      "name": "Core Build",
+      "objective": "Implement the TRAPI client, response validator, blob writer, and Timer Trigger function; wire prompt template and host configuration.",
+      "entry_criteria": [
+        "Foundation wave exit criteria met",
+        "TRAPI credentials/scope available in Key Vault or confirmed as Managed Identity scope",
+        "Dedicated storage account provisioned with yankees-roster container"
+      ],
+      "exit_criteria": [
+        "GetAndStoreYankeesRoster function executes end-to-end locally and in staging",
+        "Unit tests pass for TRAPI client, validator, and blob writer modules",
+        "Prompt template pinned and committed to prompts/get_1985_yankees.txt"
+      ]
+    },
+    {
+      "name": "Hardening",
+      "objective": "Add reliability controls (retry/backoff, failure path, conditional PUT), observability (structured logging, custom metrics, alerts), and security hardening (Key Vault references, least-privilege RBAC review).",
+      "entry_criteria": [
+        "Core Build wave exit criteria met",
+        "Function successfully writes valid roster blob in staging"
+      ],
+      "exit_criteria": [
+        "Retry logic with exponential backoff verified by unit tests",
+        "Failed-response path writes to failed/ prefix and triggers Application Insights alert",
+        "All three alert rules active in staging: failure count, duration, data quality metric",
+        "No hardcoded secrets; all sensitive config via Key Vault references",
+        "Integration test confirms Mattingly, Winfield, Henderson present in blob output"
+      ]
+    },
+    {
+      "name": "Release Readiness",
+      "objective": "Validate end-to-end in staging, complete documentation, perform staged production rollout via slot swap, and confirm monitoring is active.",
+      "entry_criteria": [
+        "Hardening wave exit criteria met",
+        "All unit and integration tests passing in CI",
+        "Code review approved"
+      ],
+      "exit_criteria": [
+        "Staging smoke test passes (manual trigger + blob verified)",
+        "Production slot swap completed via GitHub Actions",
+        "Monitoring alerts confirmed active in production",
+        "README documents local dev setup, TRAPI auth, and blob naming convention",
+        "Nightly execution verified in production on first scheduled run"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "PM-01",
+      "title": "Review and approve implementation task plan",
+      "type": "project",
+      "labels": [
+        "planning",
+        "start-assign"
+      ],
+      "description": "Review this task plan for completeness, sequencing, and alignment with spec.md requirements. Resolve open questions (especially TRAPI auth and endpoint) before approving. Dependency graph is included below.",
+      "inputs": [
+        "spec.md",
+        "this task plan JSON"
+      ],
+      "outputs": [
+        "Approved task plan",
+        "Resolved TRAPI auth/endpoint open questions documented"
+      ],
+      "depends_on": [],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "project lead / rciapala",
+      "acceptance_criteria": [
+        "All tasks reviewed and estimated by owner",
+        "TRAPI auth mechanism and endpoint confirmed or escalated with explicit deadline",
+        "Player scope (active roster only vs. broader) confirmed",
+        "Consumption Plan vs. Premium Plan decision documented",
+        "Dependency graph reviewed and wave sequencing approved"
+      ],
+      "risks": [
+        "TRAPI auth uncertainty can block APP-01 and APP-02 indefinitely if not resolved early",
+        "Deployment slot availability on Consumption Plan may require infra rework"
+      ],
+      "wave": "Foundation",
+      "dependency_graph": "PM-01 (no deps)\n  └── INF-01 (no deps)\n        ├── INF-02 (depends: INF-01)\n        │     └── INF-03 (depends: INF-01, INF-02)\n        │           └── SEC-01 (depends: INF-01, INF-02, INF-03)\n        │                 └── APP-01 (depends: INF-01, INF-02, INF-03, SEC-01)\n        │                       ├── APP-02 (depends: APP-01)\n        │                       │     └── APP-03 (depends: APP-01, APP-02)\n        │                       │           └── APP-04 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── OPS-01 (depends: APP-04, INF-03)\n        │                       │                 ├── REL-01 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── QA-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        │                       │                 │     └── QA-02 (depends: QA-01, APP-04)\n        │                       │                 │           └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01)\n        │                       │                 └── DOC-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        └── CICD-01 (depends: INF-01)\n              └── CICD-02 (depends: CICD-01, INF-01, INF-02, INF-03)\n                    └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01, CICD-02)"
+    },
+    {
+      "id": "INF-01",
+      "title": "Provision core Azure infrastructure via Bicep",
+      "type": "infra",
+      "labels": [
+        "infrastructure",
+        "bicep",
+        "start-now"
+      ],
+      "description": "Extend existing Bicep modules to provision the dedicated storage account (Standard_LRS, Cool tier, soft-delete 7 days, yankees-roster container private), Function App (Consumption Plan, Python 3.11, system-assigned Managed Identity), Log Analytics workspace, workspace-based Application Insights (30-day retention, sampling enabled), and Azure Key Vault (zone-redundant). Wire APPLICATIONINSIGHTS_CONNECTION_STRING and AzureWebJobsStorage__accountName into Function App settings.",
+      "inputs": [
+        "spec.md architecture and resource requirements sections",
+        "existing infra/ Bicep modules"
+      ],
+      "outputs": [
+        "Updated infra/main.bicep and modules (storage, functionapp, monitoring, keyvault)",
+        "All resources provisioned in target resource group"
+      ],
+      "depends_on": [],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Dedicated storage account provisioned with Standard_LRS, Cool access tier, and allowSharedKeyAccess:false",
+        "yankees-roster container created with publicAccess:None and soft-delete retention of 7 days",
+        "Function App provisioned on Consumption Plan with Python 3.11, system-assigned Managed Identity enabled",
+        "Key Vault provisioned zone-redundant with RBAC authorization model",
+        "Application Insights connected to Function App with 30-day retention and sampling enabled",
+        "Bicep deployment completes with no errors via az deployment group create"
+      ],
+      "risks": [
+        "Consumption Plan does not support deployment slots — may require a separate staging Function App",
+        "allowSharedKeyAccess:false requires all SDK calls to use identity-based auth; ensure SDK version compatibility"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "INF-02",
+      "title": "Provision RBAC role assignments via Bicep",
+      "type": "infra",
+      "labels": [
+        "infrastructure",
+        "security",
+        "rbac"
+      ],
+      "description": "Add Bicep role assignment resources granting the Function App Managed Identity: Storage Blob Data Contributor scoped to the yankees-roster container, Key Vault Secrets User on the Key Vault, and Storage Blob Data Owner on the host storage account (for AzureWebJobsStorage identity auth). All assignments must be scoped to minimum required resource, not subscription or account level.",
+      "inputs": [
+        "INF-01 outputs (resource IDs for Function App identity, storage account, Key Vault)",
+        "spec.md Access and Permissions section"
+      ],
+      "outputs": [
+        "infra/modules/rbac.bicep updated with all required role assignments",
+        "Role assignments verified in Azure portal"
+      ],
+      "depends_on": [
+        "INF-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Storage Blob Data Contributor assigned to Managed Identity scoped to yankees-roster container (not account-level)",
+        "Key Vault Secrets User assigned to Managed Identity on the Key Vault",
+        "Storage Blob Data Owner and Queue Data Contributor assigned for host storage AzureWebJobsStorage identity auth",
+        "No wildcard or subscription-scope role assignments",
+        "Role assignments idempotent on re-deployment (no duplicate assignment errors)"
+      ],
+      "risks": [
+        "Container-scoped role assignment may not be supported in all Bicep/ARM versions — verify scope syntax",
+        "Missing Queue Data Contributor will cause Function App host to fail on startup"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "INF-03",
+      "title": "Provision staging environment infrastructure",
+      "type": "infra",
+      "labels": [
+        "infrastructure",
+        "staging",
+        "ci-cd"
+      ],
+      "description": "Provision a staging Function App (or deployment slot if Consumption Plan supports it) with identical configuration to production but pointing to a separate staging storage container or account. Wire all App Settings and Key Vault references identically to production. If Consumption Plan does not support slots, provision a second Function App resource for staging.",
+      "inputs": [
+        "INF-01 outputs",
+        "PM-01 decision on Consumption Plan vs. Premium Plan for slots"
+      ],
+      "outputs": [
+        "Staging Function App or slot provisioned and accessible",
+        "Staging environment App Settings configured"
+      ],
+      "depends_on": [
+        "INF-01",
+        "INF-02"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Staging Function App (or slot) deployed with Python 3.11 and Managed Identity enabled",
+        "Staging App Settings mirror production (TRAPI endpoint, Key Vault references, storage account name)",
+        "Staging environment connects to Application Insights (same workspace, separate cloud role name)",
+        "Staging deployment verified by deploying stub function and confirming execution in App Insights"
+      ],
+      "risks": [
+        "Consumption Plan slot limitation may require Premium Plan or a second Function App, increasing cost"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "SEC-01",
+      "title": "Configure Key Vault secrets and App Settings references",
+      "type": "security",
+      "labels": [
+        "security",
+        "key-vault",
+        "secrets"
+      ],
+      "description": "Store TRAPI credentials (endpoint URL, auth scope or API key, model deployment name) in Azure Key Vault. Configure Function App App Settings to reference Key Vault secrets via @Microsoft.KeyVault(SecretUri=...) references. Ensure no secrets are committed to source control or appear in plain text in any config file.",
+      "inputs": [
+        "INF-01 and INF-02 outputs (Key Vault provisioned, Managed Identity RBAC assigned)",
+        "TRAPI auth mechanism confirmed via PM-01",
+        "local.settings.json.example for reference"
+      ],
+      "outputs": [
+        "TRAPI secrets stored in Key Vault",
+        "Function App App Settings using Key Vault references",
+        "local.settings.json.example updated with placeholder variable names (no values)"
+      ],
+      "depends_on": [
+        "INF-01",
+        "INF-02",
+        "INF-03"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "security engineer / platform engineer",
+      "acceptance_criteria": [
+        "TRAPI endpoint URL, auth scope, and model version stored as Key Vault secrets",
+        "Function App App Settings reference Key Vault secrets (not plain text values)",
+        "Key Vault reference resolution verified: az functionapp config appsettings list shows resolved values",
+        "No secrets present in any committed file (confirmed by git log and grep scan)",
+        "local.settings.json.example lists all required env var names with placeholder values only"
+      ],
+      "risks": [
+        "Key Vault reference resolution requires Managed Identity RBAC to be fully propagated (can take minutes)",
+        "If TRAPI uses non-standard auth, Key Vault secret structure may need adjustment"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "CICD-01",
+      "title": "Establish GitHub Actions CI pipeline with test gate",
+      "type": "release",
+      "labels": [
+        "ci-cd",
+        "github-actions",
+        "testing"
+      ],
+      "description": "Create a GitHub Actions workflow that triggers on pull requests and pushes to main: installs Python 3.11 dependencies from requirements.txt, runs pytest with coverage for all modules under tests/, and fails the build if any test fails. Use OIDC federated identity (not long-lived secrets) for any Azure calls.",
+      "inputs": [
+        "requirements.txt",
+        "existing .github/workflows/ directory",
+        "tests/ directory structure"
+      ],
+      "outputs": [
+        ".github/workflows/ci.yml with lint, test, and coverage steps",
+        "CI badge in README"
+      ],
+      "depends_on": [
+        "INF-01"
+      ],
+      "parallelizable": true,
+      "estimate": "S",
+      "owner_role": "platform engineer / developer",
+      "acceptance_criteria": [
+        "GitHub Actions workflow triggers on PR and push to main",
+        "pytest runs all tests in tests/ with --cov report",
+        "Build fails if any test fails or coverage drops below threshold (set threshold after QA-01)",
+        "No long-lived service principal secrets stored in GitHub secrets (OIDC only)",
+        "CI run completes successfully on a stub commit"
+      ],
+      "risks": [
+        "OIDC federated identity setup requires Azure AD app registration — confirm permissions"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "CICD-02",
+      "title": "Build GitHub Actions CD pipeline with staging slot swap",
+      "type": "release",
+      "labels": [
+        "ci-cd",
+        "github-actions",
+        "deployment"
+      ],
+      "description": "Create a GitHub Actions CD workflow triggered on push to main (after CI passes): deploys the function package to the staging slot/app, runs a smoke test (manual trigger via Azure Functions admin API + blob existence check), then swaps staging to production. Uses OIDC federated identity for all Azure CLI calls.",
+      "inputs": [
+        "CICD-01 workflow",
+        "INF-03 staging environment",
+        "Azure Functions Core Tools or zip deploy method"
+      ],
+      "outputs": [
+        ".github/workflows/cd.yml with deploy-staging, smoke-test, and slot-swap jobs"
+      ],
+      "depends_on": [
+        "CICD-01",
+        "INF-01",
+        "INF-02",
+        "INF-03"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "CD workflow deploys to staging on push to main after CI passes",
+        "Smoke test job triggers the function manually and asserts a blob was written in staging storage",
+        "Slot swap (or equivalent staging-to-production promotion) only occurs after smoke test passes",
+        "Rollback path documented: re-swap or re-deploy previous artifact on failure",
+        "Deployment workflow uses OIDC (no long-lived credentials in GitHub secrets)"
+      ],
+      "risks": [
+        "Consumption Plan slot swap not supported — requires alternative promotion strategy (separate app deploy)",
+        "Smoke test timing: function may take >30s on cold start, requiring retry logic in smoke test step"
+      ],
+      "wave": "Foundation"
+    },
+    {
+      "id": "APP-01",
+      "title": "Implement TRAPI client module with retry and timeout",
+      "type": "app",
+      "labels": [
+        "feature",
+        "trapi",
+        "start-now"
+      ],
+      "description": "Implement trapi_client.py (or extend existing) to: authenticate via DefaultAzureCredential with the TRAPI-specific scope, load and send the pinned prompt from prompts/get_1985_yankees.txt, enforce a 45-second HTTP timeout, and apply 3-attempt exponential backoff retry on transient failures (5xx, timeout). Pin the GPT-4o model version in the request payload. Return the raw JSON response body.",
+      "inputs": [
+        "Confirmed TRAPI endpoint URL, auth scope, model deployment name (from SEC-01/PM-01)",
+        "prompts/get_1985_yankees.txt (to be created)",
+        "existing trapi_client.py"
+      ],
+      "outputs": [
+        "Updated trapi_client.py with timeout, retry, and prompt-loading logic",
+        "prompts/get_1985_yankees.txt committed to source control"
+      ],
+      "depends_on": [
+        "INF-01",
+        "INF-02",
+        "INF-03",
+        "SEC-01"
+      ],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "developer",
+      "acceptance_criteria": [
+        "TRAPI client reads prompt from prompts/get_1985_yankees.txt (not hardcoded string)",
+        "GPT-4o model version is pinned in the request payload (read from App Settings)",
+        "HTTP call enforces 45-second timeout via httpx or requests timeout parameter",
+        "3 retries with exponential backoff applied on 5xx responses and timeout errors",
+        "DefaultAzureCredential used with TRAPI-specific scope (no hardcoded credentials)",
+        "Unit tests cover: successful response, timeout retry, 3-retry exhaustion raises exception"
+      ],
+      "risks": [
+        "TRAPI auth scope unknown until PM-01 resolved — blocks implementation",
+        "Model version pinning requires TRAPI to support model deployment name parameter"
+      ],
+      "wave": "Core Build"
+    },
+    {
+      "id": "APP-02",
+      "title": "Implement response validator module",
+      "type": "app",
+      "labels": [
+        "feature",
+        "validation"
+      ],
+      "description": "Implement a validator module that parses the TRAPI JSON response against the expected schema ({players: [{name, position, jersey_number}]}), asserts player count is in range [24, 28], and raises a structured ValidationError on failure. The validator should be pure (no I/O) to enable easy unit testing.",
+      "inputs": [
+        "spec.md Requirement 1 response schema and acceptance criteria",
+        "APP-01 output (raw JSON response contract)"
+      ],
+      "outputs": [
+        "src/validator.py (or equivalent) with schema validation and count-range check",
+        "Unit tests in tests/test_validator.py"
+      ],
+      "depends_on": [
+        "APP-01"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "developer",
+      "acceptance_criteria": [
+        "Validates JSON structure matches {players: [{name: str, position: str, jersey_number: int}]}",
+        "Raises ValidationError if player count < 24 or > 28",
+        "Returns validated player list on success",
+        "Unit tests cover: valid response, missing fields, wrong types, count below/above range",
+        "Validator is pure function (no side effects, no I/O dependencies)"
+      ],
+      "risks": [
+        "GPT-4o may return slightly different field names or types on prompt drift — validator must be tested with real TRAPI responses"
+      ],
+      "wave": "Core Build"
+    },
+    {
+      "id": "APP-03",
+      "title": "Implement blob writer module with conditional PUT",
+      "type": "app",
+      "labels": [
+        "feature",
+        "blob-storage",
+        "start-now"
+      ],
+      "description": "Implement or extend blob_writer.py to: write validated roster JSON to yankees-roster/{run_date_utc}.json using DefaultAzureCredential (Managed Identity), use If-None-Match: * conditional PUT to prevent duplicate writes on same-day retrigger, and write raw failed responses to yankees-roster/failed/{run_date_utc}.json on validation failure.",
+      "inputs": [
+        "spec.md Requirement 2 blob naming and storage spec",
+        "existing blob_writer.py",
+        "INF-01 dedicated storage account name (from App Settings)"
+      ],
+      "outputs": [
+        "Updated blob_writer.py with conditional PUT and failed/ path logic",
+        "Unit tests in tests/test_blob_writer.py"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "developer",
+      "acceptance_criteria": [
+        "Blob name is {run_date_utc}.json (UTC date, not local time)",
+        "Conditional PUT uses If-None-Match: * header — raises ResourceExistsError on duplicate without overwriting",
+        "Failed/invalid responses written to yankees-roster/failed/{run_date_utc}.json",
+        "DefaultAzureCredential used (no connection string or shared key)",
+        "Storage account name read from App Settings (not hardcoded)",
+        "Unit tests cover: successful write, duplicate write idempotency, failed blob write path"
+      ],
+      "risks": [
+        "azure-storage-blob SDK conditional PUT behavior must be tested against real storage — mock tests may not catch header handling issues"
+      ],
+      "wave": "Core Build"
+    },
+    {
+      "id": "APP-04",
+      "title": "Implement Timer Trigger function and host configuration",
+      "type": "app",
+      "labels": [
+        "feature",
+        "timer-trigger",
+        "start-now"
+      ],
+      "description": "Implement the GetAndStoreYankeesRoster Azure Function in function_app.py using the v2 programming model Timer Trigger with schedule '0 0 2 * * *', useMonitor=True, and explicit UTC timezone. Wire TRAPI client, validator, and blob writer calls in sequence. Emit structured log events and the player_count_returned custom metric. Set host.json functionTimeout=120, maxConcurrentCalls=1.",
+      "inputs": [
+        "APP-01, APP-02, APP-03 modules",
+        "host.json",
+        "spec.md Requirement 3 and Non-Functional Requirements"
+      ],
+      "outputs": [
+        "Updated function_app.py with Timer Trigger and full orchestration logic",
+        "Updated host.json with functionTimeout and maxConcurrentCalls",
+        "prompts/ directory in repo root"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02",
+        "APP-03"
+      ],
+      "parallelizable": false,
+      "estimate": "M",
+      "owner_role": "developer",
+      "acceptance_criteria": [
+        "Timer Trigger schedule is '0 0 2 * * *' with useMonitor=True",
+        "Function completes end-to-end locally using func start and a manual trigger",
+        "Structured log events emitted: function_started, trapi_request_sent, trapi_response_received, blob_write_succeeded, function_completed",
+        "player_count_returned custom metric emitted via Application Insights SDK on each successful run",
+        "host.json sets functionTimeout to 120 and extensions.http.maxConcurrentRequests (or timer maxConcurrentCalls) to 1",
+        "Function handles validation failure path: writes to failed/ and logs structured error before exiting"
+      ],
+      "risks": [
+        "Azure Functions v2 programming model useMonitor parameter syntax differs from v1 — verify with SDK docs",
+        "Custom metric emission via OpenTelemetry SDK requires correct instrumentation key wiring"
+      ],
+      "wave": "Core Build"
+    },
+    {
+      "id": "REL-01",
+      "title": "Implement retry, backoff, and failure-path alerting",
+      "type": "app",
+      "labels": [
+        "reliability",
+        "error-handling"
+      ],
+      "description": "Harden the TRAPI client with tenacity or equivalent library for 3-attempt exponential backoff (base 2s, max 30s). Implement the validation failure path end-to-end: catch ValidationError in function_app.py, write raw response to failed/ blob prefix, emit a custom Application Insights exception event, and re-raise so the function execution is marked as failed (triggering the execution failure alert).",
+      "inputs": [
+        "APP-01 retry stub",
+        "APP-04 function orchestration",
+        "spec.md Reliability NFR and Alerting section"
+      ],
+      "outputs": [
+        "Hardened trapi_client.py with tenacity retry decorator",
+        "Validated failure path in function_app.py",
+        "Unit tests for retry exhaustion and failure path"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02",
+        "APP-03"
+      ],
+      "parallelizable": true,
+      "estimate": "S",
+      "owner_role": "developer",
+      "acceptance_criteria": [
+        "tenacity (or equivalent) retry applied with 3 attempts, exponential backoff, jitter",
+        "Retry only on transient errors (5xx, timeout) — not on 4xx or ValidationError",
+        "On retry exhaustion, exception propagates to function_app.py and is logged as structured error",
+        "Validation failure writes raw response to failed/ prefix before re-raising",
+        "Unit tests confirm retry count, backoff intervals (mocked), and failure blob write"
+      ],
+      "risks": [
+        "Retry on TRAPI calls may push total execution time beyond 60s target — monitor duration in staging"
+      ],
+      "wave": "Hardening"
+    },
+    {
+      "id": "OPS-01",
+      "title": "Provision Application Insights alert rules via Bicep",
+      "type": "infra",
+      "labels": [
+        "observability",
+        "alerting",
+        "infrastructure"
+      ],
+      "description": "Extend infra/modules/alerts.bicep to add three alert rules: (1) execution failure count > 0 in 1-hour window → email rciapala, (2) function duration > 90 seconds → email rciapala, (3) custom metric player_count_returned < 24 or > 40 → email rciapala. Use existing Action Group or create one.",
+      "inputs": [
+        "INF-01 Application Insights resource",
+        "spec.md Alerting section",
+        "existing infra/modules/alerts.bicep"
+      ],
+      "outputs": [
+        "Updated alerts.bicep with three alert rules",
+        "Alert rules deployed and visible in Azure Monitor"
+      ],
+      "depends_on": [
+        "APP-04",
+        "INF-03"
+      ],
+      "parallelizable": true,
+      "estimate": "S",
+      "owner_role": "platform engineer",
+      "acceptance_criteria": [
+        "Execution failure alert fires when function exceptions > 0 in 1-hour window",
+        "Duration alert fires when avg execution duration > 90 seconds",
+        "Data quality alert fires when player_count_returned custom metric < 24 or > 40",
+        "All alerts notify rciapala via email Action Group",
+        "Alert rules deployed via Bicep (not manually configured)",
+        "Alerts tested in staging by intentionally triggering each condition"
+      ],
+      "risks": [
+        "Custom metric player_count_returned must be emitted by the function before the alert can be validated",
+        "Scheduled query alert for custom metrics may have up to 5-minute evaluation delay"
+      ],
+      "wave": "Hardening"
+    },
+    {
+      "id": "QA-01",
+      "title": "Write and validate unit test suite",
+      "type": "qa",
+      "labels": [
+        "testing",
+        "quality"
+      ],
+      "description": "Write comprehensive unit tests covering: TRAPI client (success, timeout, retry exhaustion), response validator (valid/invalid schema, count range boundaries), blob writer (successful write, duplicate idempotency, failed/ path), and function orchestration (success path, validation failure path). Target ≥80% coverage on all application modules.",
+      "inputs": [
+        "APP-01, APP-02, APP-03, APP-04 implementations",
+        "requirements.txt (pytest, pytest-cov)"
+      ],
+      "outputs": [
+        "tests/test_trapi_client.py, tests/test_validator.py, tests/test_blob_writer.py, tests/test_function_app.py",
+        "Coverage report ≥80%"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02",
+        "APP-03",
+        "APP-04"
+      ],
+      "parallelizable": true,
+      "estimate": "M",
+      "owner_role": "developer / QA engineer",
+      "acceptance_criteria": [
+        "pytest runs all tests with zero failures",
+        "Coverage ≥80% on trapi_client, validator, blob_writer, and function_app modules",
+        "Known player assertions tested: Mattingly, Winfield, Henderson present in parsed output",
+        "Retry logic tested with mocked HTTP responses (3 failures then success; 3 failures then exception)",
+        "Conditional PUT idempotency tested with mocked ResourceExistsError",
+        "All tests runnable locally via python -m pytest tests/ -v --cov"
+      ],
+      "risks": [
+        "Mocking DefaultAzureCredential and azure-storage-blob SDK requires careful fixture design",
+        "Integration-level assertions on known players require a real or recorded TRAPI response fixture"
+      ],
+      "wave": "Hardening"
+    },
+    {
+      "id": "QA-02",
+      "title": "Execute end-to-end integration test in staging",
+      "type": "qa",
+      "labels": [
+        "testing",
+        "staging",
+        "integration"
+      ],
+      "description": "Manually trigger GetAndStoreYankeesRoster in the staging environment, verify the roster blob is written to yankees-roster/{today_utc}.json in the staging storage account, confirm Mattingly/Winfield/Henderson appear in the output JSON, and verify Application Insights shows the player_count_returned metric and all structured log events.",
+      "inputs": [
+        "QA-01 passing",
+        "APP-04 deployed to staging",
+        "OPS-01 alert rules active in staging"
+      ],
+      "outputs": [
+        "Integration test result documented (pass/fail with blob URL and App Insights screenshot)",
+        "Known player assertions confirmed"
+      ],
+      "depends_on": [
+        "QA-01",
+        "APP-04"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "developer / QA engineer",
+      "acceptance_criteria": [
+        "Roster blob written to staging storage at yankees-roster/{run_date_utc}.json",
+        "JSON blob contains 24–28 players including Mattingly, Winfield, and Henderson",
+        "player_count_returned custom metric visible in Application Insights within 5 minutes",
+        "All five structured log events visible in Application Insights traces",
+        "Duplicate trigger on same day does not overwrite existing blob (conditional PUT verified)",
+        "Validation failure path tested: inject invalid TRAPI response, confirm failed/ blob written and alert fires"
+      ],
+      "risks": [
+        "TRAPI availability in staging environment may differ from production",
+        "Application Insights ingestion latency may delay metric/log visibility"
+      ],
+      "wave": "Hardening"
+    },
+    {
+      "id": "DOC-01",
+      "title": "Write README and operational runbook",
+      "type": "documentation",
+      "labels": [
+        "documentation"
+      ],
+      "description": "Update README.md to include: local dev setup (prerequisites, func start instructions, local.settings.json.example walkthrough), TRAPI auth instructions (how to obtain credentials, Key Vault secret names), blob naming convention, and how to manually trigger the function. Include a brief operational runbook section covering alert response procedures for each of the three alert rules.",
+      "inputs": [
+        "spec.md",
+        "local.settings.json.example",
+        "APP-01–APP-04 implementations",
+        "OPS-01 alert rules"
+      ],
+      "outputs": [
+        "Updated README.md with local dev, TRAPI auth, blob naming, and runbook sections"
+      ],
+      "depends_on": [
+        "APP-01",
+        "APP-02",
+        "APP-03",
+        "APP-04"
+      ],
+      "parallelizable": true,
+      "estimate": "S",
+      "owner_role": "developer / technical writer",
+      "acceptance_criteria": [
+        "README includes step-by-step local dev setup (clone, pip install, set env vars, func start)",
+        "TRAPI auth section documents Key Vault secret names and how to populate them",
+        "Blob naming convention documented with example (yankees-roster/2026-03-31.json)",
+        "Operational runbook covers response actions for all three Application Insights alerts",
+        "README reviewed and approved by rciapala"
+      ],
+      "risks": [
+        "TRAPI auth instructions depend on PM-01 resolution — may need a placeholder until confirmed"
+      ],
+      "wave": "Hardening"
+    },
+    {
+      "id": "REL-02",
+      "title": "Execute production deployment and verify monitoring",
+      "type": "release",
+      "labels": [
+        "release",
+        "production"
+      ],
+      "description": "Trigger the GitHub Actions CD pipeline to deploy to production via staging slot swap (or equivalent). Confirm the first nightly execution at 2 AM UTC succeeds, the roster blob is written to the production storage account, and all three Application Insights alert rules are active. Document the production deployment in the release log.",
+      "inputs": [
+        "QA-01 and QA-02 passing",
+        "OPS-01 alert rules deployed to production",
+        "DOC-01 README complete",
+        "CICD-02 CD pipeline operational"
+      ],
+      "outputs": [
+        "Production Function App running GetAndStoreYankeesRoster on nightly schedule",
+        "First production blob verified",
+        "All monitoring alerts active"
+      ],
+      "depends_on": [
+        "QA-01",
+        "QA-02",
+        "OPS-01",
+        "DOC-01",
+        "CICD-02"
+      ],
+      "parallelizable": false,
+      "estimate": "S",
+      "owner_role": "platform engineer / rciapala",
+      "acceptance_criteria": [
+        "CD pipeline deploys to production via staging promotion without manual steps",
+        "First nightly execution at 2 AM UTC writes roster blob to production storage",
+        "Roster blob contains 24–28 players including Mattingly, Winfield, Henderson",
+        "All three Application Insights alert rules confirmed active in production (Azure Monitor)",
+        "No hardcoded secrets in any deployed configuration (verified via App Settings inspection)",
+        "Deployment documented with timestamp, artifact version, and approval sign-off"
+      ],
+      "risks": [
+        "First scheduled production run may fail if cold start exceeds function timeout — monitor closely",
+        "Slot swap promotion not available on Consumption Plan — alternative promotion must be validated in CD pipeline"
+      ],
+      "wave": "Release Readiness"
+    }
+  ],
+  "critical_path": [
+    "PM-01",
+    "INF-01",
+    "INF-02",
+    "INF-03",
+    "SEC-01",
+    "CICD-01",
+    "CICD-02",
+    "APP-01",
+    "APP-02",
+    "APP-03",
+    "APP-04",
+    "REL-01",
+    "OPS-01",
+    "QA-01",
+    "QA-02",
+    "DOC-01",
+    "REL-02"
+  ],
+  "start_now": [
+    "PM-01",
+    "INF-01",
+    "CICD-01",
+    "APP-01",
+    "APP-03"
+  ]
+}

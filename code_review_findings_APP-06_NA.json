@@ -11,7 +11,9 @@
         "file": "host.json",
         "line_start": 13,
         "line_end": 15,
-        "recommendation": "Run func start locally or in CI to confirm host.json has no warnings/errors and the runtime accepts the timerTrigger concurrency setting."
+        "recommendation": "Run func start locally or in CI to confirm host.json has no warnings/errors and the runtime accepts the timerTrigger concurrency setting.",
+        "status": "deferred",
+        "status_note": "Deferred in this sandbox because Azure Functions Core Tools (`func`) is not installed."
       },
       {
         "title": "Add automated startup validation for host.json",
@@ -19,7 +21,9 @@
         "file": ".github/workflows/ci.yml",
         "line_start": 1,
         "line_end": 48,
-        "recommendation": "Add a CI startup/schema validation step using Azure Functions Core Tools so host.json regressions are detected automatically."
+        "recommendation": "Add a CI startup/schema validation step using Azure Functions Core Tools so host.json regressions are detected automatically.",
+        "status": "partially_applied",
+        "status_note": "Added CI host.json APP-06 assertions in .github/workflows/ci.yml; runtime func-based startup validation remains deferred."
       }
     ]
   }

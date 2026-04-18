@@ -1,0 +1,9 @@
+{
+  "issue_number": "APP-01",
+  "pr_number": "NA",
+  "improvements": [
+    "Require the implementor to include a verifiable manual/integration TRAPI validation path for acceptance criteria that depend on external model output.",
+    "Require tests to validate schema semantics (field presence and type intent) instead of brittle exact-string schema literals.",
+    "When PR creation tooling is unavailable, require recording an explicit compare URL and a placeholder PR identifier."
+  ]
+}

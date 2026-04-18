@@ -3,3 +3,17 @@ Step 1 - Implement Tasks
 - Searched repository for prompt conventions and schema references.
 - Added prompts/get_1985_yankees.txt with pinned model directive and system/user prompt content.
 - Added tests/test_get_1985_yankees_prompt.py to validate prompt existence and required content.
+Step 2 - Build and Test
+- Installed dependencies from requirements.txt.
+- Ran targeted pytest for prompt tests (passed).
+- Ran full available pytest suite in tests/ (passed).
+Step 3 - Code Review
+- Ran Code Review Agent against branch compare URL and acceptance criteria.
+- Recorded findings in code_review_findings_APP-01_NA.json.
+- Recorded prompt improvement proposals in prompt_improvements_APP-01_NA.json.
+Step 4 - Apply Feedback and Re-test
+- Updated prompt tests to remove ambiguous schema literal assertion.
+- Added env-gated integration/manual TRAPI validation test for known players.
+- Ran Code Review Agent a second time after updates.
+- Applied second review suggestions by requiring RUN_MANUAL_TRAPI_TESTS=true and adding schema/type assertions for TRAPI response players.
+- Re-ran full pytest suite (passed with manual TRAPI test skipped by default).

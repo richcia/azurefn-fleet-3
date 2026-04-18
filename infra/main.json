@@ -1,0 +1,280 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "3592728849001884674"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "project": "1985-NY-Yankees",
+        "owner": "rciapala"
+      }
+    },
+    "functionAppPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Function App system-assigned managed identity principal ID."
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "defaultValue": "[format('kv-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "Globally unique Key Vault name (3-24 chars, alphanumeric and hyphen)."
+      }
+    },
+    "trapiCredentialSecretName": {
+      "type": "string",
+      "defaultValue": "trapi-credential"
+    },
+    "createTrapiCredentialSecret": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "trapiCredentialSecretValue": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional TRAPI credential value. Leave empty when TRAPI uses managed identity auth."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyVault",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('keyVaultName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "trapiCredentialSecretName": {
+            "value": "[parameters('trapiCredentialSecretName')]"
+          },
+          "createTrapiCredentialSecret": {
+            "value": "[parameters('createTrapiCredentialSecret')]"
+          },
+          "trapiCredentialSecretValue": {
+            "value": "[parameters('trapiCredentialSecretValue')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "17362151483880790099"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {}
+            },
+            "tenantId": {
+              "type": "string",
+              "defaultValue": "[subscription().tenantId]"
+            },
+            "softDeleteRetentionInDays": {
+              "type": "int",
+              "defaultValue": 90
+            },
+            "enablePurgeProtection": {
+              "type": "bool",
+              "defaultValue": true
+            },
+            "trapiCredentialSecretName": {
+              "type": "string",
+              "defaultValue": "trapi-credential"
+            },
+            "createTrapiCredentialSecret": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "trapiCredentialSecretValue": {
+              "type": "securestring",
+              "defaultValue": ""
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "enableRbacAuthorization": true,
+                "enabledForDeployment": false,
+                "enabledForDiskEncryption": false,
+                "enabledForTemplateDeployment": false,
+                "enablePurgeProtection": "[parameters('enablePurgeProtection')]",
+                "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+                "tenantId": "[parameters('tenantId')]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow"
+                }
+              }
+            },
+            {
+              "condition": "[parameters('createTrapiCredentialSecret')]",
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), parameters('trapiCredentialSecretName'))]",
+              "properties": {
+                "value": "[parameters('trapiCredentialSecretValue')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "keyVaultResourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('name')), '2023-07-01').vaultUri]"
+            },
+            "trapiCredentialSecretUri": {
+              "type": "string",
+              "value": "[if(parameters('createTrapiCredentialSecret'), format('{0}secrets/{1}', reference(resourceId('Microsoft.KeyVault/vaults', parameters('name')), '2023-07-01').vaultUri, parameters('trapiCredentialSecretName')), '')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyVaultRbac",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[parameters('functionAppPrincipalId')]"
+          },
+          "keyVaultResourceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultResourceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12945302623634507736"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string"
+            },
+            "keyVaultResourceId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+            "keyVaultName": "[last(split(parameters('keyVaultResourceId'), '/'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('principalId'), variables('keyVaultSecretsUserRoleDefinitionId'))]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]"
+              }
+            }
+          ],
+          "outputs": {
+            "keyVaultSecretsUserAssignmentId": {
+              "type": "string",
+              "value": "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('principalId'), variables('keyVaultSecretsUserRoleDefinitionId')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'keyVault')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "keyVaultName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultName.value]"
+    },
+    "keyVaultResourceId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultResourceId.value]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultUri.value]"
+    },
+    "keyVaultSecretsUserAssignmentId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVaultRbac'), '2025-04-01').outputs.keyVaultSecretsUserAssignmentId.value]"
+    },
+    "trapiCredentialSecretUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.trapiCredentialSecretUri.value]"
+    },
+    "trapiCredentialSecretReference": {
+      "type": "string",
+      "value": "[if(not(empty(reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.trapiCredentialSecretUri.value)), format('@Microsoft.KeyVault(SecretUri={0})', reference(resourceId('Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.trapiCredentialSecretUri.value), '')]"
+    }
+  }
+}

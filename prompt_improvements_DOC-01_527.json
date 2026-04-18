@@ -1,0 +1,24 @@
+{
+  "issue_number": "DOC-01",
+  "pr_number": 527,
+  "improvements": [
+    {
+      "id": "prompt-1",
+      "category": "configuration_consistency",
+      "proposal": "Instruct the code-implementor-agent to cross-check every README/local.settings key against runtime code references (os.getenv usage) and update templates/examples in the same change when mismatches are found.",
+      "based_on_finding": "Local settings key mismatch with runtime expectation"
+    },
+    {
+      "id": "prompt-2",
+      "category": "auth_actionability",
+      "proposal": "Require authentication documentation tasks to include concrete role/permission setup steps and at least one verification command (for example az role assignment checks), not only high-level credential descriptions.",
+      "based_on_finding": "TRAPI auth section lacked explicit credential/role setup guidance"
+    },
+    {
+      "id": "prompt-3",
+      "category": "acceptance_dependency",
+      "proposal": "When acceptance criteria include external approval, the agent should explicitly mark it as external dependency, report current status, and request reviewer action early.",
+      "based_on_finding": "Missing required approval from rciapala"
+    }
+  ]
+}

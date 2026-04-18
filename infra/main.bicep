@@ -7,7 +7,9 @@ param location string = resourceGroup().location
 param storageAccountName string = 'yr${uniqueString(resourceGroup().id)}'
 
 @description('Function App host storage account name used for AzureWebJobsStorage, to verify separation from dedicated roster storage.')
-param functionHostStorageAccountName string = ''
+@minLength(3)
+@maxLength(24)
+param functionHostStorageAccountName string
 
 @description('Tags to apply to provisioned resources.')
 param tags object = {
@@ -15,7 +17,9 @@ param tags object = {
   owner: 'rciapala'
 }
 
-module storage './modules/storage.bicep' = {
+var storageDistinctFromHost = toLower(storageAccountName) != toLower(functionHostStorageAccountName)
+
+module storage './modules/storage.bicep' = if (storageDistinctFromHost) {
   name: 'storageDeployment'
   params: {
     storageAccountName: storageAccountName
@@ -24,9 +28,16 @@ module storage './modules/storage.bicep' = {
   }
 }
 
-var storageDistinctFromHost = empty(functionHostStorageAccountName) || toLower(storage.outputs.storageAccountName) != toLower(functionHostStorageAccountName)
+resource storageNameValidationGuard 'Microsoft.Storage/storageAccounts@2023-05-01' = if (!storageDistinctFromHost) {
+  name: '${take(storageAccountName, 23)}-'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}
 
-output storageAccountName string = storage.outputs.storageAccountName
-output storageAccountResourceId string = storage.outputs.storageAccountId
-output yankeesRosterContainerName string = storage.outputs.yankeesRosterContainerName
+output storageAccountName string = storageDistinctFromHost ? storage!.outputs.storageAccountName : ''
+output storageAccountResourceId string = storageDistinctFromHost ? storage!.outputs.storageAccountId : ''
+output yankeesRosterContainerName string = storageDistinctFromHost ? storage!.outputs.yankeesRosterContainerName : ''
 output storageDistinctFromHost bool = storageDistinctFromHost

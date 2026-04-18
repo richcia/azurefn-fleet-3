@@ -2,6 +2,28 @@
   "issue_number": "INF-01",
   "pr_number": 467,
   "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/467",
+  "review_runs": [
+    {
+      "run": 1,
+      "summary": "Initial review reported PR had no code changes yet.",
+      "status": "addressed"
+    },
+    {
+      "run": 2,
+      "summary": "Review requested deployment-time enforcement for host/dedicated storage separation.",
+      "status": "addressed"
+    },
+    {
+      "run": 3,
+      "summary": "Review identified numeric-only bypass risk in separation guard.",
+      "status": "addressed"
+    },
+    {
+      "run": 4,
+      "summary": "Final review: no remaining critical issues; only minor suggestions.",
+      "status": "accepted"
+    }
+  ],
   "critical_issues": [
     {
       "title": "No code changes in PR; INF-01 functionality is not implemented",
@@ -9,6 +31,14 @@
       "line_start": null,
       "line_end": null,
       "details": "Initial review observed no changed files in the PR, so INF-01 acceptance criteria were not yet satisfied.",
+      "status": "addressed"
+    },
+    {
+      "title": "Dedicated/host storage separation was not enforced at deployment time",
+      "file": "infra/main.bicep",
+      "line_start": 20,
+      "line_end": 42,
+      "details": "Added a deterministic deployment guard and conditional module deployment to fail when storageAccountName equals functionHostStorageAccountName.",
       "status": "addressed"
     }
   ],
@@ -19,6 +49,14 @@
       "line_start": 1,
       "line_end": 33,
       "details": "Add validation checks for Standard_LRS/Cool, allowSharedKeyAccess false, soft-delete retention, private container access, and host/dedicated storage distinction.",
+      "status": "addressed"
+    },
+    {
+      "title": "Numeric-only equal-name bypass in guard logic",
+      "file": "infra/main.bicep",
+      "line_start": 31,
+      "line_end": 33,
+      "details": "Guard now uses `${take(storageAccountName, 23)}-` so failure is deterministic for all equal-name inputs.",
       "status": "addressed"
     }
   ]

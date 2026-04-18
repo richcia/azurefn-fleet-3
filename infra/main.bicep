@@ -40,4 +40,3 @@ module functionApp 'modules/functionapp.bicep' = {
 output functionAppId string = functionApp.outputs.functionAppId
 output functionAppName string = functionApp.outputs.functionAppName
 output functionAppPrincipalId string = functionApp.outputs.functionAppPrincipalId
-output applicationInsightsConnectionString string = monitoring.outputs.applicationInsightsConnectionString

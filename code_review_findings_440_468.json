@@ -1,0 +1,33 @@
+{
+  "issue_number": 440,
+  "issue_url": "https://github.com/richcia/azurefn-fleet-3/issues/440",
+  "pr_number": 468,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/468",
+  "findings": {
+    "critical_issues": [
+      {
+        "title": "Missing RBAC role assignments for managed identity to host storage account",
+        "target_file": "infra/modules/functionapp.bicep",
+        "line_range": "1-86 (notably 29-31, 46-48)",
+        "status": "addressed",
+        "resolution": "Added storage-account scoped role assignments for Storage Blob Data Contributor and Storage Queue Data Contributor using the function app system-assigned principal ID."
+      }
+    ],
+    "suggestions": [
+      {
+        "title": "Avoid exposing Application Insights connection string as deployment output",
+        "target_file": "infra/main.bicep",
+        "line_range": "43",
+        "status": "addressed",
+        "resolution": "Removed applicationInsightsConnectionString from top-level deployment outputs."
+      },
+      {
+        "title": "Add explicit validation for operational readiness acceptance criterion",
+        "target_file": "infra/main.bicep; infra/modules/functionapp.bicep",
+        "line_range": "n/a",
+        "status": "not_addressed",
+        "resolution": "No deployment/runtime automation scripts exist in this repository; operational readiness requires post-deploy validation in Azure portal/CLI during environment deployment."
+      }
+    ]
+  }
+}

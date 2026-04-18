@@ -71,7 +71,7 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 | `AzureWebJobsStorage__accountName` | Yes | — | Storage account name for identity-based AzureWebJobs storage (no connection string / shared key). |
 | `FUNCTIONS_WORKER_RUNTIME` | Yes | `python` | Must be `python` for Python Azure Functions. |
 | `FUNCTIONS_EXTENSION_VERSION` | Yes | `~4` | Azure Functions runtime version. Must be `~4`. |
-| `STORAGE_ACCOUNT_NAME` | Yes | — | Storage account name where the `yankees-roster` blob container lives. Same value as `AzureWebJobsStorage__accountName`. |
+| `DATA_STORAGE_ACCOUNT_NAME` | Yes | — | Dedicated data storage account name where the `yankees-roster` blob container lives. |
 | `TRAPI_ENDPOINT` | Yes | — | Azure OpenAI endpoint URL, e.g. `https://<resource>.openai.azure.com`. |
 | `TRAPI_DEPLOYMENT_NAME` | No | `gpt-4o` | Azure OpenAI deployment (model alias). |
 | `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |

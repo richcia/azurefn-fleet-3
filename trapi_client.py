@@ -29,6 +29,7 @@ def _get_required_env(name: str) -> str:
 
 def _load_prompt_template() -> dict[str, str]:
     prompt_content = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    prompt_content = prompt_content.replace("\r\n", "\n").replace("\r", "\n")
     system_marker = "\nsystem:\n"
     user_marker = "\n\nuser:\n"
 

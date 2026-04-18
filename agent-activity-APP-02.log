@@ -14,3 +14,18 @@ Step 2 - Build and Test
 - Ran baseline tests before changes: pass (2 passed, 1 skipped).
 - Ran targeted tests for tests/test_trapi_client.py: pass.
 - Ran full tests with CI-like coverage command: pass (9 passed, 1 skipped, coverage >= 80%).
+
+Step 3 - Code Review
+- Ran Code Review Agent against compare link and APP-02 acceptance criteria.
+- Recorded findings in code_review_findings_APP-02_NA.json.
+- Recorded prompt improvements in prompt_improvements_APP-02_NA.json.
+
+Step 4 - Apply Code Review Feedback and Re-test
+- Applied review feedback:
+  - Normalized prompt line endings for CRLF and CR.
+  - Expanded retry tests for all transient status codes and retry exhaustion path.
+  - Added retry-path prompt hash logging test.
+  - Added default prompt path validation test.
+  - Added CRLF and CR-only prompt parsing tests.
+- Re-ran targeted trapi_client tests: pass.
+- Re-ran full test suite with coverage threshold: pass (20 passed, 1 skipped, coverage >= 80%).

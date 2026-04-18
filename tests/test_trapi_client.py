@@ -55,12 +55,13 @@ def test_fetch_roster_uses_timeout_and_parses_json(monkeypatch):
     assert roster["players"][0]["name"] == "Don Mattingly"
 
 
-def test_fetch_roster_retries_transient_status_with_exponential_backoff(monkeypatch):
+@pytest.mark.parametrize("status_code", [429, 500, 502, 503])
+def test_fetch_roster_retries_transient_status_with_exponential_backoff(monkeypatch, status_code):
     _set_required_env(monkeypatch)
 
     responses = [
-        DummyResponse(429, {"error": "rate limited"}),
-        DummyResponse(500, {"error": "server error"}),
+        DummyResponse(status_code, {"error": "transient error"}),
+        DummyResponse(status_code, {"error": "transient error"}),
         DummyResponse(200, {"choices": [{"message": {"content": '{"players":[]}'}}]}),
     ]
     sleeps = []
@@ -108,6 +109,31 @@ def test_fetch_roster_logs_prompt_hash_each_request(monkeypatch):
     assert all("prompt_sha256" in extra for _, extra in calls)
 
 
+def test_fetch_roster_logs_prompt_hash_for_each_retry_attempt(monkeypatch):
+    _set_required_env(monkeypatch)
+
+    logs = []
+    responses = [
+        DummyResponse(429, {"error": "retry"}),
+        DummyResponse(200, {"choices": [{"message": {"content": json.dumps({"players": []})}}]}),
+    ]
+
+    monkeypatch.setattr(trapi_client.LOGGER, "info", lambda message, extra: logs.append(extra))
+    monkeypatch.setattr(trapi_client.requests, "post", lambda *args, **kwargs: responses.pop(0))
+    monkeypatch.setattr(trapi_client.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        SimpleNamespace(get_token=lambda scope: SimpleNamespace(token="token")),
+    )
+
+    trapi_client.fetch_roster()
+
+    assert len(logs) == 2
+    assert all("prompt_sha256" in extra for extra in logs)
+    assert logs[0]["prompt_sha256"] == logs[1]["prompt_sha256"]
+
+
 def test_default_azure_credential_token_scope(monkeypatch):
     monkeypatch.delenv("TRAPI_AUTH_SCOPE", raising=False)
     seen = {}
@@ -128,6 +154,40 @@ def test_prompt_is_loaded_from_runtime_path(monkeypatch, tmp_path):
     prompt_file.write_text(
         "model: gpt-4o-2024-05-13\n\nsystem:\nSystem text\n\nuser:\nUser text",
         encoding="utf-8",
+    )
+    monkeypatch.setattr(trapi_client, "PROMPT_TEMPLATE_PATH", prompt_file)
+
+    prompt = trapi_client._load_prompt_template()
+
+    assert prompt["model"] == "gpt-4o-2024-05-13"
+    assert prompt["system"] == "System text"
+    assert prompt["user"] == "User text"
+
+
+def test_default_prompt_path_points_to_repo_prompt_file():
+    assert trapi_client.PROMPT_TEMPLATE_PATH.name == "get_1985_yankees.txt"
+    assert trapi_client.PROMPT_TEMPLATE_PATH.parent.name == "prompts"
+    assert trapi_client.PROMPT_TEMPLATE_PATH.exists()
+
+
+def test_prompt_with_crlf_line_endings_is_loaded(monkeypatch, tmp_path):
+    prompt_file = tmp_path / "prompt-crlf.txt"
+    prompt_file.write_bytes(
+        b"model: gpt-4o-2024-05-13\r\n\r\nsystem:\r\nSystem text\r\n\r\nuser:\r\nUser text"
+    )
+    monkeypatch.setattr(trapi_client, "PROMPT_TEMPLATE_PATH", prompt_file)
+
+    prompt = trapi_client._load_prompt_template()
+
+    assert prompt["model"] == "gpt-4o-2024-05-13"
+    assert prompt["system"] == "System text"
+    assert prompt["user"] == "User text"
+
+
+def test_prompt_with_cr_only_line_endings_is_loaded(monkeypatch, tmp_path):
+    prompt_file = tmp_path / "prompt-cr.txt"
+    prompt_file.write_bytes(
+        b"model: gpt-4o-2024-05-13\r\rsystem:\rSystem text\r\ruser:\rUser text"
     )
     monkeypatch.setattr(trapi_client, "PROMPT_TEMPLATE_PATH", prompt_file)
 
@@ -174,3 +234,26 @@ def test_fetch_roster_raises_for_non_transient_http_error(monkeypatch):
 
     with pytest.raises(Exception, match="HTTP 400"):
         trapi_client.fetch_roster()
+
+
+@pytest.mark.parametrize("status_code", [429, 500, 502, 503])
+def test_fetch_roster_retries_exhausted_raises_http_error(monkeypatch, status_code):
+    _set_required_env(monkeypatch)
+
+    sleeps = []
+    monkeypatch.setattr(
+        trapi_client.requests,
+        "post",
+        lambda *args, **kwargs: DummyResponse(status_code, {"error": "transient error"}),
+    )
+    monkeypatch.setattr(trapi_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        SimpleNamespace(get_token=lambda scope: SimpleNamespace(token="token")),
+    )
+
+    with pytest.raises(Exception, match=f"HTTP {status_code}"):
+        trapi_client.fetch_roster()
+
+    assert sleeps == [1, 2, 4]

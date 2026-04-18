@@ -31,7 +31,7 @@ def test_get_and_store_yankees_roster_success_logs_key_events(monkeypatch):
     payload = _valid_payload()
     events = []
 
-    monkeypatch.setattr(function_app, "fetch_roster", lambda: payload)
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (payload, 123))
     monkeypatch.setattr(
         function_app,
         "validate",
@@ -46,12 +46,16 @@ def test_get_and_store_yankees_roster_success_logs_key_events(monkeypatch):
     assert "function_started" in event_names
     assert "trapi_response_received" in event_names
     assert "function_completed" in event_names
+    trapi_event = next(event for event in events if event["event"] == "trapi_response_received")
+    assert trapi_event["player_count"] == len(payload["players"])
+    assert isinstance(trapi_event["latency_ms"], int)
+    assert trapi_event["token_count"] == 123
 
 
 def test_get_and_store_yankees_roster_raises_on_validation_failure(monkeypatch):
     payload = {"players": []}
 
-    monkeypatch.setattr(function_app, "fetch_roster", lambda: payload)
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (payload, 0))
     monkeypatch.setattr(
         function_app,
         "validate",

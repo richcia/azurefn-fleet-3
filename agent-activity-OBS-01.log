@@ -1,0 +1,12 @@
+[2026-04-18T19:37:00Z] Step 0: Parsed issue OBS-01 description, outputs, acceptance criteria, and dependencies.
+[2026-04-18T19:38:00Z] Step 1: Explored repository for orchestration, TRAPI, blob write logging points, and relevant tests.
+[2026-04-18T19:40:00Z] Step 2: Installed dependencies and ran baseline tests (49 passed, 1 skipped).
+[2026-04-18T19:45:00Z] Step 1 Implementation: Added Azure Monitor OpenTelemetry configuration gate in function_app and added token_count to trapi_response_received event.
+[2026-04-18T19:47:00Z] Step 1 Implementation: Updated trapi_request_sent structured fields (prompt_hash, model_version) and returned token_count from TRAPI client.
+[2026-04-18T19:49:00Z] Step 1 Implementation: Added OpenTelemetry dependencies to requirements.txt and requirements-prod.txt.
+[2026-04-18T19:53:00Z] Step 2 Validation: Updated unit tests for logging fields/token_count and ran targeted tests (23 passed).
+[2026-04-18T19:55:00Z] Step 2 Validation: Ran full test suite (49 passed, 1 skipped).
+[2026-04-18T19:58:00Z] Step 3 Code Review: Ran Code Review Agent against compare link and captured findings.
+[2026-04-18T20:02:00Z] Step 4 Feedback: Applied review suggestions (idempotent blob_write_succeeded event, stronger field assertions, defensive token_count parsing).
+[2026-04-18T20:05:00Z] Step 4 Validation: Re-ran targeted tests (30 passed) and full suite (50 passed, 1 skipped).
+[2026-04-18T20:07:00Z] Step 3 Artifacts: Added code_review_findings_OBS-01_NA.json and prompt_improvements_OBS-01_NA.json.

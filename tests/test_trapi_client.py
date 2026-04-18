@@ -37,7 +37,10 @@ def test_fetch_roster_uses_timeout_and_parses_json(monkeypatch):
         captured["timeout"] = timeout
         return DummyResponse(
             200,
-            {"choices": [{"message": {"content": '{"players":[{"name":"Don Mattingly","position":"1B","jersey_number":23}]}'}}]},
+            {
+                "choices": [{"message": {"content": '{"players":[{"name":"Don Mattingly","position":"1B","jersey_number":23}]}'}}],
+                "usage": {"total_tokens": 212},
+            },
         )
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
@@ -47,12 +50,13 @@ def test_fetch_roster_uses_timeout_and_parses_json(monkeypatch):
         SimpleNamespace(get_token=lambda scope: SimpleNamespace(token=f"token-for-{scope}")),
     )
 
-    roster = trapi_client.fetch_roster()
+    roster, token_count = trapi_client.fetch_roster()
 
     assert captured["timeout"] == 45
     assert captured["url"].endswith("/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-01")
     assert captured["headers"]["Authorization"].startswith("Bearer token-for-")
     assert roster["players"][0]["name"] == "Don Mattingly"
+    assert token_count == 212
 
 
 @pytest.mark.parametrize("status_code", [429, 500, 502, 503])
@@ -62,7 +66,7 @@ def test_fetch_roster_retries_transient_status_with_exponential_backoff(monkeypa
     responses = [
         DummyResponse(status_code, {"error": "transient error"}),
         DummyResponse(status_code, {"error": "transient error"}),
-        DummyResponse(200, {"choices": [{"message": {"content": '{"players":[]}'}}]}),
+        DummyResponse(200, {"choices": [{"message": {"content": '{"players":[]}'}}], "usage": {"total_tokens": 7}}),
     ]
     sleeps = []
 
@@ -77,9 +81,10 @@ def test_fetch_roster_retries_transient_status_with_exponential_backoff(monkeypa
         SimpleNamespace(get_token=lambda scope: SimpleNamespace(token="token")),
     )
 
-    result = trapi_client.fetch_roster()
+    result, token_count = trapi_client.fetch_roster()
 
     assert result == {"players": []}
+    assert token_count == 7
     assert sleeps == [1, 2]
 
 
@@ -100,13 +105,17 @@ def test_fetch_roster_logs_prompt_hash_each_request(monkeypatch):
     monkeypatch.setattr(
         trapi_client.requests,
         "post",
-        lambda *args, **kwargs: DummyResponse(200, {"choices": [{"message": {"content": json.dumps({"players": []})}}]}),
+        lambda *args, **kwargs: DummyResponse(
+            200,
+            {"choices": [{"message": {"content": json.dumps({"players": []})}}], "usage": {"total_tokens": 5}},
+        ),
     )
 
     trapi_client.fetch_roster()
 
     assert calls
-    assert all("prompt_sha256" in extra for _, extra in calls)
+    assert all("prompt_hash" in extra for _, extra in calls)
+    assert all("model_version" in extra for _, extra in calls)
     assert all(extra["event"] == "trapi_request_sent" for _, extra in calls)
 
 
@@ -116,7 +125,7 @@ def test_fetch_roster_logs_prompt_hash_for_each_retry_attempt(monkeypatch):
     logs = []
     responses = [
         DummyResponse(429, {"error": "retry"}),
-        DummyResponse(200, {"choices": [{"message": {"content": json.dumps({"players": []})}}]}),
+        DummyResponse(200, {"choices": [{"message": {"content": json.dumps({"players": []})}}], "usage": {"total_tokens": 1}}),
     ]
 
     monkeypatch.setattr(trapi_client.LOGGER, "info", lambda message, extra: logs.append(extra))
@@ -131,9 +140,10 @@ def test_fetch_roster_logs_prompt_hash_for_each_retry_attempt(monkeypatch):
     trapi_client.fetch_roster()
 
     assert len(logs) == 2
-    assert all("prompt_sha256" in extra for extra in logs)
+    assert all("prompt_hash" in extra for extra in logs)
+    assert all("model_version" in extra for extra in logs)
     assert all(extra["event"] == "trapi_request_sent" for extra in logs)
-    assert logs[0]["prompt_sha256"] == logs[1]["prompt_sha256"]
+    assert logs[0]["prompt_hash"] == logs[1]["prompt_hash"]
 
 
 def test_default_azure_credential_token_scope(monkeypatch):
@@ -240,7 +250,7 @@ def test_fetch_roster_retries_on_timeout(monkeypatch):
         attempts["count"] += 1
         if attempts["count"] < 3:
             raise trapi_client.requests.Timeout("timeout")
-        return DummyResponse(200, {"choices": [{"message": {"content": '{"players":[]}'}}]})
+        return DummyResponse(200, {"choices": [{"message": {"content": '{"players":[]}'}}], "usage": {"total_tokens": 2}})
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
     monkeypatch.setattr(trapi_client.time, "sleep", lambda seconds: sleeps.append(seconds))
@@ -250,8 +260,33 @@ def test_fetch_roster_retries_on_timeout(monkeypatch):
         SimpleNamespace(get_token=lambda scope: SimpleNamespace(token="token")),
     )
 
-    assert trapi_client.fetch_roster() == {"players": []}
+    roster, token_count = trapi_client.fetch_roster()
+    assert roster == {"players": []}
+    assert token_count == 2
     assert sleeps == [1, 2]
+
+
+def test_fetch_roster_defaults_token_count_to_zero_for_invalid_usage(monkeypatch):
+    _set_required_env(monkeypatch)
+
+    monkeypatch.setattr(
+        trapi_client.requests,
+        "post",
+        lambda *args, **kwargs: DummyResponse(
+            200,
+            {"choices": [{"message": {"content": '{"players":[]}'}}], "usage": {"total_tokens": "invalid"}},
+        ),
+    )
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        SimpleNamespace(get_token=lambda scope: SimpleNamespace(token="token")),
+    )
+
+    roster, token_count = trapi_client.fetch_roster()
+
+    assert roster == {"players": []}
+    assert token_count == 0
 
 
 def test_fetch_roster_raises_for_non_transient_http_error(monkeypatch):

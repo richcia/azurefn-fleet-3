@@ -48,7 +48,7 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
    - The issue's Acceptance Criteria
    - A request to return findings categorized as **critical issues** and **suggestions**
 3. If no PR exists yet, use `create_pull_request` to create it and push the branch before invoking the Code Review Agent.
-4. Record all findings (critical issues and suggestions) in a file called `code_review_findings_{ISSUE_NUMBER}_{PR_NUMBER}.txt`.
+4. Record all findings (critical issues and suggestions) with target source code filename and line numbers in a file called `code_review_findings_{ISSUE_NUMBER}_{PR_NUMBER}.json` following strict JSON format and add a link to this file in the parent issue. 
 5. Do **not** use `parallel_validation` as a substitute for this step.
 6. Wait for the sub-agent to return its findings.
 
@@ -62,17 +62,6 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 4. Wait for any asynchronous operations to complete before proceeding to the next step.
 5. Do not proceed to Step 5 until all tests pass with the review changes applied.
 
----
-
-## Step 5 — Merge the Pull Request
-
-1. Use the pull request created earlier with `create_pull_request`. If no PR exists, return to Step 3 and create it before proceeding.
-2. Ensure the PR branch is up to date with the base branch (rebase or merge as appropriate).
-3. Confirm that all required status checks and CI jobs pass.
-4. Use `execute` to run `gh pr ready <PR_NUMBER>` to mark the PR as ready for review (removes draft status).
-5. Use `execute` to run `gh pr merge <PR_NUMBER> --squash --auto` to merge the PR. Use `--merge` instead of `--squash` if the repository enforces merge commits.
-6. Do **not** call GitHub GraphQL mutations (`mergePullRequest`, `markPullRequestReadyForReview`, `addComment`) directly — use `gh` CLI commands only, so that `GH_TOKEN` from the environment is used rather than the agent's integration token.
-7. Close the originating issue if it is not automatically closed by the PR merge (`gh issue close <ISSUE_NUMBER>`).
 
 ---
 

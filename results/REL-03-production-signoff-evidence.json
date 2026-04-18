@@ -1,0 +1,13 @@
+{
+  "production_slot_swap_completed": false,
+  "slot_swap_workflow_run_url": "",
+  "first_nightly_execution": {
+    "run_date_utc": "",
+    "observed_at_utc": "",
+    "blob_path": ""
+  },
+  "production_alert_rules_active": [],
+  "deliberate_failure_alert_minutes": 0,
+  "release_notes_path": "results/REL-03-release-notes.md",
+  "spec_success_criteria_checked": []
+}

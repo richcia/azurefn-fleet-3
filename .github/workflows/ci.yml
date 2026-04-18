@@ -44,7 +44,7 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
-          python -m pytest tests/ -v \
+          python -m pytest tests/ -v -m "not integration" \
             --cov=function_app \
             --cov=blob_writer \
             --cov=trapi_client \

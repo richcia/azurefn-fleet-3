@@ -13,25 +13,25 @@
     "step": "Step 2 - Build and Test",
     "actions": [
       "Installed dependencies with pip install -r requirements.txt.",
-      "Ran targeted tests: python -m pytest tests/test_inf04_monitoring_bicep.py -v (passed).",
-      "Ran full test suite: python -m pytest -v (passed).",
-      "Compiled Bicep template: az bicep build --file infra/main.bicep (succeeded with non-blocking schema warning)."
+      "Ran targeted tests and full suite with python -m pytest -v (passing).",
+      "Validated Bicep compilation using az bicep build for infra/main.bicep."
     ]
   },
   {
     "step": "Step 3 - Code Review",
     "actions": [
-      "Invoked Code Review Agent for PR https://github.com/richcia/azurefn-fleet-3/pull/513 with acceptance criteria.",
-      "Recorded review findings in code_review_findings_INF-04_513.json.",
-      "Recorded prompt improvement recommendations in prompt_improvements_INF-04_513.json."
+      "Invoked Code Review Agent for PR https://github.com/richcia/azurefn-fleet-3/pull/513 with INF-04 acceptance criteria.",
+      "Saved review findings in code_review_findings_INF-04_513.json.",
+      "Saved prompt improvements in prompt_improvements_INF-04_513.json."
     ]
   },
   {
     "step": "Step 4 - Apply Feedback and Retest",
     "actions": [
-      "Applied all review suggestions by strengthening assertions for IngestionMode and sampling key wiring.",
-      "Removed generated build artifact infra/main.json from source control to keep committed scope clean.",
-      "Re-ran full test suite: python -m pytest -v (passed)."
+      "Addressed all review findings by improving semantic Bicep tests, adding Azure CLI availability guard, and reducing brittle expression matching.",
+      "Removed generated build artifact infra/main.json from source control.",
+      "Re-ran full test suite after each feedback batch until green.",
+      "Re-ran Code Review Agent after updates and reached no remaining critical/major issues."
     ]
   }
 ]

@@ -12,11 +12,17 @@ on:
         required: false
         default: spec.md
         type: string
+      assign_tasks_after_plan:
+        description: Trigger on-assign-tasks.yml after plan completion
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   trigger:
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
       issues: write
 
@@ -276,3 +282,11 @@ jobs:
           git add -A results/copilot-progress.md results/task-plan.json
           git commit -m "chore: pipeline run ${{ steps.context.outputs.run_id }} planned" || true
           git push
+
+      - name: Trigger Assign Tasks Workflow
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.assign_tasks_after_plan }}
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"

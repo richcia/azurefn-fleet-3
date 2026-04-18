@@ -7,6 +7,10 @@ on:
         description: Optional issue number to assign directly
         required: false
         type: string
+      pr_number:
+        description: Optional pull request number to merge after Copilot finishes
+        required: false
+        type: string
     secrets:
       COPILOT_GITHUB_TOKEN:
         required: true
@@ -14,6 +18,10 @@ on:
     inputs:
       issue_id:
         description: Optional issue number to assign directly
+        required: false
+        type: string
+      pr_number:
+        description: Optional pull request number to merge after Copilot finishes
         required: false
         type: string
 
@@ -257,6 +265,26 @@ jobs:
             [ -z "$issue_number" ] && continue
             wait_for_issue_completion "$issue_number"
           done < ready_issues.txt
+
+      - name: Merge Specified PR
+        if: ${{ inputs.pr_number != '' }}
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ inputs.pr_number }}"
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid pr_number input: '$PR_NUMBER' (expected numeric PR number)"
+            exit 1
+          fi
+
+          PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
+          if [ "$PR_STATE" != "OPEN" ]; then
+            echo "PR #$PR_NUMBER is not open (state=$PR_STATE); failing workflow."
+            exit 1
+          fi
+
+          echo "Merging PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --merge --delete-branch
 
       - name: Re-Run Workflow While Ready Issues Remain
         if: steps.ready_issues.outputs.ready_count != '0'

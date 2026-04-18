@@ -1,0 +1,12 @@
+[
+  {
+    "step": "Step 1 - Implement Tasks",
+    "actions": [
+      "Reviewed issue INF-04 requirements and host.json sampling settings.",
+      "Created infra/modules/monitoring.bicep to provision Log Analytics workspace and workspace-based Application Insights with 30-day retention.",
+      "Created infra/modules/functionapp.bicep to wire APPLICATIONINSIGHTS_CONNECTION_STRING and sampling-related app settings.",
+      "Created infra/main.bicep to pass monitoring outputs into functionapp module.",
+      "Added focused tests in tests/test_inf04_monitoring_bicep.py to validate retention, linkage, sampling settings, and connection string wiring."
+    ]
+  }
+]

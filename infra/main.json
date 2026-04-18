@@ -1,0 +1,212 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "7887859404696055045"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "yankees",
+      "metadata": {
+        "description": "Resource name prefix for generated resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[parameters('namePrefix')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "13062969811119738242"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Azure region for monitoring resources."
+              }
+            },
+            "namePrefix": {
+              "type": "string",
+              "defaultValue": "yankees",
+              "metadata": {
+                "description": "Resource name prefix used for monitoring resources."
+              }
+            }
+          },
+          "variables": {
+            "resourceSuffix": "[uniqueString(resourceGroup().id)]",
+            "samplingSettings": {
+              "isEnabled": true,
+              "excludedTypes": "Request;Exception"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[toLower(format('{0}-law-{1}', parameters('namePrefix'), variables('resourceSuffix')))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "retentionInDays": 30
+              },
+              "sku": {
+                "name": "PerGB2018"
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[toLower(format('{0}-appi-{1}', parameters('namePrefix'), variables('resourceSuffix')))]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', toLower(format('{0}-law-{1}', parameters('namePrefix'), variables('resourceSuffix'))))]",
+                "RetentionInDays": 30,
+                "IngestionMode": "LogAnalytics"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', toLower(format('{0}-law-{1}', parameters('namePrefix'), variables('resourceSuffix'))))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', toLower(format('{0}-law-{1}', parameters('namePrefix'), variables('resourceSuffix'))))]"
+            },
+            "applicationInsightsId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/components', toLower(format('{0}-appi-{1}', parameters('namePrefix'), variables('resourceSuffix'))))]"
+            },
+            "applicationInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', toLower(format('{0}-appi-{1}', parameters('namePrefix'), variables('resourceSuffix')))), '2020-02-02').ConnectionString]"
+            },
+            "samplingSettings": {
+              "type": "object",
+              "value": "[variables('samplingSettings')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "functionappSettings",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "applicationInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.applicationInsightsConnectionString.value]"
+          },
+          "samplingSettings": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.samplingSettings.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "537854260620498930"
+            }
+          },
+          "parameters": {
+            "applicationInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string to set on the Function App."
+              }
+            },
+            "additionalAppSettings": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Additional app settings to merge with required monitoring settings."
+              }
+            },
+            "samplingSettings": {
+              "type": "object",
+              "defaultValue": {
+                "isEnabled": true,
+                "excludedTypes": "Request;Exception"
+              },
+              "metadata": {
+                "description": "Sampling settings aligned with host.json logging.applicationInsights.samplingSettings."
+              }
+            }
+          },
+          "variables": {
+            "monitoringAppSettings": {
+              "APPLICATIONINSIGHTS_CONNECTION_STRING": "[parameters('applicationInsightsConnectionString')]",
+              "AzureFunctionsJobHost__logging__applicationInsights__samplingSettings__isEnabled": "[string(parameters('samplingSettings').isEnabled)]",
+              "AzureFunctionsJobHost__logging__applicationInsights__samplingSettings__excludedTypes": "[string(parameters('samplingSettings').excludedTypes)]"
+            }
+          },
+          "resources": [],
+          "outputs": {
+            "appSettings": {
+              "type": "object",
+              "value": "[union(parameters('additionalAppSettings'), variables('monitoringAppSettings'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "applicationInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.applicationInsightsConnectionString.value]"
+    },
+    "functionAppAppSettings": {
+      "type": "object",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'functionappSettings'), '2025-04-01').outputs.appSettings.value]"
+    }
+  }
+}

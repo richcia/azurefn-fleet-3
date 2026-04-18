@@ -82,7 +82,10 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 Use this when you need to verify what a PAT (for example `copilot-token`) can do in this repository.
 
 ```bash
-# Prints the repo permission booleans for the PAT
+# Generic form
+GH_TOKEN=YOUR_PAT gh api repos/OWNER/REPO --jq '.permissions'
+
+# This repository
 GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions'
 ```
 
@@ -102,6 +105,10 @@ Interpretation:
 Quick write-access check:
 
 ```bash
+# Generic form
+GH_TOKEN=YOUR_PAT gh api repos/OWNER/REPO --jq '.permissions.push'
+
+# This repository
 GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions.push'
 ```
 

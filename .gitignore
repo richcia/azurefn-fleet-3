@@ -16,3 +16,6 @@ htmlcov/
 
 # Local Azure Functions settings (may contain secrets)
 local.settings.json
+
+# Local tool binaries
+.gobin/

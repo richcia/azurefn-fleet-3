@@ -1,0 +1,21 @@
+{
+  "issue": "INF-03",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "category": "acceptance_criteria_enforcement",
+      "proposal": "Require enforcement checks in IaC module contracts (e.g., Linux Consumption Y1 + reserved=true) instead of trusting caller-provided IDs.",
+      "reason": "Code review found criterion #2 could be bypassed when only accepting an arbitrary serverFarmId."
+    },
+    {
+      "category": "security_defaults",
+      "proposal": "Explicitly instruct the implementor to mark sensitive parameters with `@secure()` and avoid exposing them via outputs.",
+      "reason": "Code review highlighted app insights connection string should be treated as sensitive input."
+    },
+    {
+      "category": "validation_expectations",
+      "proposal": "Add a prompt requirement to run `az bicep build` for changed Bicep modules and map each acceptance criterion to concrete validation evidence.",
+      "reason": "Review suggested stronger automated validation coverage for infra acceptance criteria."
+    }
+  ]
+}

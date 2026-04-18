@@ -49,9 +49,9 @@ pip install -r requirements.txt
 
 # 2. Create local settings file and fill in values
 cp local.settings.json.example local.settings.json
-# Edit local.settings.json with your TRAPI endpoint, storage account name, etc.
+# Edit local.settings.json with your TRAPI endpoint, auth scope, and storage account names
 
-# 3. (Optional) Run the function locally with Core Tools
+# 3. Run the function locally with Core Tools
 func start
 
 # 4. Run unit tests with coverage
@@ -62,7 +62,7 @@ python -m pytest tests/ -v \
 
 > **Note**: `DefaultAzureCredential` is used for both blob storage and TRAPI authentication. Run `az login` before starting the function locally to authenticate via the Azure CLI.
 
-## Environment Variables
+## Required App Settings (`local.settings.json` / Function App)
 
 All settings live under `Values` in `local.settings.json` (local) or as App Settings in the Function App (production).
 
@@ -75,7 +75,48 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 | `TRAPI_ENDPOINT` | Yes | — | Azure OpenAI endpoint URL, e.g. `https://<resource>.openai.azure.com`. |
 | `TRAPI_DEPLOYMENT_NAME` | No | `gpt-4o` | Azure OpenAI deployment (model alias). |
 | `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |
+| `TRAPI_AUTH_SCOPE` | No | `https://cognitiveservices.azure.com/.default` | OAuth scope requested by `DefaultAzureCredential` for TRAPI bearer token acquisition. |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Optional (recommended); if unset, telemetry is disabled locally. Injected automatically in production via Bicep. |
+
+Example `Values` block:
+
+```json
+{
+  "Values": {
+    "AzureWebJobsStorage__accountName": "<host-storage-account-name>",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "FUNCTIONS_EXTENSION_VERSION": "~4",
+    "DATA_STORAGE_ACCOUNT_NAME": "<data-storage-account-name>",
+    "TRAPI_ENDPOINT": "https://<resource>.openai.azure.com",
+    "TRAPI_DEPLOYMENT_NAME": "gpt-4o",
+    "TRAPI_API_VERSION": "2024-02-01",
+    "TRAPI_AUTH_SCOPE": "https://cognitiveservices.azure.com/.default"
+  }
+}
+```
+
+## TRAPI Authentication (Local and Production)
+
+- The function uses `DefaultAzureCredential` to request a bearer token for `TRAPI_AUTH_SCOPE` (defaults to `https://cognitiveservices.azure.com/.default`).
+- Local development path: run `az login`, then start the app with `func start`.
+- Production path: Function App system-assigned managed identity is used automatically.
+- Grant the calling identity an Azure OpenAI data-plane RBAC role (for example, `Cognitive Services OpenAI User`) on the target Azure OpenAI/TRAPI resource.
+- For local dev, verify your signed-in identity and role assignment before running:
+
+```bash
+az account show --query user.name -o tsv
+az role assignment list \
+  --scope /subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<aoai-resource-name> \
+  --assignee <your-object-id> \
+  --query "[].roleDefinitionName" -o tsv
+```
+
+## Blob Naming and Failed Prefix Behavior
+
+- Container: `yankees-roster`
+- Successful validation writes to: `yankees-roster/{run_date_utc}.json` (for example `yankees-roster/2026-03-31.json`)
+- Validation failure writes raw payload to: `yankees-roster/failed/{run_date_utc}.json`
+- The blob upload uses `If-None-Match: *` semantics to avoid duplicate writes for the same run date.
 
 ## Deployment
 
@@ -213,21 +254,3 @@ To validate that the alert rule fires correctly, inject a test failure by tempor
 - [ ] Verify Application Insights connection string is present in Function App settings
 - [ ] Run the KQL queries above after the first nightly execution to confirm traces appear
 - [ ] Inject a test failure and confirm alert notification is received
-
-
-
-
-
-          git add -A
-          git commit -m "docs: apply design review updates for $DESIGN_SPEC_FILE"
-          git push --set-upstream origin "$BRANCH_NAME"
-          echo "::endgroup::"
-
-          echo "::group::Create pull request"
-
-          gh pr create \
-            --base "$BASE_BRANCH" \
-            --head "$BRANCH_NAME" \
-            --title "Design review updates for $DESIGN_SPEC_FILE" \
-            --body "Automated design review updates generated from $DESIGN_SPEC_FILE by design-review-agent."
-          echo "::endgroup::"

@@ -1,0 +1,21 @@
+{
+  "issue": "INF-07",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "id": "PI-1",
+      "prompt_addition": "When creating a new infra module, also verify and wire it into the deployment entrypoint (infra/main.bicep) unless explicitly out of scope.",
+      "rationale": "Prevents implementing resources that never deploy from the main template."
+    },
+    {
+      "id": "PI-2",
+      "prompt_addition": "For alerting tasks, map each acceptance criterion to a specific alert query and ensure failure semantics are modeled correctly (failed executions vs exceptions).",
+      "rationale": "Avoids query logic that can produce false positives/negatives against expected behavior."
+    },
+    {
+      "id": "PI-3",
+      "prompt_addition": "Require tests to validate both module content and deployment wiring (main module invocation, common action group linkage, and evaluation frequency).",
+      "rationale": "Improves confidence that infrastructure changes are deployable and consistently configured."
+    }
+  ]
+}

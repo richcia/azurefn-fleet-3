@@ -1,0 +1,11 @@
+{
+  "issue_number": "APP-03",
+  "pr_number": "NA",
+  "improvements": [
+    "Require pushing current branch changes before invoking Code Review Agent so compare links are reviewable.",
+    "Require explicit implementation and negative tests for any acceptance criterion phrased as required content (for example required player names).",
+    "When validating integer fields in Python, require tests for bool values because bool is a subclass of int.",
+    "Require at least one positive test for each valid boundary and one negative test for each invalid boundary.",
+    "Prefer structured error codes in validation results so downstream routing and tests do not depend on fragile message text."
+  ]
+}

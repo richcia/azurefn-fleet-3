@@ -1,0 +1,99 @@
+{
+  "issue_number": "APP-03",
+  "pr_number": "NA",
+  "pr_link": "https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/app-03-implement-validator-module",
+  "review_rounds": [
+    {
+      "round": 1,
+      "critical_issues": [
+        {
+          "severity": "critical",
+          "file": "(compare range)",
+          "line_start": 1,
+          "line_end": 1,
+          "title": "No code changes visible in compare range",
+          "recommendation": "Push branch changes before running review.",
+          "status": "resolved"
+        }
+      ],
+      "suggestions": [
+        {
+          "severity": "suggestion",
+          "file": "tests/test_validator.py",
+          "line_start": 1,
+          "line_end": 1,
+          "title": "Add tests mapped 1:1 to acceptance criteria",
+          "recommendation": "Add tests for missing players, missing fields, count bounds, known players, and ValidationResult return behavior.",
+          "status": "resolved"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "critical_issues": [
+        {
+          "severity": "critical",
+          "file": "validator.py",
+          "line_start": 16,
+          "line_end": 47,
+          "title": "Known-player requirement not enforced",
+          "recommendation": "Validate required names Don Mattingly, Dave Winfield, Rickey Henderson are present and return ValidationResult invalid if missing.",
+          "status": "resolved"
+        }
+      ],
+      "suggestions": [
+        {
+          "severity": "suggestion",
+          "file": "tests/test_validator.py",
+          "line_start": 55,
+          "line_end": 62,
+          "title": "Add negative test for missing known players",
+          "recommendation": "Parametrize over required players and assert missing one fails validation.",
+          "status": "resolved"
+        },
+        {
+          "severity": "suggestion",
+          "file": "tests/test_validator.py",
+          "line_start": 1,
+          "line_end": 120,
+          "title": "Ensure each required known player is independently enforced",
+          "recommendation": "Add parameterized tests removing each required known player one at a time.",
+          "status": "resolved"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "severity": "minor",
+          "file": "tests/test_validator.py",
+          "line_start": 100,
+          "line_end": 104,
+          "title": "Expand ValidationResult contract tests",
+          "recommendation": "Add parameterized invalid-shape inputs and assert ValidationResult returned without exceptions.",
+          "status": "resolved"
+        },
+        {
+          "severity": "minor",
+          "file": "validator.py",
+          "line_start": 47,
+          "line_end": 47,
+          "title": "Harden integer validation and structured error output",
+          "recommendation": "Reject boolean jersey_number values and expose stable error_code in ValidationResult.",
+          "status": "resolved"
+        },
+        {
+          "severity": "minor",
+          "file": "tests/test_validator.py",
+          "line_start": 55,
+          "line_end": 63,
+          "title": "Add explicit upper bound acceptance test",
+          "recommendation": "Add positive test for 28-player boundary.",
+          "status": "resolved"
+        }
+      ]
+    }
+  ]
+}

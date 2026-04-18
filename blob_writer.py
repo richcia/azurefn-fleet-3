@@ -49,9 +49,13 @@ def _upload_json(blob_name: str, payload: Any) -> str:
             "Blob already exists for run date; skipping duplicate write",
             extra={"event": "blob_write_skipped_exists", "blob_uri": blob_uri},
         )
+        LOGGER.info(
+            "Blob write treated as succeeded for idempotent duplicate",
+            extra={"event": "blob_write_succeeded", "blob_uri": blob_uri, "write_status": "already_exists"},
+        )
         return blob_uri
 
-    LOGGER.info("Blob write succeeded", extra={"event": "blob_write_succeeded", "blob_uri": blob_uri})
+    LOGGER.info("Blob write succeeded", extra={"event": "blob_write_succeeded", "blob_uri": blob_uri, "write_status": "created"})
     return blob_uri
 
 

@@ -1,13 +1,32 @@
 import logging
+import os
 import time
 
 import azure.functions as func
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 from blob_writer import write_roster_blob
 from trapi_client import fetch_roster
 from validator import validate
 
 LOGGER = logging.getLogger(__name__)
+_AZURE_MONITOR_CONFIGURED = False
+
+
+def _configure_azure_monitor_if_available() -> None:
+    global _AZURE_MONITOR_CONFIGURED
+    if _AZURE_MONITOR_CONFIGURED:
+        return
+    if not os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+        return
+    try:
+        configure_azure_monitor()
+        _AZURE_MONITOR_CONFIGURED = True
+    except Exception:
+        LOGGER.exception("Failed to configure Azure Monitor OpenTelemetry")
+
+
+_configure_azure_monitor_if_available()
 
 app = func.FunctionApp()
 
@@ -30,7 +49,7 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
     )
 
     started_at = time.perf_counter()
-    response_payload = fetch_roster()
+    response_payload, token_count = fetch_roster()
     latency_ms = int((time.perf_counter() - started_at) * 1000)
 
     players = response_payload.get("players") if isinstance(response_payload, dict) else None
@@ -42,6 +61,7 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
             "event": "trapi_response_received",
             "player_count": player_count,
             "latency_ms": latency_ms,
+            "token_count": token_count,
         },
     )
 

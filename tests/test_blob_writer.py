@@ -73,6 +73,8 @@ def test_second_write_same_day_catches_resource_exists_and_logs(monkeypatch):
 
     assert events
     assert events[0]["event"] == "blob_write_skipped_exists"
+    assert events[1]["event"] == "blob_write_succeeded"
+    assert events[1]["write_status"] == "already_exists"
     assert uri.endswith("/yankees-roster/2026-04-18.json")
     assert dummy_service.blob_client.upload_calls[0]["if_none_match"] == "*"
     assert dummy_service.blob_client.upload_calls[0]["overwrite"] is False
@@ -116,6 +118,7 @@ def test_success_emits_blob_write_succeeded_with_blob_uri(monkeypatch):
     assert events
     assert events[0]["event"] == "blob_write_succeeded"
     assert events[0]["blob_uri"] == uri
+    assert events[0]["write_status"] == "created"
 
 
 

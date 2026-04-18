@@ -1,0 +1,21 @@
+{
+  "issue_number": "OBS-01",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "theme": "Acceptance-criteria precision",
+      "proposal": "Require explicit handling for idempotent duplicate writes by stating whether blob_write_succeeded must appear on every run or only on new blob creation.",
+      "rationale": "Avoids ambiguity between blob_write_succeeded and blob_write_skipped_exists behavior."
+    },
+    {
+      "theme": "Field-level test completeness",
+      "proposal": "Instruct implementation to add assertions for every required structured-log field in acceptance criteria (not only event presence).",
+      "rationale": "Prevents gaps where events exist but required fields are unverified."
+    },
+    {
+      "theme": "Defensive telemetry parsing",
+      "proposal": "Add explicit guidance to safely parse telemetry fields from external responses with malformed/null fallback behavior and corresponding tests.",
+      "rationale": "Improves resiliency when upstream APIs return unexpected types."
+    }
+  ]
+}

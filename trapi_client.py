@@ -89,7 +89,7 @@ def _parse_trapi_response(response_body: Any) -> dict[str, Any]:
     return parsed
 
 
-def fetch_roster() -> dict[str, Any]:
+def fetch_roster() -> tuple[dict[str, Any], int]:
     endpoint = _get_required_env("TRAPI_ENDPOINT")
     deployment_name = os.getenv("TRAPI_DEPLOYMENT_NAME", "gpt-4o")
     api_version = os.getenv("TRAPI_API_VERSION", "2024-02-01")
@@ -101,7 +101,13 @@ def fetch_roster() -> dict[str, Any]:
     for attempt in range(MAX_RETRIES + 1):
         LOGGER.info(
             "Sending TRAPI request",
-            extra={"event": "trapi_request_sent", "prompt_sha256": prompt_hash, "attempt": attempt + 1},
+            extra={
+                "event": "trapi_request_sent",
+                "prompt_sha256": prompt_hash,
+                "prompt_hash": prompt_hash,
+                "model_version": prompt["model"],
+                "attempt": attempt + 1,
+            },
         )
         try:
             response = requests.post(
@@ -132,6 +138,12 @@ def fetch_roster() -> dict[str, Any]:
 
         response.raise_for_status()
         response_body = response.json()
-        return _parse_trapi_response(response_body)
+        usage = response_body.get("usage") if isinstance(response_body, dict) else None
+        token_count_raw = usage.get("total_tokens", 0) if isinstance(usage, dict) else 0
+        try:
+            token_count = int(token_count_raw or 0)
+        except (TypeError, ValueError):
+            token_count = 0
+        return _parse_trapi_response(response_body), int(token_count)
 
     raise RuntimeError("Failed to get successful response from TRAPI after retries.")

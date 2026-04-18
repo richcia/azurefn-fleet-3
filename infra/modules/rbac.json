@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "8713579883062222892"
+    }
+  },
+  "parameters": {
+    "principalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Function App managed identity principal ID."
+      }
+    },
+    "blobContainerResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the yankees-roster blob container."
+      }
+    },
+    "keyVaultResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Key Vault."
+      }
+    }
+  },
+  "variables": {
+    "storageBlobDataContributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+    "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+    "blobContainerResourceIdSegments": "[split(parameters('blobContainerResourceId'), '/')]",
+    "storageAccountName": "[variables('blobContainerResourceIdSegments')[8]]",
+    "blobContainerName": "[variables('blobContainerResourceIdSegments')[12]]",
+    "keyVaultResourceIdSegments": "[split(parameters('keyVaultResourceId'), '/')]",
+    "keyVaultName": "[variables('keyVaultResourceIdSegments')[8]]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[0], split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[1], split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[2])]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[0], split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[1], split(format('{0}/default/{1}', variables('storageAccountName'), variables('blobContainerName')), '/')[2]), parameters('principalId'), variables('storageBlobDataContributorRoleDefinitionId'))]",
+      "properties": {
+        "roleDefinitionId": "[variables('storageBlobDataContributorRoleDefinitionId')]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('principalId'), variables('keyVaultSecretsUserRoleDefinitionId'))]",
+      "properties": {
+        "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    }
+  ]
+}

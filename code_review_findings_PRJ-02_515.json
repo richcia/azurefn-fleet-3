@@ -1,0 +1,35 @@
+{
+  "issue_number": "PRJ-02",
+  "pr_number": 515,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/515",
+  "review_runs": [
+    {
+      "run": 1,
+      "agent": "Code Review Agent",
+      "critical_issues": [
+        {
+          "title": "PR had no changed files during first review",
+          "target_filename": null,
+          "line_numbers": null,
+          "details": "Initial review observed an empty PR diff, so acceptance criteria could not be validated.",
+          "status": "addressed"
+        }
+      ],
+      "suggestions": [
+        {
+          "title": "Commit explicit spec updates for scope, thresholds, and anchor players",
+          "target_filename": "/home/runner/work/azurefn-fleet-3/azurefn-fleet-3/spec.md",
+          "line_numbers": [23, 127, 166],
+          "details": "Ensure player scope decision, count thresholds, and anchor player list are explicitly documented.",
+          "status": "addressed"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "agent": "Code Review Agent",
+      "critical_issues": [],
+      "suggestions": []
+    }
+  ]
+}

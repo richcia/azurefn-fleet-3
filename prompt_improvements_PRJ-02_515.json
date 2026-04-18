@@ -1,0 +1,21 @@
+{
+  "issue_number": "PRJ-02",
+  "pr_number": 515,
+  "improvements": [
+    {
+      "id": "P1",
+      "prompt_change": "Before launching Code Review Agent, commit and push all implementation changes, then verify the PR has non-empty file diffs.",
+      "why": "Prevents empty-diff reviews and avoids false critical findings."
+    },
+    {
+      "id": "P2",
+      "prompt_change": "Require mapping each acceptance criterion to exact file paths and line ranges in the implementation before requesting review.",
+      "why": "Makes it easier for the reviewer to validate completeness quickly."
+    },
+    {
+      "id": "P3",
+      "prompt_change": "If the issue is documentation-only, explicitly tell the reviewer to perform a docs-focused review rather than code-only review.",
+      "why": "Improves relevance of review feedback for spec-only changes."
+    }
+  ]
+}

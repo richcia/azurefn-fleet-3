@@ -12,15 +12,16 @@ class ValidationResult:
     is_valid: bool
     player_count: int
     error_message: str = ""
+    error_code: str = ""
 
 
 def validate_response(response: Any) -> ValidationResult:
     if not isinstance(response, dict):
-        return ValidationResult(False, 0, "Response must be a JSON object.")
+        return ValidationResult(False, 0, "Response must be a JSON object.", "invalid_response_object")
 
     players = response.get("players")
     if not isinstance(players, list):
-        return ValidationResult(False, 0, "Response missing players array.")
+        return ValidationResult(False, 0, "Response missing players array.", "missing_players_array")
 
     player_count = len(players)
     if player_count < MIN_PLAYER_COUNT or player_count > MAX_PLAYER_COUNT:
@@ -28,24 +29,45 @@ def validate_response(response: Any) -> ValidationResult:
             False,
             player_count,
             f"Player count must be between {MIN_PLAYER_COUNT} and {MAX_PLAYER_COUNT}.",
+            "invalid_player_count",
         )
 
     player_names = set()
     for index, player in enumerate(players):
         if not isinstance(player, dict):
-            return ValidationResult(False, player_count, f"Player at index {index} must be an object.")
+            return ValidationResult(
+                False,
+                player_count,
+                f"Player at index {index} must be an object.",
+                "invalid_player_object",
+            )
 
         for field in REQUIRED_PLAYER_FIELDS:
             if field not in player:
-                return ValidationResult(False, player_count, f"Player at index {index} missing {field}.")
+                return ValidationResult(
+                    False,
+                    player_count,
+                    f"Player at index {index} missing {field}.",
+                    "missing_player_field",
+                )
 
         if not isinstance(player["name"], str) or not player["name"].strip():
-            return ValidationResult(False, player_count, f"Player at index {index} has invalid name.")
+            return ValidationResult(False, player_count, f"Player at index {index} has invalid name.", "invalid_name")
         player_names.add(player["name"].strip())
         if not isinstance(player["position"], str) or not player["position"].strip():
-            return ValidationResult(False, player_count, f"Player at index {index} has invalid position.")
+            return ValidationResult(
+                False,
+                player_count,
+                f"Player at index {index} has invalid position.",
+                "invalid_position",
+            )
         if type(player["jersey_number"]) is not int:
-            return ValidationResult(False, player_count, f"Player at index {index} has invalid jersey_number.")
+            return ValidationResult(
+                False,
+                player_count,
+                f"Player at index {index} has invalid jersey_number.",
+                "invalid_jersey_number",
+            )
 
     missing_required_players = REQUIRED_PLAYER_NAMES - player_names
     if missing_required_players:
@@ -53,6 +75,7 @@ def validate_response(response: Any) -> ValidationResult:
             False,
             player_count,
             f"Response missing required players: {', '.join(sorted(missing_required_players))}.",
+            "missing_required_players",
         )
 
     return ValidationResult(True, player_count, "")

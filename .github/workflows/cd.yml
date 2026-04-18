@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy Function App to Azure
+    name: Test, deploy to staging, smoke test, and swap
     runs-on: ubuntu-latest
     environment: production
 
@@ -24,6 +24,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+
+      - name: Install test dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest unit tests
+        run: python -m pytest tests/ -v
 
       - name: Install production dependencies
         run: |
@@ -52,8 +58,69 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy zip package to Azure Function App
+      - name: Deploy zip package to staging slot
         uses: azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          slot-name: staging
           package: deploy.zip
+
+      - name: Smoke test staging slot by invoking timer function
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            RESOURCE_GROUP="$(az resource list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-type "Microsoft.Web/sites" --query "[0].resourceGroup" -o tsv)"
+            if [ -z "$RESOURCE_GROUP" ]; then
+              echo "Unable to determine resource group for ${{ secrets.AZURE_FUNCTIONAPP_NAME }}"
+              exit 1
+            fi
+
+            FUNCTION_RESOURCE_NAME="$(az functionapp function list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query "[0].name" -o tsv)"
+            if [ -z "$FUNCTION_RESOURCE_NAME" ]; then
+              echo "No functions found in staging slot."
+              exit 1
+            fi
+
+            FUNCTION_NAME="${FUNCTION_RESOURCE_NAME##*/}"
+            HOSTNAME="$(az functionapp show --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query defaultHostName -o tsv)"
+            MASTER_KEY="$(az functionapp keys list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query masterKey -o tsv)"
+
+            if [ -z "$HOSTNAME" ] || [ -z "$MASTER_KEY" ]; then
+              echo "Unable to resolve host name or host key for staging slot."
+              exit 1
+            fi
+
+            for attempt in 1 2 3 4 5 6; do
+              STATUS_CODE="$(curl -sS -o /dev/null -w "%{http_code}" \
+                -X POST "https://${HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
+                -H "Content-Type: application/json" \
+                -H "x-functions-key: ${MASTER_KEY}" \
+                --data '{}')"
+
+              if [ "$STATUS_CODE" = "200" ] || [ "$STATUS_CODE" = "202" ] || [ "$STATUS_CODE" = "204" ]; then
+                echo "Smoke test passed with HTTP $STATUS_CODE by invoking ${FUNCTION_NAME} on attempt ${attempt}."
+                exit 0
+              fi
+
+              echo "Smoke test attempt ${attempt} failed with HTTP $STATUS_CODE. Retrying in 10 seconds..."
+              sleep 10
+            done
+
+            echo "Smoke test failed after retries."
+            exit 1
+
+      - name: Swap staging slot to production
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            RESOURCE_GROUP="$(az resource list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-type "Microsoft.Web/sites" --query "[0].resourceGroup" -o tsv)"
+            if [ -z "$RESOURCE_GROUP" ]; then
+              echo "Unable to determine resource group for ${{ secrets.AZURE_FUNCTIONAPP_NAME }}"
+              exit 1
+            fi
+
+            az functionapp deployment slot swap \
+              --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" \
+              --resource-group "$RESOURCE_GROUP" \
+              --slot staging \
+              --target-slot production

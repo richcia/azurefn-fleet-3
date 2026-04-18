@@ -21,6 +21,7 @@ jobs:
   assign-and-execute:
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       issues: write
       pull-requests: write
       contents: write
@@ -256,4 +257,12 @@ jobs:
             [ -z "$issue_number" ] && continue
             wait_for_issue_completion "$issue_number"
           done < ready_issues.txt
+
+      - name: Re-Run Workflow While Ready Issues Remain
+        if: steps.ready_issues.outputs.ready_count != '0'
+        run: |
+          set -euo pipefail
+
+          echo "ready_count=${{ steps.ready_issues.outputs.ready_count }}; dispatching next run"
+          gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"
 

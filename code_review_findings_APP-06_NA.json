@@ -1,0 +1,26 @@
+{
+  "issue_number": "APP-06",
+  "pr_number": "NA",
+  "pr_link": "https://github.com/richcia/azurefn-fleet-3/pull/new/copilot/app-06-update-host-json-settings",
+  "findings": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "title": "Verify timerTrigger.maxConcurrentCalls at runtime",
+        "severity": "minor",
+        "file": "host.json",
+        "line_start": 13,
+        "line_end": 15,
+        "recommendation": "Run func start locally or in CI to confirm host.json has no warnings/errors and the runtime accepts the timerTrigger concurrency setting."
+      },
+      {
+        "title": "Add automated startup validation for host.json",
+        "severity": "minor",
+        "file": ".github/workflows/ci.yml",
+        "line_start": 1,
+        "line_end": 48,
+        "recommendation": "Add a CI startup/schema validation step using Azure Functions Core Tools so host.json regressions are detected automatically."
+      }
+    ]
+  }
+}

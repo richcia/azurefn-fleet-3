@@ -1,0 +1,5 @@
+Step 1 - Implement Tasks
+- Reviewed issue requirements and repository instructions.
+- Searched repository for prompt conventions and schema references.
+- Added prompts/get_1985_yankees.txt with pinned model directive and system/user prompt content.
+- Added tests/test_get_1985_yankees_prompt.py to validate prompt existence and required content.

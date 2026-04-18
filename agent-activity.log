@@ -1,0 +1,19 @@
+Step 1 - Implement Tasks
+- Searched repository context and identified missing infra module files for INF-02.
+- Created infra/modules/storage.bicep with Standard_LRS + Cool tier, allowSharedKeyAccess:false, private yankees-roster container, and 7-day blob soft-delete.
+- Added infra/main.bicep wiring dedicated data storage separately from host storage account.
+
+Step 2 - Build and Test
+- Installed requirements from requirements.txt.
+- Ran baseline pytest command and confirmed no pre-existing tests in fresh clone.
+- Added focused tests in tests/test_storage_bicep.py to validate INF-02 acceptance criteria.
+- Executed targeted and full test runs until all tests passed.
+
+Step 3 - Code Review
+- Ran Code Review Agent with compare URL context and acceptance criteria.
+- Captured findings in code_review_findings_INF-02_0.json.
+- Captured prompt improvement suggestions in prompt_improvements_INF-02_0.json.
+
+Step 4 - Apply Feedback and Re-test
+- Applied all review suggestions: deployable wiring, structured infra tests, parameter constraints, output contract preservation, and tooling documentation.
+- Re-ran full tests to green.

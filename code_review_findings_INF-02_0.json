@@ -1,0 +1,68 @@
+{
+  "issue": "INF-02",
+  "pr_number": 0,
+  "review_runs": [
+    {
+      "run": 1,
+      "source": "Code Review Agent",
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "title": "Dedicated storage module is not wired into any deployable template",
+          "file": "infra/modules/storage.bicep",
+          "line_range": "1-41",
+          "severity": "major",
+          "status": "addressed",
+          "resolution": "Added infra/main.bicep to deploy dedicated data storage module and separate host storage account."
+        },
+        {
+          "title": "Tests rely on raw string matching and can produce false positives",
+          "file": "tests/test_storage_bicep.py",
+          "line_range": "14-31, 38-39",
+          "severity": "minor",
+          "status": "addressed",
+          "resolution": "Rewrote tests to compile Bicep via az bicep build and assert structured ARM JSON fields."
+        },
+        {
+          "title": "Missing parameter constraints for storage account naming",
+          "file": "infra/modules/storage.bicep",
+          "line_range": "1",
+          "severity": "minor",
+          "status": "addressed",
+          "resolution": "Added @minLength(3) and @maxLength(24) decorators to storageAccountName parameter."
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "source": "Code Review Agent",
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "title": "Preserve output contract for rosterContainerName",
+          "file": "infra/modules/storage.bicep",
+          "line_range": "35-45",
+          "severity": "minor",
+          "status": "addressed",
+          "resolution": "Updated rosterContainerName output to full '<account>/default/<container>' format."
+        },
+        {
+          "title": "Reduce brittleness in separation test assertions",
+          "file": "tests/test_storage_bicep.py",
+          "line_range": "59-63",
+          "severity": "minor",
+          "status": "addressed",
+          "resolution": "Replaced text literal assertions with compiled-template parameter assertions."
+        },
+        {
+          "title": "Make test tooling dependency explicit",
+          "file": "tests/test_storage_bicep.py",
+          "line_range": "11-19",
+          "severity": "minor",
+          "status": "addressed",
+          "resolution": "Documented az+bicep dependency for storage infra tests in readme.md."
+        }
+      ]
+    }
+  ]
+}

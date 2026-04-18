@@ -1,0 +1,17 @@
+Code Review Findings for APP-06 / PR #466
+Source: Code Review Agent
+
+Critical issues:
+1) host.json:13-21 - maxConcurrentCalls was placed under serviceBus.messageHandlerOptions, which does not match this app's timer/queue context.
+   Action taken: removed serviceBus block and retained queue concurrency controls (batchSize=1, newBatchThreshold=0).
+
+Suggestions:
+1) host.json:16 - maxDequeueCount=1 may reduce reliability by poisoning after one failure.
+   Action taken: changed maxDequeueCount to 5.
+
+2) Validation command az functionapp validate is not available in this environment.
+   Action taken: validated JSON syntax with python -m json.tool; documented limitation in final report.
+
+Follow-up review findings:
+1) Timer-trigger concurrency was not explicitly constrained.
+   Action taken: added host-level singleton lock configuration in host.json to prevent overlapping timer listeners and added assertions in tests/test_host_json_config.py.

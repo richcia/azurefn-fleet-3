@@ -13,13 +13,14 @@
     "queues": {
       "batchSize": 1,
       "newBatchThreshold": 0,
-      "maxDequeueCount": 1
-    },
-    "serviceBus": {
-      "messageHandlerOptions": {
-        "maxConcurrentCalls": 1
-      }
+      "maxDequeueCount": 5
     }
+  },
+  "singleton": {
+    "lockAcquisitionTimeout": "00:00:30",
+    "lockAcquisitionPollingInterval": "00:00:05",
+    "listenerLockPeriod": "00:01:00",
+    "listenerLockRecoveryPollingInterval": "00:01:00"
   },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",

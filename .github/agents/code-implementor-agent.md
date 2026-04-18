@@ -57,10 +57,12 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 ## Step 4 — Apply Code Review Feedback and Test
 
 1. Apply every change proposed by the code review (critical issues first, then suggestions).
-2. Re-run the full unit test suite after applying changes.
-3. **If any test fails, fix the implementation code and re-run until all tests pass.**
-4. Wait for any asynchronous operations to complete before proceeding to the next step.
-5. Do not proceed to Step 5 until all tests pass with the review changes applied.
+2. Summarize the code review findings in commit messsage when applying changes
+3. Also in the commit message include a section on how to improve the prompt for the code-implementator-agent based on the code review findings and a link to a PR that applies the changes
+4. Re-run the full unit test suite after applying changes.
+5. **If any test fails, fix the implementation code and re-run until all tests pass.**
+6. Wait for any asynchronous operations to complete before proceeding to the next step.
+7. Do not proceed to Step 5 until all tests pass with the review changes applied.
 
 
 ---

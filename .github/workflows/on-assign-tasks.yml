@@ -256,4 +256,124 @@ jobs:
             [ -z "$issue_number" ] && continue
             wait_for_issue_completion "$issue_number"
           done < ready_issues.txt
+
+      - name: Post Code Review Findings To PR Comments
+        if: steps.ready_issues.outputs.ready_count != '0'
+        run: |
+          set -euo pipefail
+
+          normalize_findings() {
+            local json_file="$1"
+            jq -c '
+              def finding_items($group):
+                .[$group]
+                | if type == "array" then . else [] end
+                | map({
+                    category: $group,
+                    title: (.title // .summary // .issue // .finding // .name // "Untitled finding"),
+                    description: (.description // .details // .message // .recommendation // ""),
+                    file: (.file // .filename // .path // .target_file // ""),
+                    line: (.line // .line_number // .target_line // null),
+                    severity: (.severity // "")
+                  });
+
+              (
+                (finding_items("critical") + finding_items("critical_issues") + finding_items("suggestions") + finding_items("major") + finding_items("minor"))
+                + (
+                    (.findings
+                      | if type == "array" then . else [] end
+                      | map({
+                          category: (.category // "finding"),
+                          title: (.title // .summary // .issue // .finding // .name // "Untitled finding"),
+                          description: (.description // .details // .message // .recommendation // ""),
+                          file: (.file // .filename // .path // .target_file // ""),
+                          line: (.line // .line_number // .target_line // null),
+                          severity: (.severity // "")
+                        })
+                    )
+                  )
+              )
+              | unique_by((.category|tostring) + "|" + (.title|tostring) + "|" + (.file|tostring) + "|" + ((.line // "")|tostring))
+              | .[]
+            ' "$json_file"
+          }
+
+          comment_from_finding() {
+            local issue_number="$1"
+            local pr_number="$2"
+            local finding_json="$3"
+
+            local category title description file line severity
+            category=$(jq -r '.category // "finding"' <<< "$finding_json")
+            title=$(jq -r '.title // "Untitled finding"' <<< "$finding_json")
+            description=$(jq -r '.description // ""' <<< "$finding_json")
+            file=$(jq -r '.file // ""' <<< "$finding_json")
+            line=$(jq -r '.line // empty' <<< "$finding_json")
+            severity=$(jq -r '.severity // ""' <<< "$finding_json")
+
+            body=$(
+              cat <<EOF
+            Code Review Finding
+
+            - Issue: #$issue_number
+            - Category: $category
+            - Severity: ${severity:-n/a}
+            - File: ${file:-n/a}
+            - Line: ${line:-n/a}
+
+            Title: $title
+
+            $description
+            EOF
+            )
+
+            gh pr comment "$pr_number" --body "$body"
+          }
+
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
+
+            pr_json=$(gh pr list --state open --limit 1000 --json number,url,headRefOid,closingIssuesReferences | jq -c --argjson issue_number "$issue_number" '
+              [ .[]
+                | select(any(.closingIssuesReferences[]?; .number == $issue_number))
+              ]
+              | sort_by(.number)
+              | last // empty
+            ')
+
+            if [ -z "$pr_json" ]; then
+              echo "No open PR linked to issue #$issue_number; skipping finding comments"
+              continue
+            fi
+
+            pr_number=$(jq -r '.number' <<< "$pr_json")
+            head_sha=$(jq -r '.headRefOid' <<< "$pr_json")
+
+            echo "Discovering findings files for issue #$issue_number on PR #$pr_number"
+            findings_paths=$(gh api "/repos/${{ github.repository }}/git/trees/$head_sha?recursive=1" \
+              --jq '.tree[]?.path | select(test("(^|/)code_review_findings_.*\\.json$"))' || true)
+
+            if [ -z "$findings_paths" ]; then
+              echo "No code_review_findings_*.json found for PR #$pr_number"
+              continue
+            fi
+
+            while IFS= read -r findings_path; do
+              [ -z "$findings_path" ] && continue
+
+              echo "Processing findings file: $findings_path"
+              gh api "/repos/${{ github.repository }}/contents/$findings_path?ref=$head_sha" --jq '.content' \
+                | tr -d '\n' | base64 -d > findings.json
+
+              if ! jq -e . findings.json > /dev/null 2>&1; then
+                echo "Skipping invalid JSON findings file: $findings_path"
+                continue
+              fi
+
+              while IFS= read -r finding; do
+                [ -z "$finding" ] && continue
+                comment_from_finding "$issue_number" "$pr_number" "$finding"
+              done < <(normalize_findings findings.json)
+            done <<< "$findings_paths"
+          done < ready_issues.txt
           

@@ -1,0 +1,18 @@
+{
+  "issue_number": "REL-01",
+  "pr_number": 528,
+  "improvements": [
+    {
+      "area": "Smoke test quality",
+      "suggested_prompt_addition": "Require smoke tests to verify an authenticated, deterministic health signal (or explicit manual timer-trigger invocation) and fail on non-success responses instead of accepting broad HTTP status ranges."
+    },
+    {
+      "area": "Resilience",
+      "suggested_prompt_addition": "Require retry/backoff logic for post-deploy smoke tests to handle cold starts and transient platform readiness delays."
+    },
+    {
+      "area": "Workflow test rigor",
+      "suggested_prompt_addition": "When modifying GitHub workflows, require a test that validates required step ordering and gating conditions, not only substring presence."
+    }
+  ]
+}

@@ -29,8 +29,9 @@
   {
     "step": "Step 4 - Apply Feedback and Retest",
     "actions": [
-      "Applied all review suggestions by strengthening tests to parse compiled ARM JSON and validate ingestion mode + sampling wiring semantics.",
-      "Prepared to rerun full test suite after feedback implementation."
+      "Applied all review suggestions by strengthening assertions for IngestionMode and sampling key wiring.",
+      "Removed generated build artifact infra/main.json from source control to keep committed scope clean.",
+      "Re-ran full test suite: python -m pytest -v (passed)."
     ]
   }
 ]

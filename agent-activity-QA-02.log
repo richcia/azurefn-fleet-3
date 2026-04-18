@@ -1,0 +1,30 @@
+[Step 1 - Implement Tasks]
+- Parsed QA-02 description, outputs, and acceptance criteria.
+- Ran repository semantic exploration for existing TRAPI/manual validation tests, blob-writing patterns, and CI workflows.
+- Added tests/test_integration.py with pytest.mark.integration to:
+  - invoke function_app.get_and_store_yankees_roster against staging TRAPI configuration
+  - assert blob yankees-roster/{today_utc}.json is readable from staging storage
+  - validate payload shape and required known players are present
+- Added pytest.ini marker registration for integration tests.
+- Updated unit CI workflow to exclude integration tests via `-m "not integration"`.
+- Added manual workflow_dispatch integration-staging workflow documenting/staging integration execution in CI.
+
+[Step 2 - Build and Test]
+- Installed dependencies with `pip install -r requirements.txt`.
+- Ran full baseline tests before code changes and confirmed suite status.
+- Ran targeted integration-test file locally (`tests/test_integration.py`), confirming expected skip when staging env vars are not present.
+- Ran unit suite with integration excluded (`python -m pytest tests/ -v -m "not integration"`): passed.
+- Ran CI-equivalent coverage command with integration excluded: passed, coverage threshold satisfied.
+
+[Step 3 - Code Review]
+- Invoked Code Review Agent with compare-link context and QA-02 acceptance criteria.
+- Captured review artifacts:
+  - `code_review_findings_QA-02_NA.json`
+  - `prompt_improvements_QA-02_NA.json`
+- Review outcome: no critical issues; two suggestions (UTC-date rollover stability and explicit blob existence assertion).
+
+[Step 4 - Apply Code Review Feedback and Re-test]
+- Updated integration test to compute `run_date_utc` before function invocation.
+- Added explicit `blob_client.exists()` assertion before download.
+- Re-ran `tests/test_integration.py` (expected skip without staging credentials): pass/skip behavior confirmed.
+- Re-ran unit suite excluding integration marker: all selected tests passed.

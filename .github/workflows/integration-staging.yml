@@ -1,0 +1,44 @@
+name: Integration - Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  integration:
+    name: Run staging integration test
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run staging integration test
+        env:
+          RUN_INTEGRATION_TESTS: "true"
+          TRAPI_ENDPOINT: ${{ secrets.STAGING_TRAPI_ENDPOINT }}
+          TRAPI_DEPLOYMENT_NAME: ${{ secrets.STAGING_TRAPI_DEPLOYMENT_NAME }}
+          TRAPI_API_VERSION: ${{ secrets.STAGING_TRAPI_API_VERSION }}
+          DATA_STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_DATA_STORAGE_ACCOUNT_NAME }}
+        run: |
+          python -m pytest tests/test_integration.py -v -m integration

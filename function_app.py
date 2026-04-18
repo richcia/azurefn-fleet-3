@@ -81,7 +81,14 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
         )
 
     blob_uri = write_roster_blob(response_payload, validation_result)
-    _PLAYER_COUNT_RETURNED_COUNTER.add(validation_result.player_count)
+    try:
+        _PLAYER_COUNT_RETURNED_COUNTER.add(validation_result.player_count)
+    except Exception:
+        LOGGER.warning(
+            "Failed to emit player_count_returned metric",
+            extra={"event": "player_count_metric_emit_failed", "player_count": validation_result.player_count},
+            exc_info=True,
+        )
     LOGGER.info(
         "Function completed",
         extra={

@@ -134,3 +134,52 @@ def test_get_and_store_yankees_roster_does_not_emit_player_count_metric_on_valid
         function_app.get_and_store_yankees_roster(TimerStub(past_due=True))
 
     assert metric_calls == []
+
+
+def test_get_and_store_yankees_roster_metric_emit_failure_does_not_fail_run(monkeypatch):
+    payload = _valid_payload()
+    warning_events = []
+
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (payload, 123))
+    monkeypatch.setattr(
+        function_app,
+        "validate",
+        lambda response: ValidationResult(is_valid=True, player_count=len(response["players"])),
+    )
+    monkeypatch.setattr(function_app, "write_roster_blob", lambda response, result: "https://storage/yankees-roster/2026-04-18.json")
+    monkeypatch.setattr(function_app.LOGGER, "info", lambda _message, extra: None)
+    monkeypatch.setattr(
+        function_app.LOGGER,
+        "warning",
+        lambda _message, extra, exc_info: warning_events.append({"extra": extra, "exc_info": exc_info}),
+    )
+
+    class CounterStub:
+        def add(self, _value):
+            raise RuntimeError("telemetry backend unavailable")
+
+    monkeypatch.setattr(function_app, "_PLAYER_COUNT_RETURNED_COUNTER", CounterStub())
+
+    function_app.get_and_store_yankees_roster(TimerStub(past_due=False))
+
+    assert len(warning_events) == 1
+    assert warning_events[0]["extra"]["event"] == "player_count_metric_emit_failed"
+    assert warning_events[0]["extra"]["player_count"] == len(payload["players"])
+    assert warning_events[0]["exc_info"] is True
+
+
+def test_get_and_store_yankees_roster_does_not_emit_metric_when_fetch_fails(monkeypatch):
+    metric_calls = []
+
+    monkeypatch.setattr(function_app, "fetch_roster", lambda: (_ for _ in ()).throw(RuntimeError("upstream failed")))
+
+    class CounterStub:
+        def add(self, value):
+            metric_calls.append(value)
+
+    monkeypatch.setattr(function_app, "_PLAYER_COUNT_RETURNED_COUNTER", CounterStub())
+
+    with pytest.raises(RuntimeError, match="upstream failed"):
+        function_app.get_and_store_yankees_roster(TimerStub(past_due=False))
+
+    assert metric_calls == []

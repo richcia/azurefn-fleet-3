@@ -1,0 +1,38 @@
+{
+  "issue_number": "OBS-02",
+  "pr_number": 532,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/532",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "id": "CR-1",
+      "title": "Telemetry emission can fail the whole invocation",
+      "severity": "major",
+      "file": "function_app.py",
+      "line_start": 84,
+      "line_end": 91,
+      "status": "addressed",
+      "resolution": "Wrapped metric emission in try/except and log warning with event player_count_metric_emit_failed so telemetry failure does not fail successful execution."
+    },
+    {
+      "id": "CR-2",
+      "title": "Acceptance criterion #3 only partially tested",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line_start": 171,
+      "line_end": 185,
+      "status": "addressed",
+      "resolution": "Added explicit test for non-validation failure (fetch_roster failure) asserting player_count_returned metric is not emitted."
+    },
+    {
+      "id": "CR-3",
+      "title": "No automated verification for App Insights visibility timing",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line_start": 1,
+      "line_end": 186,
+      "status": "not_addressed",
+      "resolution": "Requires environment-backed integration validation against Azure Application Insights customMetrics ingestion latency; not feasible in local unit-test-only context."
+    }
+  ]
+}

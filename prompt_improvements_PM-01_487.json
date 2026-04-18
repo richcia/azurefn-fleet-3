@@ -1,0 +1,10 @@
+{
+  "issue_number": "PM-01",
+  "pr_number": 487,
+  "proposed_prompt_improvements": [
+    "Require the implementor prompt to push at least one substantive commit before invoking Code Review Agent, and include the commit SHA in the review prompt.",
+    "For documentation-only issues, instruct the agent to request documentation/process review criteria instead of code-only checks.",
+    "Require an explicit acceptance-criteria traceability table artifact mapping each criterion to exact file paths/sections.",
+    "If no executable tests exist in the branch, require the agent to record evidence (directory check + command output) and mark test status as not-applicable with rationale."
+  ]
+}

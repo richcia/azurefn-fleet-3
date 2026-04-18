@@ -147,6 +147,27 @@
           "status": "approved",
           "decided_at_utc": "2026-04-18T17:47:48Z"
         }
+      },
+      "acceptance_traceability": {
+        "all_tasks_reviewed_and_estimated_by_owner": "PM-01.estimate_review",
+        "trapi_auth_and_endpoint_confirmed_or_escalated_with_deadline": [
+          "PM-01.decision_log.trapi_auth_and_endpoint",
+          "root.open_questions[0]",
+          "root.open_questions[1]"
+        ],
+        "player_scope_confirmed": [
+          "PM-01.decision_log.player_scope",
+          "root.open_questions[2]"
+        ],
+        "consumption_vs_premium_decision_documented": [
+          "PM-01.decision_log.hosting_plan",
+          "root.open_questions[4]"
+        ],
+        "dependency_graph_and_wave_sequencing_approved": [
+          "PM-01.dependency_graph",
+          "PM-01.decision_log.wave_sequencing",
+          "root.critical_path"
+        ]
       }
     },
     {

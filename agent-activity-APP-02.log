@@ -1,0 +1,16 @@
+Step 1 - Implement Tasks
+- Reviewed APP-02 requirements and acceptance criteria.
+- Confirmed prompt template exists at prompts/get_1985_yankees.txt.
+- Implemented trapi_client.py with:
+  - DefaultAzureCredential bearer token acquisition
+  - Runtime prompt loading and parsing from prompts/get_1985_yankees.txt
+  - 45-second HTTP timeout
+  - Exponential backoff retries for 429/500/502/503 and transient timeout/connection failures
+  - Prompt SHA-256 logging on each request
+  - Parsed JSON dict return from TRAPI response
+
+Step 2 - Build and Test
+- Installed dependencies from requirements.txt.
+- Ran baseline tests before changes: pass (2 passed, 1 skipped).
+- Ran targeted tests for tests/test_trapi_client.py: pass.
+- Ran full tests with CI-like coverage command: pass (9 passed, 1 skipped, coverage >= 80%).

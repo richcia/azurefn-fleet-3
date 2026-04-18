@@ -1,0 +1,11 @@
+[Step 0] Parsed INF-06 requirements, outputs, and acceptance criteria from issue statement and task plan.
+[Step 1] Located existing Function App and RBAC Bicep modules; confirmed TRAPI app settings are defined in infra/modules/functionapp.bicep.
+[Step 2] Installed Python dependencies and ran baseline tests before changes (37 passed, 1 skipped).
+[Step 2] Updated infra/modules/functionapp.bicep to configure TRAPI_AUTH_SCOPE as a plain app setting parameter for managed-identity token scope.
+[Step 2] Regenerated infra/modules/functionapp.json via `az bicep build --file infra/modules/functionapp.bicep`.
+[Step 2] Added focused tests for infra app setting wiring and runtime TRAPI auth scope environment usage.
+[Step 3] Ran Code Review Agent and captured findings (no critical issues; three suggestions).
+[Step 4] Applied review feedback by removing over-restrictive auth-scope allowed-values and making infra template test resource-order independent.
+[Step 4] Recorded review artifacts in code_review_findings_INF-06_NA.json and prompt_improvements_INF-06_NA.json.
+[Step 4] Re-ran Code Review Agent, then applied additional hardening: non-empty trapiAuthScope validation in Bicep, empty env fallback in trapi_client.py, and a regression test for empty TRAPI_AUTH_SCOPE.
+[Step 4] Re-ran full unit tests after all review-driven updates (40 passed, 1 skipped).

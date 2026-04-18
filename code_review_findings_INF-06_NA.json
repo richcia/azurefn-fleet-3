@@ -1,0 +1,80 @@
+{
+  "issue": "INF-06",
+  "pr_number": "NA",
+  "pr_link": null,
+  "findings": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Align infra configurability with runtime behavior for TRAPI_AUTH_SCOPE",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 23,
+        "line_end": 23,
+        "recommendation": "Do not constrain trapiAuthScope to a single allowed value if runtime supports configurable scopes.",
+        "status": "resolved",
+        "resolution": "Removed the single-value @allowed constraint and kept a secure default value."
+      },
+      {
+        "id": "SUG-2",
+        "title": "Make template test resilient to ARM resource ordering",
+        "file": "tests/test_infra_functionapp_settings.py",
+        "line_start": 9,
+        "line_end": 10,
+        "recommendation": "Find the Function App resource by type instead of relying on a fixed list index.",
+        "status": "resolved",
+        "resolution": "Updated test to select Microsoft.Web/sites resource via type lookup."
+      },
+      {
+        "id": "SUG-3",
+        "title": "Add deployed Key Vault reference resolution validation",
+        "file": "tests/test_infra_functionapp_settings.py",
+        "line_start": 13,
+        "line_end": 14,
+        "recommendation": "Add a post-deployment integration check that verifies TRAPI_ENDPOINT Key Vault reference resolves in Azure.",
+        "status": "not_applied",
+        "notes": "Repository test suite is unit-test only and has no Azure integration environment in this task scope."
+      },
+      {
+        "id": "SUG-4",
+        "title": "Validate non-empty scope at deployment input",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 24,
+        "line_end": 24,
+        "recommendation": "Add minimum length validation for trapiAuthScope to prevent empty deployments.",
+        "status": "resolved",
+        "resolution": "Added @minLength(1) to trapiAuthScope parameter and regenerated infra/modules/functionapp.json."
+      },
+      {
+        "id": "SUG-5",
+        "title": "Harden runtime scope resolution for empty env values",
+        "file": "trapi_client.py",
+        "line_start": 60,
+        "line_end": 60,
+        "recommendation": "Treat blank TRAPI_AUTH_SCOPE as unset and fallback to default scope.",
+        "status": "resolved",
+        "resolution": "Updated _get_bearer_token() to use stripped env value with fallback to DEFAULT_TRAPI_AUTH_SCOPE."
+      },
+      {
+        "id": "SUG-6",
+        "title": "Add regression test for empty scope env var",
+        "file": "tests/test_trapi_client.py",
+        "line_start": 167,
+        "line_end": 180,
+        "recommendation": "Add unit test ensuring empty/whitespace TRAPI_AUTH_SCOPE falls back safely.",
+        "status": "resolved",
+        "resolution": "Added test_empty_trapi_auth_scope_falls_back_to_default."
+      },
+      {
+        "id": "SUG-7",
+        "title": "Improve missing-resource assertion clarity in infra template test",
+        "file": "tests/test_infra_functionapp_settings.py",
+        "line_start": 10,
+        "line_end": 11,
+        "recommendation": "Add explicit assertion message if Function App resource is missing.",
+        "status": "resolved",
+        "resolution": "Test now asserts presence of Microsoft.Web/sites with a clear failure message before dereferencing."
+      }
+    ]
+  }
+}

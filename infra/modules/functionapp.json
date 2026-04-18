@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "4544360154365955098"
+      "templateHash": "15706139189561619580"
     }
   },
   "parameters": {
@@ -52,11 +52,12 @@
         "description": "Key Vault secret name for TRAPI endpoint."
       }
     },
-    "trapiAuthScopeSecretName": {
+    "trapiAuthScope": {
       "type": "string",
-      "defaultValue": "TRAPI-AUTH-SCOPE",
+      "defaultValue": "https://cognitiveservices.azure.com/.default",
+      "minLength": 1,
       "metadata": {
-        "description": "Key Vault secret name for TRAPI auth scope."
+        "description": "TRAPI auth scope used by DefaultAzureCredential for bearer tokens."
       }
     },
     "dataStorageAccountNameSecretName": {
@@ -128,7 +129,7 @@
             },
             {
               "name": "TRAPI_AUTH_SCOPE",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName={1})', parameters('keyVaultName'), parameters('trapiAuthScopeSecretName'))]"
+              "value": "[parameters('trapiAuthScope')]"
             },
             {
               "name": "DATA_STORAGE_ACCOUNT_NAME",

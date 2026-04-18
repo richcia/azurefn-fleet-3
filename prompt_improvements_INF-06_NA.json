@@ -1,0 +1,26 @@
+{
+  "issue": "INF-06",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "category": "config-flexibility",
+      "proposal": "Instruct implementor to keep IaC parameter constraints aligned with runtime behavior and avoid over-restrictive allowed-values unless required by acceptance criteria.",
+      "reason": "Code review found that a single-value allowed list for TRAPI auth scope conflicted with runtime support for custom scopes."
+    },
+    {
+      "category": "test-robustness",
+      "proposal": "Require template tests to locate resources by stable identifiers (type/name) rather than array index positions.",
+      "reason": "Resource ordering in compiled ARM templates can change and create brittle tests."
+    },
+    {
+      "category": "acceptance-validation",
+      "proposal": "Explicitly ask for at least one verification method per acceptance criterion and mark criteria requiring deployment-time checks as manual if no integration environment exists.",
+      "reason": "Key Vault reference resolution can only be fully validated post-deployment, not by static unit tests alone."
+    },
+    {
+      "category": "configuration-defensive-coding",
+      "proposal": "When introducing new environment-driven settings, require explicit handling of blank values and corresponding regression tests.",
+      "reason": "Code review highlighted that TRAPI_AUTH_SCOPE may be set but empty, which should safely fall back to the default scope."
+    }
+  ]
+}

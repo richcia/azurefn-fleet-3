@@ -1,0 +1,30 @@
+{
+  "issue_number": "REL-02",
+  "pr_number": "NA",
+  "pr_link": "https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/rel-02-end-to-end-validation?expand=1",
+  "critical_issues": [
+    {
+      "title": "Validation test can pass without proving any staging acceptance criterion was actually met",
+      "file": "tests/test_rel_02_staging_validation_artifacts.py",
+      "line_start": 11,
+      "line_end": 19,
+      "recommendation": "Add verification against machine-readable staging evidence and assert duration<=60s, blob path for run date, all five key events, metric range 24..28, no valid-run alerts, and deliberate-failure alert within 5 minutes."
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "Checklist-content test missed two acceptance criteria phrases",
+      "file": "tests/test_rel_02_staging_validation_artifacts.py",
+      "line_start": 11,
+      "line_end": 19,
+      "recommendation": "Assert checklist includes criteria for successful execution within 60 seconds and no failure/data-quality alerts during valid run."
+    },
+    {
+      "title": "Exact long-string assertions are brittle",
+      "file": "tests/test_rel_02_staging_validation_artifacts.py",
+      "line_start": 12,
+      "line_end": 18,
+      "recommendation": "Prefer semantic checks; at minimum add machine-readable evidence artifact checks to reduce dependence on editorial phrasing."
+    }
+  ]
+}

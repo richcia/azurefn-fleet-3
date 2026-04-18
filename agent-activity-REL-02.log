@@ -9,3 +9,16 @@
 - Installed dependencies from `requirements.txt`.
 - Ran full baseline tests before changes.
 - Added targeted artifact test `tests/test_rel_02_staging_validation_artifacts.py`.
+
+[Step 3 - Code Review]
+- Invoked Code Review Agent with REL-02 acceptance criteria and compare-link context.
+- Captured review artifacts:
+  - `code_review_findings_REL-02_NA.json`
+  - `prompt_improvements_REL-02_NA.json`
+- Review findings included one critical issue (lack of machine-readable acceptance validation) and two suggestions.
+
+[Step 4 - Apply Feedback and Re-test]
+- Added `results/REL-02-staging-validation-evidence.json` template for structured staging evidence.
+- Updated checklist with machine-readable evidence schema.
+- Strengthened artifact test coverage for all acceptance-criteria checklist lines.
+- Added integration test `tests/test_rel_02_staging_validation_evidence_integration.py` to validate staged evidence against all REL-02 thresholds when integration tests are enabled.

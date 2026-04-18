@@ -79,3 +79,25 @@ union isfuzzy=true
 - Signed off by: `____________________`
 - Timestamp (UTC): `____________________`
 - Notes: `____________________________________________________________`
+
+## Machine-readable Evidence (for automated verification)
+
+Save validation results to `results/REL-02-staging-validation-evidence.json` using this schema:
+
+```json
+{
+  "run_date_utc": "2026-04-18",
+  "run_duration_seconds": 12.4,
+  "blob_path": "yankees-roster/2026-04-18.json",
+  "key_events": [
+    "function_started",
+    "trapi_request_sent",
+    "trapi_response_received",
+    "blob_write_succeeded",
+    "function_completed"
+  ],
+  "player_count_returned": 26,
+  "valid_run_alerts": [],
+  "deliberate_failure_alert_minutes": 3.0
+}
+```

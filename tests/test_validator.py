@@ -62,6 +62,41 @@ def test_validator_accepts_valid_response_with_known_players():
     assert result.error_message == ""
 
 
+def test_validator_accepts_upper_player_count_boundary():
+    payload = {"players": _build_valid_players(28)}
+
+    result = validator.validate_response(payload)
+
+    assert result.is_valid
+    assert result.player_count == 28
+    assert result.error_message == ""
+
+
+@pytest.mark.parametrize("missing_name", ["Don Mattingly", "Dave Winfield", "Rickey Henderson"])
+def test_validator_rejects_when_required_known_player_missing(missing_name):
+    players = [player for player in _build_valid_players(24) if player["name"] != missing_name]
+    players.append({"name": "Replacement Player", "position": "P", "jersey_number": 99})
+    payload = {"players": players}
+
+    result = validator.validate_response(payload)
+
+    assert not result.is_valid
+    assert result.player_count == 24
+    assert "missing required players" in result.error_message
+    assert missing_name in result.error_message
+
+
+def test_validator_rejects_boolean_jersey_number():
+    players = _build_valid_players(24)
+    players[0]["jersey_number"] = True
+
+    result = validator.validate_response({"players": players})
+
+    assert not result.is_valid
+    assert result.player_count == 24
+    assert "invalid jersey_number" in result.error_message
+
+
 def test_validator_returns_validation_result_instead_of_raising():
     result = validator.validate_response({"players": []})
 

@@ -1,0 +1,29 @@
+{
+  "players": [
+    {"name": "Player 01", "position": "P", "jersey_number": 1},
+    {"name": "Player 02", "position": "C", "jersey_number": 2},
+    {"name": "Player 03", "position": "1B", "jersey_number": 3},
+    {"name": "Player 04", "position": "2B", "jersey_number": 4},
+    {"name": "Player 05", "position": "3B", "jersey_number": 5},
+    {"name": "Player 06", "position": "SS", "jersey_number": 6},
+    {"name": "Player 07", "position": "LF", "jersey_number": 7},
+    {"name": "Player 08", "position": "CF", "jersey_number": 8},
+    {"name": "Player 09", "position": "RF", "jersey_number": 9},
+    {"name": "Player 10", "position": "P", "jersey_number": 10},
+    {"name": "Player 11", "position": "C", "jersey_number": 11},
+    {"name": "Player 12", "position": "1B", "jersey_number": 12},
+    {"name": "Player 13", "position": "2B", "jersey_number": 13},
+    {"name": "Player 14", "position": "3B", "jersey_number": 14},
+    {"name": "Player 15", "position": "SS", "jersey_number": 15},
+    {"name": "Player 16", "position": "LF", "jersey_number": 16},
+    {"name": "Player 17", "position": "CF", "jersey_number": 17},
+    {"name": "Player 18", "position": "RF", "jersey_number": 18},
+    {"name": "Player 19", "position": "P", "jersey_number": 19},
+    {"name": "Player 20", "position": "C", "jersey_number": 20},
+    {"name": "Player 21", "position": "1B", "jersey_number": 21},
+    {"name": "Player 22", "position": "2B", "jersey_number": 22},
+    {"name": "Player 23", "position": "3B", "jersey_number": 23},
+    {"name": "Player 24", "position": "SS", "jersey_number": 24},
+    {"name": "Player 25", "position": "LF", "jersey_number": 25}
+  ]
+}

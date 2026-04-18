@@ -79,7 +79,7 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 
 ## GitHub PAT Repository Permission Check (gh CLI)
 
-Use this when you need to verify what a PAT (for example `copilot-token`) can do in this repository.
+Use this when you need to verify what a PAT (e.g. `copilot-token`) can do in this repository.
 
 ```bash
 # Generic form
@@ -112,7 +112,7 @@ GH_TOKEN=YOUR_PAT gh api repos/OWNER/REPO --jq '.permissions.push'
 GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions.push'
 ```
 
-If `.permissions` is `{}` or `null`, the token/auth context is not returning repo permission metadata. Confirm the token being used and inspect token scopes:
+If `.permissions` is `{}` or `null`, the token/auth context is not returning repo permission metadata. Confirm the token being used and inspect token scopes (`repo` is typically required for classic PAT private-repo write access; fine-grained PATs must include repository access and write permission for Contents/metadata as needed):
 
 ```bash
 GH_TOKEN=YOUR_PAT gh api -i user

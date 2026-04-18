@@ -1,0 +1,18 @@
+{
+  "issue_number": "REL-03",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "category": "live_validation",
+      "prompt_addition": "For release sign-off issues, require integration checks that validate production state from live systems (GitHub Actions run status, production blob existence, and alert-rule activation), not only repository artifacts."
+    },
+    {
+      "category": "artifact_quality",
+      "prompt_addition": "When adding JSON artifact tests, parse JSON and assert schema/type constraints instead of string-key presence checks."
+    },
+    {
+      "category": "completion_traceability",
+      "prompt_addition": "For release-notes acceptance criteria, require tests that validate completion indicators (for example checked checklist items) during integration validation."
+    }
+  ]
+}

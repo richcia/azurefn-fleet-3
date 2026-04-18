@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 
@@ -18,19 +19,21 @@ def test_rel_03_signoff_checklist_contains_acceptance_criteria():
 
 
 def test_rel_03_evidence_template_contains_required_fields():
-    evidence = (
-        Path(__file__).resolve().parents[1]
-        / "results"
-        / "REL-03-production-signoff-evidence.json"
-    ).read_text(encoding="utf-8")
+    evidence = json.loads(
+        (
+            Path(__file__).resolve().parents[1]
+            / "results"
+            / "REL-03-production-signoff-evidence.json"
+        ).read_text(encoding="utf-8")
+    )
 
-    assert '"production_slot_swap_completed"' in evidence
-    assert '"slot_swap_workflow_run_url"' in evidence
-    assert '"first_nightly_execution"' in evidence
-    assert '"production_alert_rules_active"' in evidence
-    assert '"deliberate_failure_alert_minutes"' in evidence
-    assert '"release_notes_path"' in evidence
-    assert '"spec_success_criteria_checked"' in evidence
+    assert isinstance(evidence["production_slot_swap_completed"], bool)
+    assert isinstance(evidence["slot_swap_workflow_run_url"], str)
+    assert isinstance(evidence["first_nightly_execution"], dict)
+    assert isinstance(evidence["production_alert_rules_active"], list)
+    assert isinstance(evidence["deliberate_failure_alert_minutes"], (int, float))
+    assert isinstance(evidence["release_notes_path"], str)
+    assert isinstance(evidence["spec_success_criteria_checked"], list)
 
 
 def test_rel_03_release_notes_template_contains_spec_success_criteria():

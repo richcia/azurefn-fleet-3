@@ -48,7 +48,7 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
    - The issue's Acceptance Criteria
    - A request to return findings categorized as **critical issues** and **suggestions**
 3. If no PR exists yet, use `create_pull_request` to create it and push the branch before invoking the Code Review Agent.
-4. Record all findings (critical issues and suggestions) as comments in the PR before proceeding to Step 4. Use `execute` to run `gh pr comment <PR_NUMBER> --body "<findings>"`, or use `create_issue_comment` if available. Do **not** use the `addComment` GraphQL mutation directly.
+4. Record all findings (critical issues and suggestions) in a file called `code_review_findings_{ISSUE_NUMBER}_{PR_NUMBER}.txt`.
 5. Do **not** use `parallel_validation` as a substitute for this step.
 6. Wait for the sub-agent to return its findings.
 

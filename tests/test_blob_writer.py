@@ -65,7 +65,7 @@ def test_second_write_same_day_catches_resource_exists_and_logs(monkeypatch):
     monkeypatch.setattr(blob_writer, "BlobServiceClient", lambda account_url, credential: dummy_service)
     monkeypatch.setattr(blob_writer.LOGGER, "info", lambda message, extra: events.append(extra))
 
-    blob_writer.write_roster_blob(
+    uri = blob_writer.write_roster_blob(
         {"players": []},
         ValidationResult(is_valid=True, player_count=0),
         "2026-04-18",
@@ -73,6 +73,9 @@ def test_second_write_same_day_catches_resource_exists_and_logs(monkeypatch):
 
     assert events
     assert events[0]["event"] == "blob_write_skipped_exists"
+    assert uri.endswith("/yankees-roster/2026-04-18.json")
+    assert dummy_service.blob_client.upload_calls[0]["if_none_match"] == "*"
+    assert dummy_service.blob_client.upload_calls[0]["overwrite"] is False
 
 
 
@@ -84,13 +87,14 @@ def test_failed_validation_writes_to_failed_prefix(monkeypatch):
     monkeypatch.setattr(blob_writer, "BlobServiceClient", lambda account_url, credential: dummy_service)
 
     payload = {"raw": "response"}
-    blob_writer.write_roster_blob(
+    uri = blob_writer.write_roster_blob(
         payload,
         ValidationResult(is_valid=False, player_count=0, error_message="bad", error_code="missing_players_array"),
         "2026-04-18",
     )
 
     assert dummy_service.blob == "failed/2026-04-18.json"
+    assert uri.endswith("/yankees-roster/failed/2026-04-18.json")
 
 
 

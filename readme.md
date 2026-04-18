@@ -77,6 +77,40 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 | `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Optional (recommended); if unset, telemetry is disabled locally. Injected automatically in production via Bicep. |
 
+## GitHub PAT Repository Permission Check (gh CLI)
+
+Use this when you need to verify what a PAT (for example `copilot-token`) can do in this repository.
+
+```bash
+# Prints the repo permission booleans for the PAT
+GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions'
+```
+
+Expected shape:
+
+```json
+{"admin":false,"maintain":false,"push":true,"triage":false,"pull":true}
+```
+
+Interpretation:
+- `admin`: full repo administration
+- `maintain`: high-level repo maintenance (without full admin)
+- `push`: write access (create/update branches, push commits)
+- `triage`: issue/PR triage without write
+- `pull`: read access
+
+Quick write-access check:
+
+```bash
+GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions.push'
+```
+
+If `.permissions` is `{}` or `null`, the token/auth context is not returning repo permission metadata. Confirm the token being used and inspect token scopes:
+
+```bash
+GH_TOKEN=YOUR_PAT gh api -i user
+```
+
 ## Deployment
 
 ### 1. Provision infrastructure

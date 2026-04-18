@@ -1,0 +1,21 @@
+{
+  "issue": "INF-05",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "category": "infra_wiring",
+      "proposal": "Require implementor to verify module is invoked from a deployable entrypoint template (for example infra/main.bicep) when acceptance criteria depend on deployed effects.",
+      "reason": "Code review identified that creating a module file alone is insufficient if nothing deploys it."
+    },
+    {
+      "category": "artifact_tracking",
+      "proposal": "Explicitly require `git status --short` check before review to ensure changed IaC files are tracked and committed.",
+      "reason": "Review flagged untracked RBAC artifacts as a critical blocker."
+    },
+    {
+      "category": "scope_assumptions",
+      "proposal": "Ask implementor to document/validate whether resource IDs may cross resource groups or subscriptions and choose scoping logic accordingly.",
+      "reason": "Review suggested fragility when deriving existing-resource references from IDs without explicit cross-scope handling."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "issue": "INF-05",
+  "pr_number": "NA",
+  "pr_link": null,
+  "findings": {
+    "critical_issues": [
+      {
+        "id": "CRIT-1",
+        "title": "RBAC changes are not currently part of tracked branch content",
+        "file": "infra/modules/rbac.bicep",
+        "line_start": 1,
+        "line_end": 46,
+        "recommendation": "Add and commit RBAC files before merge",
+        "status": "resolved",
+        "resolution": "Committed infra/modules/rbac.bicep and generated infra/modules/rbac.json via report_progress commit a0f5f8f"
+      },
+      {
+        "id": "CRIT-2",
+        "title": "No deployment entrypoint invocation of RBAC module found",
+        "file": "infra/main.bicep",
+        "line_start": 1,
+        "line_end": 16,
+        "recommendation": "Wire infra/modules/rbac.bicep into top-level deployment template",
+        "status": "resolved",
+        "resolution": "Added infra/main.bicep with module invocation passing principalId, blobContainerResourceId, and keyVaultResourceId"
+      }
+    ],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Scope derivation is fragile for cross-RG/subscription IDs",
+        "file": "infra/modules/rbac.bicep",
+        "line_start": 13,
+        "line_end": 26,
+        "recommendation": "Use explicit subscription/resource-group scoping or structured params for existing resources",
+        "status": "not_applied",
+        "notes": "Current repository issue scope only requires the role assignments and container-level scope; cross-subscription deployment patterns are out of scope for INF-05. Current template compiles and satisfies stated acceptance criteria inputs."
+      }
+    ]
+  }
+}

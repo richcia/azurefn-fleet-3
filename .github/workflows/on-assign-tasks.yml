@@ -7,10 +7,6 @@ on:
         description: Optional issue number to assign directly
         required: false
         type: string
-      pr_number:
-        description: Optional pull request number to merge after Copilot finishes
-        required: false
-        type: string
     secrets:
       COPILOT_GITHUB_TOKEN:
         required: true
@@ -18,10 +14,6 @@ on:
     inputs:
       issue_id:
         description: Optional issue number to assign directly
-        required: false
-        type: string
-      pr_number:
-        description: Optional pull request number to merge after Copilot finishes
         required: false
         type: string
 
@@ -266,25 +258,45 @@ jobs:
             wait_for_issue_completion "$issue_number"
           done < ready_issues.txt
 
-      - name: Merge Specified PR
-        if: ${{ inputs.pr_number != '' }}
+      - name: Merge Completed Issue PRs
+        if: steps.ready_issues.outputs.ready_count != '0'
         run: |
           set -euo pipefail
 
-          PR_NUMBER="${{ inputs.pr_number }}"
-          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-            echo "Invalid pr_number input: '$PR_NUMBER' (expected numeric PR number)"
-            exit 1
-          fi
+          while IFS= read -r issue_number; do
+            [ -z "$issue_number" ] && continue
 
-          PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
-          if [ "$PR_STATE" != "OPEN" ]; then
-            echo "PR #$PR_NUMBER is not open (state=$PR_STATE); failing workflow."
-            exit 1
-          fi
+            pr_json=$(gh pr list --state all --limit 1000 --json number,state,mergedAt,url,closingIssuesReferences | jq -c --argjson issue_number "$issue_number" '
+              [ .[]
+                | select(any(.closingIssuesReferences[]?; .number == $issue_number))
+              ]
+              | sort_by(.number)
+              | last // empty
+            ')
 
-          echo "Merging PR #$PR_NUMBER"
-          gh pr merge "$PR_NUMBER" --merge --delete-branch
+            if [ -z "$pr_json" ]; then
+              echo "::error::No PR found for completed issue #$issue_number"
+              exit 1
+            fi
+
+            pr_number=$(jq -r '.number' <<< "$pr_json")
+            pr_state=$(jq -r '.state' <<< "$pr_json")
+            pr_merged_at=$(jq -r '.mergedAt // empty' <<< "$pr_json")
+            pr_url=$(jq -r '.url' <<< "$pr_json")
+
+            if [ -n "$pr_merged_at" ]; then
+              echo "PR #$pr_number for issue #$issue_number already merged: $pr_url"
+              continue
+            fi
+
+            if [ "$pr_state" != "OPEN" ]; then
+              echo "::error::PR #$pr_number for issue #$issue_number is not open (state=$pr_state): $pr_url"
+              exit 1
+            fi
+
+            echo "Merging PR #$pr_number for issue #$issue_number: $pr_url"
+            gh pr merge "$pr_number" --merge --delete-branch
+          done < ready_issues.txt
 
       - name: Re-Run Workflow While Ready Issues Remain
         if: steps.ready_issues.outputs.ready_count != '0'

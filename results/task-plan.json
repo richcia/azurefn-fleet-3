@@ -1,23 +1,23 @@
 {
   "summary": "Implementation plan for the 1985-NY-Yankees Azure Function: a nightly Timer-triggered Python 3.11 function that queries GPT-4o via TRAPI, validates the 1985 New York Yankees roster response, and persists it to dedicated Azure Blob Storage using Managed Identity for all service authentication. The plan covers IaC provisioning, TRAPI integration, blob write logic, CI/CD pipeline, observability, security hardening, and release readiness.",
   "assumptions": [
-    "TRAPI supports Azure AD Managed Identity bearer token authentication; if not, a Key Vault secret fallback will be used.",
-    "TRAPI endpoint and GPT-4o model version will be confirmed by rciapala before APP-01 begins.",
+    "TRAPI auth and endpoint are escalated to the TRAPI team; explicit response deadline is 2026-04-22T17:00:00Z (owner: rciapala).",
+    "APP-01 may start only after TRAPI auth scope, base URL, and API version are confirmed in writing by the deadline owner.",
     "Player scope is limited to the 25-man active roster (24–28 range accounts for roster edge cases).",
     "TRAPI is accessible over the public internet; no VNet integration required for initial deployment.",
-    "Consumption Plan is acceptable; cold-start risk at 2 AM UTC is acceptable given best-effort SLA.",
-    "A staging deployment slot is available on the Consumption Plan (requires Standard or higher for slots — owner to confirm or use a separate staging Function App).",
+    "Consumption Plan is approved for production; cold-start risk at 2 AM UTC is acceptable for this workload.",
+    "Staging will use a separate Function App (not deployment slots) because slots are not available on Consumption Plan.",
     "GitHub Actions OIDC federated identity is used for Azure deployments (no long-lived service principal secrets).",
     "Existing infra/ Bicep modules (storage, functionapp, rbac, monitoring, alerts) will be extended, not replaced.",
     "The host.json functionTimeout will be set to 120 seconds; maxConcurrentCalls = 1.",
     "Application Insights sampling is enabled at the SDK level to control ingestion cost."
   ],
   "open_questions": [
-    "Does TRAPI support Azure AD Managed Identity bearer tokens, or is a client credential / API key required?",
-    "What is the TRAPI base URL and GPT-4o API version/model deployment name to pin in the prompt template?",
-    "Should the roster include coaching staff, front-office, or IL players, or strictly the 25-man active roster?",
+    "Escalated on 2026-04-18: TRAPI auth mechanism (Managed Identity bearer token vs client credential/API key) must be confirmed by 2026-04-22T17:00:00Z (owner: rciapala).",
+    "Escalated on 2026-04-18: TRAPI base URL and GPT-4o API version/model deployment must be confirmed by 2026-04-22T17:00:00Z (owner: rciapala).",
+    "Resolved on 2026-04-18: scope is active roster only (24-28 players); coaching/front-office/IL are out of scope.",
     "Is TRAPI network-restricted (requiring VNet integration and private endpoint for storage)?",
-    "Does the Consumption Plan support deployment slots, or should a separate staging Function App be provisioned?"
+    "Resolved on 2026-04-18: use Consumption Plan for production and a separate staging Function App instead of slots."
   ],
   "waves": [
     {
@@ -115,7 +115,39 @@
         "Deployment slot availability on Consumption Plan may require infra rework"
       ],
       "wave": "Foundation",
-      "dependency_graph": "PM-01 (no deps)\n  └── INF-01 (no deps)\n        ├── INF-02 (depends: INF-01)\n        │     └── INF-03 (depends: INF-01, INF-02)\n        │           └── SEC-01 (depends: INF-01, INF-02, INF-03)\n        │                 └── APP-01 (depends: INF-01, INF-02, INF-03, SEC-01)\n        │                       ├── APP-02 (depends: APP-01)\n        │                       │     └── APP-03 (depends: APP-01, APP-02)\n        │                       │           └── APP-04 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── OPS-01 (depends: APP-04, INF-03)\n        │                       │                 ├── REL-01 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── QA-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        │                       │                 │     └── QA-02 (depends: QA-01, APP-04)\n        │                       │                 │           └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01)\n        │                       │                 └── DOC-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        └── CICD-01 (depends: INF-01)\n              └── CICD-02 (depends: CICD-01, INF-01, INF-02, INF-03)\n                    └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01, CICD-02)"
+      "dependency_graph": "PM-01 (no deps)\n  └── INF-01 (no deps)\n        ├── INF-02 (depends: INF-01)\n        │     └── INF-03 (depends: INF-01, INF-02)\n        │           └── SEC-01 (depends: INF-01, INF-02, INF-03)\n        │                 └── APP-01 (depends: INF-01, INF-02, INF-03, SEC-01)\n        │                       ├── APP-02 (depends: APP-01)\n        │                       │     └── APP-03 (depends: APP-01, APP-02)\n        │                       │           └── APP-04 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── OPS-01 (depends: APP-04, INF-03)\n        │                       │                 ├── REL-01 (depends: APP-01, APP-02, APP-03)\n        │                       │                 ├── QA-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        │                       │                 │     └── QA-02 (depends: QA-01, APP-04)\n        │                       │                 │           └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01)\n        │                       │                 └── DOC-01 (depends: APP-01, APP-02, APP-03, APP-04)\n        └── CICD-01 (depends: INF-01)\n              └── CICD-02 (depends: CICD-01, INF-01, INF-02, INF-03)\n                    └── REL-02 (depends: QA-01, QA-02, OPS-01, DOC-01, CICD-02)",
+      "status": "approved",
+      "approved_by": "rciapala",
+      "approved_at_utc": "2026-04-18T17:47:48Z",
+      "approval_notes": "Task plan reviewed for completeness, sequencing, and spec alignment. TRAPI auth/endpoint items escalated with explicit deadline; player scope and hosting plan decisions documented.",
+      "estimate_review": {
+        "reviewer": "rciapala",
+        "reviewed_at_utc": "2026-04-18T17:47:48Z",
+        "notes": "All task estimates reviewed and accepted for initial execution."
+      },
+      "decision_log": {
+        "trapi_auth_and_endpoint": {
+          "status": "escalated",
+          "owner": "rciapala",
+          "escalated_at_utc": "2026-04-18T17:47:48Z",
+          "deadline_utc": "2026-04-22T17:00:00Z",
+          "impact_if_missed": "APP-01 and APP-02 remain blocked."
+        },
+        "player_scope": {
+          "status": "confirmed",
+          "decision": "Active roster only (24-28 players).",
+          "decided_at_utc": "2026-04-18T17:47:48Z"
+        },
+        "hosting_plan": {
+          "status": "confirmed",
+          "decision": "Consumption Plan for production; separate staging Function App in place of deployment slots.",
+          "decided_at_utc": "2026-04-18T17:47:48Z"
+        },
+        "wave_sequencing": {
+          "status": "approved",
+          "decided_at_utc": "2026-04-18T17:47:48Z"
+        }
+      }
     },
     {
       "id": "INF-01",
@@ -766,8 +798,6 @@
   "start_now": [
     "PM-01",
     "INF-01",
-    "CICD-01",
-    "APP-01",
-    "APP-03"
+    "CICD-01"
   ]
 }

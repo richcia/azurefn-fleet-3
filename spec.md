@@ -85,14 +85,14 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 - **Framework:** Azure Functions v2 programming model (azure-functions SDK)
 - **Cloud Platform:** Azure
 - **Storage:** Azure Blob Storage (Standard_LRS, dedicated account, container: `yankees-roster`)
-- **AI Gateway:** TRAPI (internal GPT-4o proxy) — endpoint and auth scope to be confirmed by owner
+- **AI Gateway:** TRAPI (internal GPT-4o proxy) — auth mechanism and endpoint are escalated to TRAPI team with response deadline 2026-04-22T17:00:00Z (owner: rciapala)
 - **Secrets:** Azure Key Vault (Key Vault references in App Settings)
 - **Observability:** Azure Application Insights (structured logging via OpenTelemetry SDK)
 - **Message Queues:** Not applicable (single sequential function; no fan-out)
 
 ### Deployment Model
 - **Target Environment:** Azure Functions Consumption Plan (serverless)
-- **CI/CD Pipeline:** GitHub Actions — triggered on push to `main`; deploys to staging slot, runs smoke test, then swaps to production
+- **CI/CD Pipeline:** GitHub Actions — triggered on push to `main`; deploys to a separate staging Function App, runs smoke test, then promotes to production
 - **Infrastructure as Code:** Bicep — provisions Function App, dedicated Storage Account, App Insights workspace, Key Vault, and all Managed Identity role assignments
 
 ---
@@ -161,10 +161,10 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 
 ## Open Questions / Decisions Pending
 
-1. **TRAPI auth mechanism:** Does TRAPI support Azure AD Managed Identity bearer tokens? If not, what credential type is required and where will it be stored (Key Vault)? — *Owner: rciapala to confirm with TRAPI team*
-2. **TRAPI endpoint and API version:** What is the base URL and API version for the TRAPI GPT-4o endpoint? — *Required before implementation*
-3. **Player scope:** Should the roster include only the 25-man active roster, or also coaching staff, front-office personnel, and injured list? — *Affects prompt template and validation thresholds*
+1. **TRAPI auth mechanism:** Escalated to TRAPI team on 2026-04-18. Confirmation deadline: 2026-04-22T17:00:00Z (owner: rciapala). If Managed Identity is unsupported, credential fallback will be stored in Key Vault.
+2. **TRAPI endpoint and API version:** Escalated to TRAPI team on 2026-04-18 with deadline 2026-04-22T17:00:00Z (owner: rciapala). Required before APP-01 starts.
+3. **Player scope:** Resolved — include only the 25-man active roster (validation range remains 24–28 for edge cases). Coaching/front-office/injured-list entries are out of scope.
 4. **Networking:** Is TRAPI accessible over public internet or does it require VNet integration? — *Affects infrastructure design*
-5. **Consumption Plan vs. Premium Plan:** Is there a strict SLA on the 2 AM execution time? If yes, Premium Plan with always-ready instances is required to eliminate cold-start risk.
+5. **Consumption Plan vs. Premium Plan:** Resolved — Consumption Plan approved for production; use a separate staging Function App instead of deployment slots.
 
 ---

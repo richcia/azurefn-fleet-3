@@ -1,0 +1,18 @@
+{
+  "issue_number": 488,
+  "pr_number": 516,
+  "improvements": [
+    {
+      "area": "Decision precision",
+      "suggestion": "Require explicit wording whether a confirmed endpoint value is concrete or a canonical endpoint format, and require documenting how environment-specific values are supplied."
+    },
+    {
+      "area": "Documentation consistency",
+      "suggestion": "Add a checklist item to ensure endpoint examples and variable defaults are identical across spec.md, readme.md, and local.settings.json.example."
+    },
+    {
+      "area": "Artifact hygiene",
+      "suggestion": "Instruct the implementor to avoid modifying unrelated placeholder/log files and to store process tracking only in required artifacts (for this workflow: agent-activity.log)."
+    }
+  ]
+}

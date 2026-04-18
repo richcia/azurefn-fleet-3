@@ -1,0 +1,32 @@
+{
+  "issue_number": 488,
+  "pr_number": 516,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/516",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Clarify whether endpoint is concrete or template",
+      "file": "spec.md",
+      "line": 165,
+      "review_note": "Resolved decision used endpoint template format.",
+      "action_taken": "Updated text to explicitly state TRAPI team confirmed Azure OpenAI base URL format and that resource-specific host is supplied through TRAPI_ENDPOINT.",
+      "status": "addressed"
+    },
+    {
+      "title": "Align endpoint formatting across docs",
+      "file": "local.settings.json.example",
+      "line": 8,
+      "review_note": "Endpoint examples were inconsistent across files.",
+      "action_taken": "Updated local.settings.json.example to use https://<resource>.openai.azure.com, matching readme.md and spec.md.",
+      "status": "addressed"
+    },
+    {
+      "title": "Remove process log artifact from PR",
+      "file": "log",
+      "line": 1,
+      "review_note": "log file contained agent execution notes.",
+      "action_taken": "Reverted log to original content and moved step tracking to agent-activity.log as requested by issue instructions.",
+      "status": "addressed"
+    }
+  ]
+}

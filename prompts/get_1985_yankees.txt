@@ -1,0 +1,2 @@
+Return a JSON object with key "players" listing the 1985 New York Yankees roster.
+Each player must include name, position, and jersey_number (integer).

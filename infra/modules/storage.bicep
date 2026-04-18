@@ -1,3 +1,5 @@
+@minLength(3)
+@maxLength(24)
 param storageAccountName string
 param location string = resourceGroup().location
 param tags object = {}
@@ -20,7 +22,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
-  name: '${storageAccount.name}/default'
+  parent: storageAccount
+  name: 'default'
   properties: {
     deleteRetentionPolicy: {
       enabled: true
@@ -30,7 +33,8 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
 }
 
 resource yankeesRosterContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/default/yankees-roster'
+  parent: blobService
+  name: 'yankees-roster'
   properties: {
     publicAccess: 'None'
   }
@@ -38,4 +42,4 @@ resource yankeesRosterContainer 'Microsoft.Storage/storageAccounts/blobServices/
 
 output storageAccountId string = storageAccount.id
 output storageAccountName string = storageAccount.name
-output rosterContainerName string = yankeesRosterContainer.name
+output rosterContainerName string = '${storageAccount.name}/default/${yankeesRosterContainer.name}'

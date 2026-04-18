@@ -41,6 +41,8 @@ Nightly Azure Function that fetches the 1985 New York Yankees roster from an Azu
 | Azure Functions Core Tools | v4 | `func --version` — [install guide](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local) |
 | Azure CLI | latest | `az --version` — [install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
 
+> Unit tests under `tests/test_storage_bicep.py` compile Bicep templates using `az bicep build`, so Azure CLI with the Bicep extension must be available in local and CI environments.
+
 ## Local Development
 
 ```bash

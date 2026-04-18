@@ -1,0 +1,26 @@
+{
+  "issue": "INF-02",
+  "pr_number": 0,
+  "improvements": [
+    {
+      "problem": "Initial implementation created a module but did not wire it into a deployable parent template.",
+      "prompt_improvement": "Explicitly require creating/updating the top-level infra deployment template (e.g., infra/main.bicep) whenever acceptance criteria require runtime provisioning behavior."
+    },
+    {
+      "problem": "Initial tests used raw string matching and were brittle/non-structural.",
+      "prompt_improvement": "Require infrastructure tests to validate compiled ARM JSON structure and property values rather than source text snippets."
+    },
+    {
+      "problem": "Storage account parameter validation was added only after review.",
+      "prompt_improvement": "Include a checklist item to add Bicep parameter constraints (min/max length and valid naming assumptions) for Azure resource names."
+    },
+    {
+      "problem": "Tooling dependency for infra tests was implicit.",
+      "prompt_improvement": "Require documenting any non-Python/non-npm test prerequisites (for example az bicep) in README whenever tests depend on external CLIs."
+    },
+    {
+      "problem": "Output contract changed unintentionally during refactor to parent syntax.",
+      "prompt_improvement": "Require preserving public output contracts when refactoring templates, or explicitly documenting contract changes in the PR."
+    }
+  ]
+}

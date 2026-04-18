@@ -1,0 +1,39 @@
+{
+  "issue": "INF-03",
+  "pr_number": "NA",
+  "pr_link": null,
+  "findings": {
+    "critical_issues": [
+      {
+        "id": "CRIT-1",
+        "title": "Linux Consumption plan not enforced by module contract",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 7,
+        "line_end": 8,
+        "recommendation": "Provision or enforce Linux Consumption plan (Y1, reserved=true, functionapp,linux)",
+        "status": "resolved"
+      }
+    ],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Mark Application Insights connection string input as secure",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 13,
+        "line_end": 15,
+        "recommendation": "Use @secure() annotation for parameter",
+        "status": "resolved"
+      },
+      {
+        "id": "SUG-2",
+        "title": "Add automated validation for acceptance criteria",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 1,
+        "line_end": 95,
+        "recommendation": "Validate template compiles and acceptance criteria via checks",
+        "status": "partially_resolved",
+        "notes": "Template compile validation (`az bicep build`) performed in this task. No existing infra CI test harness in this repository snapshot."
+      }
+    ]
+  }
+}

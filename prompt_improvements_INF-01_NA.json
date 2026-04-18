@@ -1,0 +1,21 @@
+{
+  "issue_number": "INF-01",
+  "pr_number": "NA",
+  "prompt_improvements": [
+    {
+      "category": "parameter_safety",
+      "improvement": "Explicitly require implementations to prevent empty-secret creation paths when secret deployment is optional.",
+      "example_instruction": "If a secret is optional, derive deployment from non-empty secure value or enforce validation so a secret cannot be created with an empty value."
+    },
+    {
+      "category": "security_defaults",
+      "improvement": "Ask the implementor to document when secure-by-default network ACLs are intentionally deferred.",
+      "example_instruction": "If Key Vault public access is left enabled, include rationale and dependency on follow-up private endpoint/firewall work."
+    },
+    {
+      "category": "validation_evidence",
+      "improvement": "Require capture of deployment validation command output and explicit note if environment credentials are unavailable.",
+      "example_instruction": "Run `az deployment group validate` and include pass/fail evidence; if blocked by authentication, record exact blocker and rerun instructions."
+    }
+  ]
+}

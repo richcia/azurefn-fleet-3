@@ -243,6 +243,13 @@ jobs:
                 
                 # Merge the PR if it's still open
                 if [ "$pr_state" = "OPEN" ]; then
+                  # Mark PR as ready for review if it's still in draft
+                  pr_draft=$(gh pr view "$pr_number" --json isDraft --jq '.isDraft')
+                  if [ "$pr_draft" = "true" ]; then
+                    echo "Marking PR #$pr_number as ready for review"
+                    gh pr ready "$pr_number"
+                  fi
+                  
                   echo "Merging PR #$pr_number for issue #$issue_number"
                   gh pr merge "$pr_number" --merge --delete-branch
                 fi

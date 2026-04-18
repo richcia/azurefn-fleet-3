@@ -1,0 +1,35 @@
+{
+  "issue_number": "INF-04",
+  "pr_number": 513,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/513",
+  "findings": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "title": "Strengthen tests to validate template semantics (not just string presence)",
+        "severity": "minor",
+        "file": "tests/test_inf04_monitoring_bicep.py",
+        "line_start": 13,
+        "line_end": 30,
+        "recommendation": "Parse compiled ARM JSON (infra/main.json) and assert concrete retention/linkage/output paths."
+      },
+      {
+        "title": "Add explicit test for Log Analytics ingestion mode wiring",
+        "severity": "minor",
+        "file": "infra/modules/monitoring.bicep",
+        "line_start": 28,
+        "line_end": 33,
+        "recommendation": "Assert IngestionMode stays 'LogAnalytics'."
+      },
+      {
+        "title": "Add validation for Function App sampling app settings output values",
+        "severity": "minor",
+        "file": "infra/modules/functionapp.bicep",
+        "line_start": 13,
+        "line_end": 19,
+        "recommendation": "Assert sampling app setting keys and expected values are present in compiled output."
+      }
+    ]
+  },
+  "status": "all suggestions addressed"
+}

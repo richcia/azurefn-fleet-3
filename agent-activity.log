@@ -8,5 +8,29 @@
       "Created infra/main.bicep to pass monitoring outputs into functionapp module.",
       "Added focused tests in tests/test_inf04_monitoring_bicep.py to validate retention, linkage, sampling settings, and connection string wiring."
     ]
+  },
+  {
+    "step": "Step 2 - Build and Test",
+    "actions": [
+      "Installed dependencies with pip install -r requirements.txt.",
+      "Ran targeted tests: python -m pytest tests/test_inf04_monitoring_bicep.py -v (passed).",
+      "Ran full test suite: python -m pytest -v (passed).",
+      "Compiled Bicep template: az bicep build --file infra/main.bicep (succeeded with non-blocking schema warning)."
+    ]
+  },
+  {
+    "step": "Step 3 - Code Review",
+    "actions": [
+      "Invoked Code Review Agent for PR https://github.com/richcia/azurefn-fleet-3/pull/513 with acceptance criteria.",
+      "Recorded review findings in code_review_findings_INF-04_513.json.",
+      "Recorded prompt improvement recommendations in prompt_improvements_INF-04_513.json."
+    ]
+  },
+  {
+    "step": "Step 4 - Apply Feedback and Retest",
+    "actions": [
+      "Applied all review suggestions by strengthening tests to parse compiled ARM JSON and validate ingestion mode + sampling wiring semantics.",
+      "Prepared to rerun full test suite after feedback implementation."
+    ]
   }
 ]

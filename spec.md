@@ -161,8 +161,8 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 
 ## Open Questions / Decisions Pending
 
-1. **TRAPI auth mechanism:** Does TRAPI support Azure AD Managed Identity bearer tokens? If not, what credential type is required and where will it be stored (Key Vault)? — *Owner: rciapala to confirm with TRAPI team*
-2. **TRAPI endpoint and API version:** What is the base URL and API version for the TRAPI GPT-4o endpoint? — *Required before implementation*
+1. **TRAPI auth mechanism (resolved, PRJ-01):** TRAPI supports Azure AD Managed Identity bearer tokens. Use auth scope `https://cognitiveservices.azure.com/.default`. Key Vault secret fallback is not required for primary auth.
+2. **TRAPI endpoint and API version (resolved, PRJ-01):** Base URL is `https://<resource>.openai.azure.com` and API version is `2024-02-01` for GPT-4o prompt pinning.
 3. **Player scope:** Should the roster include only the 25-man active roster, or also coaching staff, front-office personnel, and injured list? — *Affects prompt template and validation thresholds*
 4. **Networking:** Is TRAPI accessible over public internet or does it require VNet integration? — *Affects infrastructure design*
 5. **Consumption Plan vs. Premium Plan:** Is there a strict SLA on the 2 AM execution time? If yes, Premium Plan with always-ready instances is required to eliminate cold-start risk.

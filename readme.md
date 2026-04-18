@@ -75,6 +75,7 @@ All settings live under `Values` in `local.settings.json` (local) or as App Sett
 | `TRAPI_ENDPOINT` | Yes | — | Azure OpenAI endpoint URL, e.g. `https://<resource>.openai.azure.com`. |
 | `TRAPI_DEPLOYMENT_NAME` | No | `gpt-4o` | Azure OpenAI deployment (model alias). |
 | `TRAPI_API_VERSION` | No | `2024-02-01` | Azure OpenAI Chat Completions API version. |
+| `TRAPI_AUTH_SCOPE` | No | `https://cognitiveservices.azure.com/.default` | Managed Identity bearer token scope used to acquire TRAPI/Azure OpenAI access token. |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | No | — | Application Insights connection string. Optional (recommended); if unset, telemetry is disabled locally. Injected automatically in production via Bicep. |
 
 ## Deployment

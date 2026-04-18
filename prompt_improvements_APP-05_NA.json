@@ -1,0 +1,21 @@
+{
+  "issue_number": "APP-05",
+  "pr_number": "NA",
+  "improvements": [
+    {
+      "id": "PI-1",
+      "prompt_change": "Explicitly require at least one assertion that each required structured event name is emitted (including trapi_request_sent and blob_write_succeeded), even when orchestration dependencies are monkeypatched.",
+      "reason": "Code review identified partial acceptance-criteria coverage for logging events."
+    },
+    {
+      "id": "PI-2",
+      "prompt_change": "Add an instruction to remove unused imports and run a quick lint-equivalent check in modified test files before submitting.",
+      "reason": "Code review identified an unused import in the new test module."
+    },
+    {
+      "id": "PI-3",
+      "prompt_change": "When an acceptance criterion references func start, require either executing func start or explicitly documenting tool unavailability with a compensating verification step.",
+      "reason": "Environment lacked Azure Functions Core Tools, leaving one acceptance criterion unverifiable directly."
+    }
+  ]
+}

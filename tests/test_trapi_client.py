@@ -107,6 +107,7 @@ def test_fetch_roster_logs_prompt_hash_each_request(monkeypatch):
 
     assert calls
     assert all("prompt_sha256" in extra for _, extra in calls)
+    assert all(extra["event"] == "trapi_request_sent" for _, extra in calls)
 
 
 def test_fetch_roster_logs_prompt_hash_for_each_retry_attempt(monkeypatch):
@@ -131,6 +132,7 @@ def test_fetch_roster_logs_prompt_hash_for_each_retry_attempt(monkeypatch):
 
     assert len(logs) == 2
     assert all("prompt_sha256" in extra for extra in logs)
+    assert all(extra["event"] == "trapi_request_sent" for extra in logs)
     assert logs[0]["prompt_sha256"] == logs[1]["prompt_sha256"]
 
 

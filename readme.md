@@ -112,7 +112,11 @@ GH_TOKEN=YOUR_PAT gh api repos/OWNER/REPO --jq '.permissions.push'
 GH_TOKEN=YOUR_PAT gh api repos/richcia/azurefn-fleet-3 --jq '.permissions.push'
 ```
 
-If `.permissions` is `{}` or `null`, the token/auth context is not returning repo permission metadata. Confirm the token being used and inspect token scopes (`repo` is typically required for classic PAT private-repo write access; fine-grained PATs must include repository access and write permission for Contents/metadata as needed):
+If `.permissions` is `{}` or `null`, the token/auth context is not returning repo permission metadata.
+Confirm the token being used and check these auth details:
+
+- Classic PATs: `repo` is typically required for private-repo write access.
+- Fine-grained PATs: ensure repository access is granted and required permissions (such as Contents write + Metadata read) are enabled.
 
 ```bash
 GH_TOKEN=YOUR_PAT gh api -i user

@@ -1,0 +1,58 @@
+{
+  "issue_number": "SEC-01",
+  "pr_number": "NA",
+  "pr_link": null,
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Pin gitleaks to a fixed version",
+      "severity": "minor",
+      "status": "addressed",
+      "target": {
+        "file": ".github/workflows/ci.yml",
+        "line_start": 35,
+        "line_end": 36
+      }
+    },
+    {
+      "title": "Enforce CI gating assertion in test coverage",
+      "severity": "minor",
+      "status": "addressed",
+      "target": {
+        "file": "tests/test_security_ci.py",
+        "line_start": 16,
+        "line_end": 17
+      }
+    },
+    {
+      "title": "Validate Key Vault references in Bicep source",
+      "severity": "minor",
+      "status": "addressed",
+      "target": {
+        "file": "tests/test_infra_functionapp_settings.py",
+        "line_start": 20,
+        "line_end": 28
+      }
+    },
+    {
+      "title": "Assert local.settings.json is not tracked",
+      "severity": "minor",
+      "status": "addressed",
+      "target": {
+        "file": "tests/test_security_ci.py",
+        "line_start": 10,
+        "line_end": 20
+      }
+    },
+    {
+      "title": "Harden workflow test semantics for secret scan gating",
+      "severity": "minor",
+      "status": "addressed",
+      "target": {
+        "file": "tests/test_security_ci.py",
+        "line_start": 23,
+        "line_end": 32
+      }
+    }
+  ]
+}

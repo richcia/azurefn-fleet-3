@@ -13,3 +13,6 @@ build/
 .coverage.*
 htmlcov/
 .pytest_cache/
+
+# Local Azure Functions settings (may contain secrets)
+local.settings.json

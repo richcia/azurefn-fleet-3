@@ -20,8 +20,11 @@ param keyVaultName string
 @description('Key Vault secret name for TRAPI endpoint.')
 param trapiEndpointSecretName string = 'TRAPI-ENDPOINT'
 
-@description('Key Vault secret name for TRAPI auth scope.')
-param trapiAuthScopeSecretName string = 'TRAPI-AUTH-SCOPE'
+@description('TRAPI auth scope used by DefaultAzureCredential for bearer tokens.')
+@allowed([
+  'https://cognitiveservices.azure.com/.default'
+])
+param trapiAuthScope string = 'https://cognitiveservices.azure.com/.default'
 
 @description('Key Vault secret name for data storage account name.')
 param dataStorageAccountNameSecretName string = 'DATA-STORAGE-ACCOUNT-NAME'
@@ -79,7 +82,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'TRAPI_AUTH_SCOPE'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=${trapiAuthScopeSecretName})'
+          value: trapiAuthScope
         }
         {
           name: 'DATA_STORAGE_ACCOUNT_NAME'

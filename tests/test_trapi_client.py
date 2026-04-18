@@ -149,6 +149,21 @@ def test_default_azure_credential_token_scope(monkeypatch):
     assert seen["scope"] == "https://cognitiveservices.azure.com/.default"
 
 
+def test_custom_trapi_auth_scope_from_env(monkeypatch):
+    monkeypatch.setenv("TRAPI_AUTH_SCOPE", "api://trapi/.default")
+    seen = {}
+
+    def fake_get_token(scope):
+        seen["scope"] = scope
+        return SimpleNamespace(token="abc")
+
+    monkeypatch.setattr(trapi_client, "_DEFAULT_AZURE_CREDENTIAL", SimpleNamespace(get_token=fake_get_token))
+    token = trapi_client._get_bearer_token()
+
+    assert token == "abc"
+    assert seen["scope"] == "api://trapi/.default"
+
+
 def test_prompt_is_loaded_from_runtime_path(monkeypatch, tmp_path):
     prompt_file = tmp_path / "prompt.txt"
     prompt_file.write_text(

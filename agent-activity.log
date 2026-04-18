@@ -1,0 +1,37 @@
+[
+  {
+    "step": "Step 1 - Implement Tasks",
+    "actions": [
+      "Reviewed issue INF-04 requirements and host.json sampling settings.",
+      "Created infra/modules/monitoring.bicep to provision Log Analytics workspace and workspace-based Application Insights with 30-day retention.",
+      "Created infra/modules/functionapp.bicep to wire APPLICATIONINSIGHTS_CONNECTION_STRING and sampling-related app settings.",
+      "Created infra/main.bicep to pass monitoring outputs into functionapp module.",
+      "Added focused tests in tests/test_inf04_monitoring_bicep.py to validate retention, linkage, sampling settings, and connection string wiring."
+    ]
+  },
+  {
+    "step": "Step 2 - Build and Test",
+    "actions": [
+      "Installed dependencies with pip install -r requirements.txt.",
+      "Ran targeted tests and full suite with python -m pytest -v (passing).",
+      "Validated Bicep compilation using az bicep build for infra/main.bicep."
+    ]
+  },
+  {
+    "step": "Step 3 - Code Review",
+    "actions": [
+      "Invoked Code Review Agent for PR https://github.com/richcia/azurefn-fleet-3/pull/513 with INF-04 acceptance criteria.",
+      "Saved review findings in code_review_findings_INF-04_513.json.",
+      "Saved prompt improvements in prompt_improvements_INF-04_513.json."
+    ]
+  },
+  {
+    "step": "Step 4 - Apply Feedback and Retest",
+    "actions": [
+      "Addressed all review findings by improving semantic Bicep tests, adding Azure CLI availability guard, and reducing brittle expression matching.",
+      "Removed generated build artifact infra/main.json from source control.",
+      "Re-ran full test suite after each feedback batch until green.",
+      "Re-ran Code Review Agent after updates and reached no remaining critical/major issues."
+    ]
+  }
+]

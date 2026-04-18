@@ -1,0 +1,60 @@
+{
+  "issue_number": "INF-04",
+  "pr_number": 513,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/513",
+  "review_rounds": [
+    {
+      "round": 1,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "title": "Strengthen tests to validate template semantics (not just string presence)",
+          "severity": "minor",
+          "file": "tests/test_inf04_monitoring_bicep.py",
+          "line_start": 13,
+          "line_end": 30
+        },
+        {
+          "title": "Add explicit test for Log Analytics ingestion mode wiring",
+          "severity": "minor",
+          "file": "infra/modules/monitoring.bicep",
+          "line_start": 28,
+          "line_end": 33
+        },
+        {
+          "title": "Add validation for Function App sampling app settings output values",
+          "severity": "minor",
+          "file": "infra/modules/functionapp.bicep",
+          "line_start": 13,
+          "line_end": 19
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "critical_issues": [],
+      "suggestions": [
+        {
+          "title": "Test suite hard-depends on Azure CLI without guard",
+          "severity": "major",
+          "file": "tests/test_inf04_monitoring_bicep.py",
+          "line_start": 9,
+          "line_end": 15
+        },
+        {
+          "title": "Assertions are brittle against Bicep/ARM expression formatting changes",
+          "severity": "minor",
+          "file": "tests/test_inf04_monitoring_bicep.py",
+          "line_start": 73,
+          "line_end": 76
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "critical_issues": [],
+      "suggestions": []
+    }
+  ],
+  "status": "all review findings addressed"
+}

@@ -1,0 +1,18 @@
+{
+  "issue_number": "INF-04",
+  "pr_number": 513,
+  "improvements": [
+    {
+      "area": "Validation depth",
+      "improvement": "Require semantic validation of IaC outputs (compiled ARM JSON assertions or az what-if checks), not only string matching in source files."
+    },
+    {
+      "area": "Acceptance criteria traceability",
+      "improvement": "Explicitly map each acceptance criterion to at least one concrete automated test assertion and mention the exact file/line path in the final checklist."
+    },
+    {
+      "area": "Monitoring-specific checks",
+      "improvement": "For workspace-based Application Insights tasks, require explicit verification of IngestionMode=LogAnalytics and sampling settings wiring keys alongside connection string wiring."
+    }
+  ]
+}

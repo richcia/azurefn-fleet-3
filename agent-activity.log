@@ -1,0 +1,13 @@
+Step 0 - Parsed INF-01 requirements and acceptance criteria from provided issue details.
+Step 1 - Explored repository and infrastructure context; confirmed infra templates were absent in current branch.
+Step 1 - Read .github/copilot-instructions.md and markdown instruction file.
+Step 2 - Ran baseline checks: pip install -r requirements.txt, pytest (no tests discovered), az --version.
+Step 2 - Implemented INF-01 IaC changes: added infra/main.bicep, infra/modules/keyvault.bicep, infra/modules/rbac.bicep.
+Step 2 - Validated Bicep syntax with az bicep build for all changed templates.
+Step 2 - Attempted az deployment group validate; blocked by missing az login in sandbox.
+Step 3 - Pending: Run Code Review Agent and capture findings artifacts.
+Step 4 - Pending: Apply review feedback and re-run validations.
+Step 3 - Ran Code Review Agent against INF-01 branch changes and collected findings.
+Step 3 - Recorded findings in code_review_findings_INF-01_NA.json and prompt improvements in prompt_improvements_INF-01_NA.json.
+Step 4 - Applied review feedback to prevent empty Key Vault secret creation path.
+Step 4 - Re-ran Bicep builds; retried deployment validate (still blocked by az login); re-ran tests (no tests directory present).

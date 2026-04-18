@@ -1,0 +1,48 @@
+{
+  "issue_number": "INF-01",
+  "pr_number": "NA",
+  "reviewed_pr_link": "https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/inf-01-add-key-vault-bicep-module?expand=1",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Secret can be created with an empty value",
+      "severity": "major",
+      "status": "addressed",
+      "files": [
+        {
+          "path": "infra/main.bicep",
+          "line_range": "18-22"
+        },
+        {
+          "path": "infra/modules/keyvault.bicep",
+          "line_range": "8-10,36-42"
+        }
+      ],
+      "resolution": "Secret creation is now derived from whether `trapiCredentialSecretValue` is non-empty in main.bicep, eliminating empty secret creation paths."
+    },
+    {
+      "title": "Key Vault is publicly reachable by default",
+      "severity": "minor",
+      "status": "not_applied",
+      "files": [
+        {
+          "path": "infra/modules/keyvault.bicep",
+          "line_range": "28-32"
+        }
+      ],
+      "resolution": "Left unchanged to avoid introducing connectivity regressions without the companion private endpoint/network ACL design in this issue scope."
+    },
+    {
+      "title": "No in-branch evidence for `az deployment group validate` pass",
+      "severity": "minor",
+      "status": "blocked_environment",
+      "files": [
+        {
+          "path": "infra/main.bicep",
+          "line_range": "1-48"
+        }
+      ],
+      "resolution": "Validation command was executed in sandbox but cannot complete without Azure authentication (`az login`)."
+    }
+  ]
+}

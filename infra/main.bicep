@@ -13,11 +13,11 @@ param functionAppPrincipalId string
 param keyVaultName string = 'kv-${uniqueString(resourceGroup().id)}'
 
 param trapiCredentialSecretName string = 'trapi-credential'
-param createTrapiCredentialSecret bool = false
 
 @secure()
 @description('Optional TRAPI credential value. Leave empty when TRAPI uses managed identity auth.')
 param trapiCredentialSecretValue string = ''
+var createTrapiCredentialSecret = !empty(trapiCredentialSecretValue)
 
 module keyVault './modules/keyvault.bicep' = {
   name: 'keyVault'

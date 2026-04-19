@@ -120,6 +120,39 @@ def test_fetch_roster_retries_with_exponential_backoff_and_warning_logs(monkeypa
     ]
 
 
+def test_fetch_roster_retries_for_non_503_server_errors(monkeypatch, configure_env, caplog):
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        types.SimpleNamespace(get_token=lambda _: types.SimpleNamespace(token="token")),
+    )
+
+    statuses = [502, 200]
+    calls = {"count": 0}
+    sleeps = []
+
+    def fake_post(*_, **__):
+        status = statuses[calls["count"]]
+        calls["count"] += 1
+        if status == 200:
+            return FakeResponse(200, {"players": _players(24), "usage": {"total_tokens": 77}})
+        return FakeResponse(status, {})
+
+    monkeypatch.setattr(trapi_client.requests, "post", fake_post)
+    monkeypatch.setattr(trapi_client.time, "sleep", lambda s: sleeps.append(s))
+    monkeypatch.setattr(trapi_client.random, "uniform", lambda *_: 0.0)
+
+    response = trapi_client.fetch_1985_yankees_roster()
+
+    assert response["players"][0]["name"] == "Player 1"
+    assert calls["count"] == 2
+    assert sleeps == [1.0]
+    retry_log = next(record for record in caplog.records if record.message == "trapi_retry_attempt")
+    assert retry_log.attempt_number == 1
+    assert retry_log.status_code == 502
+
+
 def test_fetch_roster_raises_after_retry_exhaustion(monkeypatch, configure_env):
     monkeypatch.setattr(
         trapi_client,

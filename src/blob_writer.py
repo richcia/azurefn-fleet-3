@@ -21,6 +21,15 @@ def _resolve_run_date_utc(run_date_utc: str | None = None) -> str:
     return run_date_utc or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def _is_duplicate_write_conflict(exc: HttpResponseError) -> bool:
+    status_code = getattr(exc, "status_code", None)
+    error_code = getattr(exc, "error_code", None)
+    return (
+        (status_code == 409 and error_code == "BlobAlreadyExists")
+        or (status_code == 412 and error_code in {"ConditionNotMet", "PreconditionFailed"})
+    )
+
+
 class BlobWriter:
     def __init__(
         self,
@@ -55,7 +64,7 @@ class BlobWriter:
             _LOGGER.info("blob_write_conflict", extra={"blob_uri": blob_client.url})
             return None
         except HttpResponseError as exc:
-            if getattr(exc, "status_code", None) == 409:
+            if _is_duplicate_write_conflict(exc):
                 _LOGGER.info("blob_write_conflict", extra={"blob_uri": blob_client.url})
                 return None
             raise

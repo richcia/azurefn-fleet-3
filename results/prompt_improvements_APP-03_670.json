@@ -1,0 +1,18 @@
+{
+  "issue_id": "APP-03",
+  "pr_number": 670,
+  "prompt_improvements": [
+    {
+      "category": "Error-shape specificity",
+      "improvement": "Explicitly instruct the implementor to handle duplicate blob writes using narrow Azure error shapes (ResourceExistsError, 409 BlobAlreadyExists, and 412 ConditionNotMet/PreconditionFailed), while re-raising all other HttpResponseError cases."
+    },
+    {
+      "category": "Negative-path tests",
+      "improvement": "Require at least one test that proves unexpected storage HTTP errors are re-raised and not silently swallowed."
+    },
+    {
+      "category": "Branch coverage expectations",
+      "improvement": "Require tests to directly exercise both ResourceExistsError and HttpResponseError branches in blob write logic."
+    }
+  ]
+}

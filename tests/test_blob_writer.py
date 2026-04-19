@@ -1,7 +1,7 @@
 import logging
 import types
 
-from azure.core.exceptions import HttpResponseError
+from azure.core.exceptions import HttpResponseError, ResourceExistsError
 
 from src import blob_writer
 
@@ -64,6 +64,7 @@ def test_write_handles_409_conflict_without_raising(monkeypatch, caplog):
     monkeypatch.setenv("DATA_STORAGE_ACCOUNT_NAME", "storageacct")
     conflict_error = HttpResponseError(message="conflict")
     conflict_error.status_code = 409
+    conflict_error.error_code = "BlobAlreadyExists"
     fake_blob_client = FakeBlobClient(
         "https://storageacct.blob.core.windows.net/yankees-roster/2026-03-31.json",
         upload_side_effect=conflict_error,
@@ -77,6 +78,76 @@ def test_write_handles_409_conflict_without_raising(monkeypatch, caplog):
         blob_writer,
         "_DEFAULT_AZURE_CREDENTIAL",
         types.SimpleNamespace(get_token=lambda *_: None),
+    )
+
+    writer = blob_writer.BlobWriter()
+    result = writer.write({"players": []}, run_date_utc="2026-03-31")
+
+    assert result is None
+    record = next(r for r in caplog.records if r.message == "blob_write_conflict")
+    assert record.blob_uri == fake_blob_client.url
+
+
+def test_write_reraises_non_duplicate_http_response_error(monkeypatch):
+    monkeypatch.setenv("DATA_STORAGE_ACCOUNT_NAME", "storageacct")
+    conflict_error = HttpResponseError(message="conflict")
+    conflict_error.status_code = 409
+    conflict_error.error_code = "ContainerBeingDeleted"
+    fake_blob_client = FakeBlobClient(
+        "https://storageacct.blob.core.windows.net/yankees-roster/2026-03-31.json",
+        upload_side_effect=conflict_error,
+    )
+    monkeypatch.setattr(
+        blob_writer,
+        "BlobServiceClient",
+        lambda account_url, credential: FakeBlobServiceClient(account_url, credential, fake_blob_client),
+    )
+
+    writer = blob_writer.BlobWriter()
+
+    try:
+        writer.write({"players": []}, run_date_utc="2026-03-31")
+    except HttpResponseError as exc:
+        assert exc is conflict_error
+    else:
+        raise AssertionError("Expected HttpResponseError to be re-raised for non-duplicate conflicts")
+
+
+def test_write_handles_412_duplicate_conflict_without_raising(monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    monkeypatch.setenv("DATA_STORAGE_ACCOUNT_NAME", "storageacct")
+    conflict_error = HttpResponseError(message="precondition failed")
+    conflict_error.status_code = 412
+    conflict_error.error_code = "ConditionNotMet"
+    fake_blob_client = FakeBlobClient(
+        "https://storageacct.blob.core.windows.net/yankees-roster/2026-03-31.json",
+        upload_side_effect=conflict_error,
+    )
+    monkeypatch.setattr(
+        blob_writer,
+        "BlobServiceClient",
+        lambda account_url, credential: FakeBlobServiceClient(account_url, credential, fake_blob_client),
+    )
+
+    writer = blob_writer.BlobWriter()
+    result = writer.write({"players": []}, run_date_utc="2026-03-31")
+
+    assert result is None
+    record = next(r for r in caplog.records if r.message == "blob_write_conflict")
+    assert record.blob_uri == fake_blob_client.url
+
+
+def test_write_handles_resource_exists_error_without_raising(monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    monkeypatch.setenv("DATA_STORAGE_ACCOUNT_NAME", "storageacct")
+    fake_blob_client = FakeBlobClient(
+        "https://storageacct.blob.core.windows.net/yankees-roster/2026-03-31.json",
+        upload_side_effect=ResourceExistsError(message="exists"),
+    )
+    monkeypatch.setattr(
+        blob_writer,
+        "BlobServiceClient",
+        lambda account_url, credential: FakeBlobServiceClient(account_url, credential, fake_blob_client),
     )
 
     writer = blob_writer.BlobWriter()

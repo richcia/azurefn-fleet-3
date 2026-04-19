@@ -5,7 +5,7 @@ from opentelemetry import metrics
 
 from src.blob_writer import BlobWriter
 from src.validator import validate_roster_response
-from trapi_client import RosterValidationError, fetch_1985_yankees_roster
+from trapi_client import TRAPIRetryExhaustedError, RosterValidationError, fetch_1985_yankees_roster
 
 app = func.FunctionApp()
 _LOGGER = logging.getLogger(__name__)
@@ -49,5 +49,8 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
             },
         )
     except RosterValidationError as exc:
+        writer.write_failed(exc.response_payload)
+        raise RuntimeError(str(exc)) from exc
+    except TRAPIRetryExhaustedError as exc:
         writer.write_failed(exc.response_payload)
         raise RuntimeError(str(exc)) from exc

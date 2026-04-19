@@ -77,7 +77,8 @@ def test_fetch_roster_uses_prompt_file_timeout_scope_and_logs(monkeypatch, confi
     assert received.player_count == 24
 
 
-def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_env):
+def test_fetch_roster_retries_with_exponential_backoff_and_warning_logs(monkeypatch, configure_env, caplog):
+    caplog.set_level(logging.WARNING)
     monkeypatch.setattr(
         trapi_client,
         "_DEFAULT_AZURE_CREDENTIAL",
@@ -87,6 +88,7 @@ def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_en
     statuses = [429, 500, 503, 200]
     calls = {"count": 0}
     sleeps = []
+    jitter_calls = []
 
     def fake_post(*_, **__):
         status = statuses[calls["count"]]
@@ -97,12 +99,25 @@ def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_en
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
     monkeypatch.setattr(trapi_client.time, "sleep", lambda s: sleeps.append(s))
+    monkeypatch.setattr(
+        trapi_client.random,
+        "uniform",
+        lambda minimum, maximum: jitter_calls.append((minimum, maximum)) or 0.0,
+    )
 
     response = trapi_client.fetch_1985_yankees_roster()
 
     assert response["players"][0]["name"] == "Player 1"
     assert calls["count"] == 4
-    assert sleeps == [1, 2, 4]
+    assert sleeps == [1.0, 2.0, 4.0]
+    assert jitter_calls == [(0, 1), (0, 2), (0, 4)]
+    retry_logs = [record for record in caplog.records if record.message == "trapi_retry_attempt"]
+    assert len(retry_logs) == 3
+    assert [(record.attempt_number, record.status_code) for record in retry_logs] == [
+        (1, 429),
+        (2, 500),
+        (3, 503),
+    ]
 
 
 def test_fetch_roster_raises_after_retry_exhaustion(monkeypatch, configure_env):
@@ -113,12 +128,18 @@ def test_fetch_roster_raises_after_retry_exhaustion(monkeypatch, configure_env):
     )
     monkeypatch.setattr(trapi_client.requests, "post", lambda *_, **__: FakeResponse(503, {}))
     monkeypatch.setattr(trapi_client.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(trapi_client.random, "uniform", lambda *_: 0.0)
 
-    with pytest.raises(RuntimeError, match="http 503"):
+    with pytest.raises(trapi_client.TRAPIRetryExhaustedError) as exc:
         trapi_client.fetch_1985_yankees_roster()
 
+    assert exc.value.status_code == 503
+    assert exc.value.retries == 3
+    assert exc.value.response_payload == {}
 
-def test_fetch_roster_does_not_retry_non_retryable_status(monkeypatch, configure_env):
+
+@pytest.mark.parametrize("status_code", [400, 401, 403])
+def test_fetch_roster_does_not_retry_fatal_statuses(monkeypatch, configure_env, status_code):
     monkeypatch.setattr(
         trapi_client,
         "_DEFAULT_AZURE_CREDENTIAL",
@@ -128,11 +149,11 @@ def test_fetch_roster_does_not_retry_non_retryable_status(monkeypatch, configure
 
     def fake_post(*_, **__):
         calls["count"] += 1
-        return FakeResponse(400, {})
+        return FakeResponse(status_code, {})
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
 
-    with pytest.raises(RuntimeError, match="http 400"):
+    with pytest.raises(RuntimeError, match=f"http {status_code}"):
         trapi_client.fetch_1985_yankees_roster()
 
     assert calls["count"] == 1

@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import random
 import time
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,8 @@ TRAPI_API_VERSION = os.getenv("TRAPI_API_VERSION", "2025-04-01-preview")
 TRAPI_TIMEOUT_SECONDS = 45
 TRAPI_MAX_RETRIES = 3
 TRAPI_RETRYABLE_STATUS_CODES = {429, 500, 503}
+TRAPI_FATAL_STATUS_CODES = {400, 401, 403}
+TRAPI_MAX_BACKOFF_SECONDS = 8
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "get_1985_yankees.txt"
 
 _DEFAULT_AZURE_CREDENTIAL = DefaultAzureCredential()
@@ -29,6 +32,29 @@ class RosterValidationError(RuntimeError):
         super().__init__(message)
         self.kind = kind
         self.response_payload = response_payload
+
+
+class TRAPIRetryExhaustedError(RuntimeError):
+    def __init__(self, status_code: int, retries: int, response_payload: Any):
+        super().__init__(f"TRAPI retries exhausted after {retries} retries with status {status_code}")
+        self.status_code = status_code
+        self.retries = retries
+        self.response_payload = response_payload
+
+
+def _classify_status_code(status_code: int) -> str:
+    if status_code in TRAPI_FATAL_STATUS_CODES:
+        return "fatal"
+    if status_code == 429 or 500 <= status_code <= 599:
+        return "transient"
+    return "other"
+
+
+def _safe_response_payload(response: Any) -> Any:
+    try:
+        return response.json()
+    except Exception:
+        return {"status_code": getattr(response, "status_code", None)}
 
 
 def _normalize_prompt(prompt_text: str) -> str:
@@ -93,10 +119,31 @@ def fetch_1985_yankees_roster() -> dict[str, Any]:
         )
         latency_ms = int((time.perf_counter() - started) * 1000)
 
-        if response.status_code in TRAPI_RETRYABLE_STATUS_CODES and attempt < TRAPI_MAX_RETRIES:
-            time.sleep(delay_seconds)
-            delay_seconds *= 2
-            continue
+        status_classification = _classify_status_code(response.status_code)
+        if status_classification == "transient":
+            if attempt < TRAPI_MAX_RETRIES:
+                retry_attempt = attempt + 1
+                jitter = random.uniform(0, delay_seconds)
+                sleep_seconds = min(TRAPI_MAX_BACKOFF_SECONDS, delay_seconds + jitter)
+                _LOGGER.warning(
+                    "trapi_retry_attempt",
+                    extra={
+                        "attempt_number": retry_attempt,
+                        "status_code": response.status_code,
+                        "sleep_seconds": sleep_seconds,
+                    },
+                )
+                time.sleep(sleep_seconds)
+                delay_seconds *= 2
+                continue
+            raise TRAPIRetryExhaustedError(
+                status_code=response.status_code,
+                retries=TRAPI_MAX_RETRIES,
+                response_payload=_safe_response_payload(response),
+            )
+
+        if status_classification == "fatal":
+            response.raise_for_status()
 
         response.raise_for_status()
         response_json = response.json()

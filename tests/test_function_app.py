@@ -116,6 +116,27 @@ def test_get_and_store_yankees_roster_validation_failure_path(monkeypatch):
     assert fake_writer.write_failed_calls == [invalid_payload]
 
 
+def test_get_and_store_yankees_roster_retry_exhaustion_failure_path(monkeypatch):
+    fake_writer = FakeWriter()
+    failed_payload = {"error": "transient retry exhausted"}
+
+    def raise_retry_exhausted_error():
+        raise trapi_client.TRAPIRetryExhaustedError(
+            status_code=503,
+            retries=3,
+            response_payload=failed_payload,
+        )
+
+    monkeypatch.setattr(function_app, "BlobWriter", lambda: fake_writer)
+    monkeypatch.setattr(function_app, "fetch_1985_yankees_roster", raise_retry_exhausted_error)
+
+    with pytest.raises(RuntimeError, match="retries exhausted"):
+        function_app.get_and_store_yankees_roster(None)
+
+    assert fake_writer.write_calls == []
+    assert fake_writer.write_failed_calls == [failed_payload]
+
+
 def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch):
     fake_writer = FakeWriter()
     invalid_payload = {"players": [{"name": "Don Mattingly"}]}

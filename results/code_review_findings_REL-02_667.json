@@ -1,0 +1,22 @@
+{
+  "issue": "REL-02",
+  "pr_number": 667,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/667",
+  "status": "completed",
+  "critical_issues_remaining": [],
+  "applied_findings": [
+    "Added bounded retry/backoff for post-deployment validation",
+    "Added fail-closed environment variable checks for deployment targets",
+    "Removed user-provided resource group/function app inputs and derived targets from environment-scoped vars",
+    "Included inherited RBAC checks at container scope",
+    "Added transient/non-retryable Azure CLI error classification",
+    "Hardened workflow input handling against shell/GITHUB_ENV injection",
+    "Pinned actions to immutable commit SHAs",
+    "Added job timeout guardrail",
+    "Added explicit --auth-mode login for storage validation"
+  ],
+  "latest_review_summary": {
+    "critical": [],
+    "suggestions": []
+  }
+}

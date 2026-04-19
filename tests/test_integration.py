@@ -143,7 +143,9 @@ def test_staging_output_blob_contains_known_players():
     }
 
     found_blob_name = None
+    found_blob_etag = None
     created_by_test = False
+    cleanup_created_blob = os.getenv("INTEGRATION_DELETE_CREATED_BLOB", "false").lower() == "true"
     try:
         invoked_at = datetime.now(timezone.utc)
         _invoke_function_admin_api(
@@ -159,7 +161,7 @@ def test_staging_output_blob_contains_known_players():
 
         payload = None
         while time.time() < deadline:
-            for blob_name in _candidate_blob_names():
+            for blob_name in candidate_blob_names:
                 blob_client = container_client.get_blob_client(blob_name)
                 if not blob_client.exists():
                     continue
@@ -175,6 +177,7 @@ def test_staging_output_blob_contains_known_players():
                     continue
                 found_blob_name = blob_name
                 created_by_test = snapshot_before is None
+                found_blob_etag = snapshot_after["etag"]
                 payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
                 break
             if payload is not None:
@@ -193,5 +196,7 @@ def test_staging_output_blob_contains_known_players():
         assert "Rickey Henderson" in names
         assert 24 <= len(players) <= 28, f"Unexpected player count: {len(players)}"
     finally:
-        if found_blob_name and created_by_test and container_client.get_blob_client(found_blob_name).exists():
-            container_client.get_blob_client(found_blob_name).delete_blob()
+        if found_blob_name and created_by_test and cleanup_created_blob:
+            snapshot_after = _blob_snapshot(container_client, found_blob_name)
+            if snapshot_after is not None and snapshot_after["etag"] == found_blob_etag:
+                container_client.get_blob_client(found_blob_name).delete_blob()

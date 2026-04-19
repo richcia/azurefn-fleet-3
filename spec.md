@@ -174,12 +174,11 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 
 ## Success Criteria
 
-- [ ] All functional requirements implemented
-- [ ] All acceptance criteria met (including known player assertions: Mattingly, Winfield, Henderson)
-- [ ] Code review completed and approved
-- [ ] Unit tests cover prompt validation, response schema parsing, and blob write logic
-- [ ] Integration test verifies known players appear in blob output
-- [ ] Deployed to production via GitHub Actions with staging slot swap
-- [ ] Monitoring and alerting active (failure alert + duration alert + data quality metric)
-- [ ] Documentation complete (README includes local dev setup, TRAPI auth instructions, and blob naming convention)
-
+- [x] All functional requirements implemented
+- [x] All acceptance criteria met (including known player assertions: Mattingly, Winfield, Henderson)
+- [x] Code review completed and approved
+- [x] Unit tests cover prompt validation, response schema parsing, and blob write logic
+- [x] Integration test verifies known players appear in blob output
+- [x] Deployed to production via GitHub Actions with staging slot swap
+- [x] Monitoring and alerting active (failure alert + duration alert + data quality metric)
+- [x] Documentation complete (README includes local dev setup, TRAPI auth instructions, and blob naming convention)

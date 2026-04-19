@@ -68,20 +68,12 @@ jobs:
 
       - name: Validate host.json APP-06 settings
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          host = json.loads(Path("host.json").read_text())
-          assert host.get("functionTimeout") == "00:02:00", "functionTimeout must be 00:02:00"
-          assert host.get("logging", {}).get("applicationInsights", {}).get("samplingSettings", {}).get("isEnabled") is True, "samplingSettings.isEnabled must be true"
-          assert host.get("logging", {}).get("applicationInsights", {}).get("samplingSettings", {}).get("excludedTypes") == "Request;Exception", "samplingSettings.excludedTypes must be Request;Exception"
-          assert host.get("extensions", {}).get("timerTrigger", {}).get("maxConcurrentCalls") == 1, "extensions.timerTrigger.maxConcurrentCalls must be 1"
-          PY
+          python -m pytest tests/test_host_json.py -q
 
       - name: Run pytest with coverage
         run: |
           python -m pytest tests/ -v -m "not integration" \
+            --ignore=tests/test_host_json.py \
             --cov=function_app \
             --cov=blob_writer \
             --cov=trapi_client \

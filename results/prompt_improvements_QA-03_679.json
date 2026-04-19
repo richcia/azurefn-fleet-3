@@ -1,0 +1,22 @@
+{
+  "issue_id": "QA-03",
+  "pr_number": 679,
+  "prompt_improvements": [
+    {
+      "category": "Staging evidence capture",
+      "improvement": "Require the implementor prompt to collect and record concrete staging evidence values (run_date_utc, blob URI/ETag, required player names, failed-path check, App Insights query results, metric datapoint, duration) in the sign-off artifact."
+    },
+    {
+      "category": "Environment readiness",
+      "improvement": "Require the prompt to verify staging credentials/environment variables up front and explicitly branch into 'execute validation' vs 'prepare checklist only' behavior."
+    },
+    {
+      "category": "Acceptance criteria traceability",
+      "improvement": "Require a one-to-one mapping table from each acceptance criterion to either automated test coverage or manual validation command/query text."
+    },
+    {
+      "category": "Review closure quality",
+      "improvement": "Require explicit disposition for every code review finding with one of: addressed, not_addressed (with blocker), or not_applicable."
+    }
+  ]
+}

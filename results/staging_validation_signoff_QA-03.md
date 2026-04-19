@@ -33,6 +33,19 @@
 - [ ] Function duration is under 60 seconds.
   - Evidence: Duration: ____________________ seconds
 
+## Validation Procedure (Staging)
+
+1. Execute `.github/workflows/integration-staging.yml` (workflow_dispatch) to trigger `tests/test_integration.py`.
+2. Record run_date_utc from the created blob name (`YYYY-MM-DD.json`) and store it above.
+3. Validate timer and duration in App Insights:
+   - `requests | where name contains "GetAndStoreYankeesRoster" | where timestamp > ago(24h) | order by timestamp desc`
+4. Validate required log events:
+   - `traces | where timestamp > ago(24h) | where message in ("function_started","trapi_request_sent","trapi_response_received","blob_write_succeeded","function_completed") | order by timestamp desc`
+5. Validate metric visibility:
+   - Metrics Explorer > `player_count_returned` filtered to the validation window/run date.
+6. Validate no failed blob for run date:
+   - Confirm absence of `yankees-roster/failed/{run_date_utc}.json`.
+
 ## Sign-off
 
 - QA Sign-off: ____________________

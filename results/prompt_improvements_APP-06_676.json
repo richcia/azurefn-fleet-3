@@ -1,0 +1,18 @@
+{
+  "issue": "APP-06",
+  "pr": 676,
+  "improvements": [
+    {
+      "theme": "YAML safety",
+      "proposal": "When modifying GitHub workflow heredoc blocks, run a syntax-safe check or prefer committed script/test files to avoid indentation regressions."
+    },
+    {
+      "theme": "Commit completeness",
+      "proposal": "Before requesting review, run `git --no-pager status --short` and ensure all referenced files are tracked and committed."
+    },
+    {
+      "theme": "CI efficiency",
+      "proposal": "When adding dedicated validation tests in CI, avoid duplicate execution in later broad test steps (for example with `--ignore`)."
+    }
+  ]
+}

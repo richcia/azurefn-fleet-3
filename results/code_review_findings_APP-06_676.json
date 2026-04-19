@@ -1,0 +1,47 @@
+{
+  "issue": "APP-06",
+  "pr": 676,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/676",
+  "findings": [
+    {
+      "review_round": 1,
+      "category": "critical",
+      "title": "CI host.json validation step has invalid Python/heredoc indentation and will fail",
+      "file": ".github/workflows/ci.yml",
+      "line_start": 77,
+      "line_end": 81,
+      "rationale": "Extra leading whitespace in assertions and heredoc terminator breaks the validation block.",
+      "recommendation": "Fix indentation or move validation into a dedicated script/test file."
+    },
+    {
+      "review_round": 1,
+      "category": "suggestion",
+      "title": "Move host.json assertions to a dedicated script/test to avoid YAML indentation regressions",
+      "file": ".github/workflows/ci.yml",
+      "line_start": 69,
+      "line_end": 81,
+      "rationale": "Inline YAML heredoc Python is indentation-fragile.",
+      "recommendation": "Run dedicated host.json validation from a committed test/script file."
+    },
+    {
+      "review_round": 2,
+      "category": "critical",
+      "title": "Host.json validation step references a file that must be committed in PR",
+      "file": ".github/workflows/ci.yml",
+      "line_start": 69,
+      "line_end": 71,
+      "rationale": "CI would fail if tests/test_host_json.py is not committed with the workflow change.",
+      "recommendation": "Commit tests/test_host_json.py in the same PR."
+    },
+    {
+      "review_round": 2,
+      "category": "suggestion",
+      "title": "Avoid running host.json validation twice in CI",
+      "file": ".github/workflows/ci.yml",
+      "line_start": 69,
+      "line_end": 89,
+      "rationale": "Dedicated validation step plus full pytest suite duplicates host.json test execution.",
+      "recommendation": "Exclude tests/test_host_json.py from the later full test run."
+    }
+  ]
+}

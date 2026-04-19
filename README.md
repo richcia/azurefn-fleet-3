@@ -2,11 +2,14 @@
 
 ## Local development setup
 
+Prerequisite: install [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) so `func start` is available locally.
+
 1. Create and activate a virtual environment:
    ```bash
    python -m venv .venv
    source .venv/bin/activate
    ```
+   On Windows, use `.venv\\Scripts\\Activate.ps1` (PowerShell) or `.venv\\Scripts\\activate.bat` (CMD).
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
@@ -55,13 +58,15 @@
    - `federated_credential_name`
    - `subject_type` (`branch` or `environment`)
    - `subject_value` (branch/environment value)
-3. After completion, copy the emitted values and set repository/environment variables:
+3. After completion, copy the emitted values and configure deployment credentials per environment (`staging`, `production`):
    - `AZURE_CLIENT_ID`
    - `AZURE_TENANT_ID`
    - `AZURE_SUBSCRIPTION_ID`
+   Set these as **environment variables** because deployment workflows read them via `${{ vars.* }}`.
 4. Ensure deployment targets are configured:
    - environment variable `AZURE_RESOURCE_GROUP`
-   - secret `AZURE_FUNCTIONAPP_NAME`
+   - environment variable `AZURE_FUNCTIONAPP_NAME` (used by `cd-infra.yml` via `${{ vars.AZURE_FUNCTIONAPP_NAME }}`)
+   - environment secret `AZURE_FUNCTIONAPP_NAME` (used by `cd-app.yml` and `cd-promote.yml` via `${{ secrets.AZURE_FUNCTIONAPP_NAME }}`)
 
 ### 2) Run `cd-infra.yml` (deploy/validate infrastructure)
 

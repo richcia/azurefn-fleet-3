@@ -20,3 +20,4 @@ Step 4 - Apply Review Feedback and Re-test
 - Added tests/test_host_json.py for APP-06 host.json checks.
 - Applied suggestion to avoid duplicate execution by excluding tests/test_host_json.py from full pytest step.
 - Re-ran targeted and full pytest suites to green.
+- Attempted to add findings-file link on parent issue #652 via gh CLI; comment failed due token permission (Resource not accessible by integration).

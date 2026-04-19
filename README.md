@@ -33,6 +33,19 @@ After the setup run, create/update repository secrets:
 
 These are consumed by deployment workflows such as `.github/workflows/cd.yml` via `azure/login@v2`.
 
+## Promote staging to production
+
+Use `.github/workflows/cd-promote.yml` to run a manual, OIDC-authenticated slot promotion with gates.
+
+1. In GitHub, open **Actions** > **CD Promote**.
+2. Click **Run workflow** and provide:
+   - `source-slot` (default: `staging`)
+   - `target-slot` (default: `production`)
+3. The workflow:
+   - runs a pre-swap smoke test on the source slot,
+   - swaps source to target via `az functionapp deployment slot swap`,
+   - verifies the target slot has the promoted deployment marker and passes a post-swap smoke test.
+
 ### Subject examples
 
 - Branch trust for `main`: `repo:richcia/azurefn-fleet-3:ref:refs/heads/main`

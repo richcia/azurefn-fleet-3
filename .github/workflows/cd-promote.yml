@@ -1,0 +1,199 @@
+name: CD Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      source-slot:
+        description: Source deployment slot to promote from
+        required: true
+        default: staging
+        type: string
+      target-slot:
+        description: Target deployment slot to promote to
+        required: true
+        default: production
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  promote:
+    name: Promote source slot to target slot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate source slot and run pre-swap smoke test
+        id: precheck
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            APP_NAME='${{ secrets.AZURE_FUNCTIONAPP_NAME }}'
+            SOURCE_SLOT='${{ inputs.source-slot }}'
+            TARGET_SLOT='${{ inputs.target-slot }}'
+            FUNCTION_NAME='${{ vars.SMOKE_TEST_FUNCTION_NAME }}'
+
+            if [ -z "$FUNCTION_NAME" ]; then
+              FUNCTION_NAME='GetAndStoreYankeesRoster'
+            fi
+
+            if [ "$SOURCE_SLOT" = "$TARGET_SLOT" ]; then
+              echo "source-slot and target-slot must be different values."
+              exit 1
+            fi
+
+            if [ "$SOURCE_SLOT" = 'production' ]; then
+              echo "source-slot cannot be 'production' for an Azure slot swap."
+              exit 1
+            fi
+
+            RESOURCE_GROUP="$(az resource list --name "$APP_NAME" --resource-type 'Microsoft.Web/sites' --query '[0].resourceGroup' -o tsv)"
+            if [ -z "$RESOURCE_GROUP" ]; then
+              echo "Unable to determine resource group for $APP_NAME"
+              exit 1
+            fi
+
+            if ! az functionapp deployment slot list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query "[?name=='$APP_NAME/$SOURCE_SLOT'].name" -o tsv | grep -q "$APP_NAME/$SOURCE_SLOT"; then
+              echo "Source slot '$SOURCE_SLOT' does not exist on app '$APP_NAME'."
+              exit 1
+            fi
+
+            SOURCE_MARKER="$(az functionapp config appsettings list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --query "[?name=='WEBSITE_RUN_FROM_PACKAGE' || name=='SCM_RUN_FROM_PACKAGE'].value | [0]" -o tsv)"
+            if [ -z "$SOURCE_MARKER" ]; then
+              echo "Unable to read a deployment version marker from source slot '$SOURCE_SLOT'."
+              echo "Expected WEBSITE_RUN_FROM_PACKAGE or SCM_RUN_FROM_PACKAGE app setting."
+              exit 1
+            fi
+
+            SOURCE_HOSTNAME="$(az functionapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --query defaultHostName -o tsv)"
+            SOURCE_MASTER_KEY="$(az functionapp keys list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --query masterKey -o tsv)"
+            SOURCE_FUNCTION_RESOURCE="$(az functionapp function show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --function-name "$FUNCTION_NAME" --query name -o tsv 2>/dev/null || true)"
+
+            if [ -z "$SOURCE_HOSTNAME" ] || [ -z "$SOURCE_MASTER_KEY" ] || [ -z "$SOURCE_FUNCTION_RESOURCE" ]; then
+              echo "Unable to resolve smoke test prerequisites on source slot '$SOURCE_SLOT'."
+              exit 1
+            fi
+
+            for attempt in 1 2 3 4 5 6; do
+              STATUS_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+                -X POST "https://${SOURCE_HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
+                -H 'Content-Type: application/json' \
+                -H "x-functions-key: ${SOURCE_MASTER_KEY}" \
+                --data '{}')"
+
+              if [ "$STATUS_CODE" = '200' ] || [ "$STATUS_CODE" = '202' ] || [ "$STATUS_CODE" = '204' ]; then
+                echo "Pre-swap smoke test passed with HTTP $STATUS_CODE on attempt ${attempt}."
+                break
+              fi
+
+              if [ "$attempt" -eq 6 ]; then
+                echo "Pre-swap smoke test failed after retries. Last HTTP status: $STATUS_CODE"
+                exit 1
+              fi
+
+              echo "Pre-swap smoke test attempt ${attempt} failed with HTTP $STATUS_CODE. Retrying in 10 seconds..."
+              sleep 10
+            done
+
+            {
+              echo "resource-group=$RESOURCE_GROUP"
+              echo "function-name=$FUNCTION_NAME"
+              echo "source-marker=$SOURCE_MARKER"
+            } >> "$GITHUB_OUTPUT"
+
+      - name: Swap source slot to target slot
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az functionapp deployment slot swap \
+              --name '${{ secrets.AZURE_FUNCTIONAPP_NAME }}' \
+              --resource-group '${{ steps.precheck.outputs.resource-group }}' \
+              --slot '${{ inputs.source-slot }}' \
+              --target-slot '${{ inputs.target-slot }}'
+
+      - name: Verify promoted version and run post-swap smoke test
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            APP_NAME='${{ secrets.AZURE_FUNCTIONAPP_NAME }}'
+            RESOURCE_GROUP='${{ steps.precheck.outputs.resource-group }}'
+            TARGET_SLOT='${{ inputs.target-slot }}'
+            FUNCTION_NAME='${{ steps.precheck.outputs.function-name }}'
+            SOURCE_MARKER='${{ steps.precheck.outputs.source-marker }}'
+
+            TARGET_SHOW_SLOT_ARGS=()
+            TARGET_KEYS_SLOT_ARGS=()
+            TARGET_FUNCTION_SLOT_ARGS=()
+            TARGET_APPSETTINGS_SLOT_ARGS=()
+            if [ "$TARGET_SLOT" != 'production' ]; then
+              TARGET_SHOW_SLOT_ARGS=(--slot "$TARGET_SLOT")
+              TARGET_KEYS_SLOT_ARGS=(--slot "$TARGET_SLOT")
+              TARGET_FUNCTION_SLOT_ARGS=(--slot "$TARGET_SLOT")
+              TARGET_APPSETTINGS_SLOT_ARGS=(--slot "$TARGET_SLOT")
+            fi
+
+            TARGET_MARKER="$(az functionapp config appsettings list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_APPSETTINGS_SLOT_ARGS[@]}" --query "[?name=='WEBSITE_RUN_FROM_PACKAGE' || name=='SCM_RUN_FROM_PACKAGE'].value | [0]" -o tsv)"
+            if [ -z "$TARGET_MARKER" ]; then
+              echo "Unable to read deployment version marker on target slot '$TARGET_SLOT'."
+              exit 1
+            fi
+
+            if [ "$TARGET_MARKER" != "$SOURCE_MARKER" ]; then
+              echo "Post-swap version verification failed."
+              echo "Source slot marker before swap: '$SOURCE_MARKER'"
+              echo "Target slot marker after swap: '$TARGET_MARKER'"
+              exit 1
+            fi
+
+            TARGET_HOSTNAME="$(az functionapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_SHOW_SLOT_ARGS[@]}" --query defaultHostName -o tsv)"
+            TARGET_MASTER_KEY="$(az functionapp keys list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_KEYS_SLOT_ARGS[@]}" --query masterKey -o tsv)"
+            TARGET_FUNCTION_RESOURCE="$(az functionapp function show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_FUNCTION_SLOT_ARGS[@]}" --function-name "$FUNCTION_NAME" --query name -o tsv 2>/dev/null || true)"
+
+            if [ -z "$TARGET_HOSTNAME" ] || [ -z "$TARGET_MASTER_KEY" ] || [ -z "$TARGET_FUNCTION_RESOURCE" ]; then
+              echo "Unable to resolve post-swap smoke test prerequisites for target slot '$TARGET_SLOT'."
+              exit 1
+            fi
+
+            for attempt in 1 2 3 4 5 6; do
+              STATUS_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+                -X POST "https://${TARGET_HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
+                -H 'Content-Type: application/json' \
+                -H "x-functions-key: ${TARGET_MASTER_KEY}" \
+                --data '{}')"
+
+              if [ "$STATUS_CODE" = '200' ] || [ "$STATUS_CODE" = '202' ] || [ "$STATUS_CODE" = '204' ]; then
+                echo "Post-swap smoke test passed with HTTP $STATUS_CODE on attempt ${attempt}."
+                {
+                  echo '### CD Promote completed successfully'
+                  echo "- Source slot: \
+`'${{ inputs.source-slot }}'`"
+                  echo "- Target slot: \
+`'${{ inputs.target-slot }}'`"
+                  echo "- Verified promoted version marker: \
+`$TARGET_MARKER`"
+                } >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+
+              if [ "$attempt" -eq 6 ]; then
+                echo "Post-swap smoke test failed after retries. Last HTTP status: $STATUS_CODE"
+                exit 1
+              fi
+
+              echo "Post-swap smoke test attempt ${attempt} failed with HTTP $STATUS_CODE. Retrying in 10 seconds..."
+              sleep 10
+            done

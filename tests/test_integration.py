@@ -127,48 +127,48 @@ def test_staging_output_blob_contains_known_players():
     container_client = service_client.get_container_client("yankees-roster")
 
     candidate_blob_names = _candidate_blob_names()
-    existing_before = {
-        blob_name
-        for blob_name in candidate_blob_names
-        if container_client.get_blob_client(blob_name).exists()
-    }
-
-    _invoke_function_admin_api(
-        app_name=app_name,
-        resource_group=resource_group,
-        slot_name=slot_name,
-        function_name=function_name,
-    )
-
-    timeout_seconds = int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "240"))
-    poll_interval_seconds = int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10"))
-    deadline = time.time() + timeout_seconds
+    for blob_name in candidate_blob_names:
+        blob_client = container_client.get_blob_client(blob_name)
+        if blob_client.exists():
+            blob_client.delete_blob()
 
     found_blob_name = None
-    payload = None
-    while time.time() < deadline:
-        for blob_name in _candidate_blob_names():
-            blob_client = container_client.get_blob_client(blob_name)
-            if not blob_client.exists():
-                continue
-            payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
-            found_blob_name = blob_name
-            break
-        if payload is not None:
-            break
-        time.sleep(poll_interval_seconds)
+    try:
+        _invoke_function_admin_api(
+            app_name=app_name,
+            resource_group=resource_group,
+            slot_name=slot_name,
+            function_name=function_name,
+        )
 
-    assert payload is not None, (
-        f"Timed out after {timeout_seconds}s waiting for output blob in yankees-roster/"
-    )
+        timeout_seconds = int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "240"))
+        poll_interval_seconds = int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10"))
+        deadline = time.time() + timeout_seconds
 
-    players = payload.get("players")
-    assert isinstance(players, list), "Output blob payload must contain a players list"
-    names = {player.get("name") for player in players if isinstance(player, dict)}
-    assert "Don Mattingly" in names
-    assert "Dave Winfield" in names
-    assert "Rickey Henderson" in names
-    assert 24 <= len(players) <= 28, f"Unexpected player count: {len(players)}"
+        payload = None
+        while time.time() < deadline:
+            for blob_name in _candidate_blob_names():
+                blob_client = container_client.get_blob_client(blob_name)
+                if not blob_client.exists():
+                    continue
+                payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
+                found_blob_name = blob_name
+                break
+            if payload is not None:
+                break
+            time.sleep(poll_interval_seconds)
 
-    if found_blob_name and found_blob_name not in existing_before:
-        container_client.get_blob_client(found_blob_name).delete_blob()
+        assert payload is not None, (
+            f"Timed out after {timeout_seconds}s waiting for output blob in yankees-roster/"
+        )
+
+        players = payload.get("players")
+        assert isinstance(players, list), "Output blob payload must contain a players list"
+        names = {player.get("name") for player in players if isinstance(player, dict)}
+        assert "Don Mattingly" in names
+        assert "Dave Winfield" in names
+        assert "Rickey Henderson" in names
+        assert 24 <= len(players) <= 28, f"Unexpected player count: {len(players)}"
+    finally:
+        if found_blob_name:
+            container_client.get_blob_client(found_blob_name).delete_blob()

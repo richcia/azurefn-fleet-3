@@ -36,6 +36,10 @@ jobs:
       - name: Run staging integration test
         env:
           RUN_INTEGRATION_TESTS: "true"
+          INTEGRATION_ALLOW_DESTRUCTIVE_BLOB_CLEANUP: "true"
+          INTEGRATION_DELETE_EXISTING_BLOBS_BEFORE_INVOKE: "true"
+          INTEGRATION_DELETE_CREATED_BLOB: "true"
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           TRAPI_ENDPOINT: ${{ secrets.STAGING_TRAPI_ENDPOINT }}
           TRAPI_DEPLOYMENT_NAME: ${{ secrets.STAGING_TRAPI_DEPLOYMENT_NAME }}
           TRAPI_API_VERSION: ${{ secrets.STAGING_TRAPI_API_VERSION }}

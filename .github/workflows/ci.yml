@@ -75,7 +75,7 @@ jobs:
           python -m pytest tests/ -v -m "not integration" \
             --ignore=tests/test_host_json.py \
             --cov=function_app \
-            --cov=blob_writer \
+            --cov=src.blob_writer \
             --cov=trapi_client \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \

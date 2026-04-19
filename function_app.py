@@ -54,5 +54,5 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
         writer.write_failed(exc.response_payload, run_date_utc=run_date_utc)
         raise RuntimeError(str(exc)) from exc
     except TRAPIRetryExhaustedError as exc:
-        writer.write_failed(exc.response_payload)
+        writer.write_failed(exc.response_payload, run_date_utc=run_date_utc)
         raise RuntimeError(str(exc)) from exc

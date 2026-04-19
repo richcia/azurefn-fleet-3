@@ -1,0 +1,41 @@
+{
+  "issue_id": "QA-01",
+  "pr_number": 678,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/678",
+  "critical_issues": [
+    {
+      "title": "Coverage gate did not measure blob writer module",
+      "severity": "critical",
+      "file": ".github/workflows/ci.yml",
+      "line_range": "84-87",
+      "status": "addressed",
+      "action": "Updated coverage target from --cov=blob_writer to --cov=src.blob_writer so CI enforces blob writer coverage for the actual imported module."
+    },
+    {
+      "title": "Missing failed-blob-write failure-path unit test",
+      "severity": "critical",
+      "file": "tests/test_function_app.py",
+      "line_range": "146-159",
+      "status": "addressed",
+      "action": "Added a unit test that forces BlobWriter.write_failed to raise and asserts the failure is surfaced."
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "Add explicit 28-player boundary validator assertion",
+      "severity": "minor",
+      "file": "tests/test_validator.py",
+      "line_range": "61-66",
+      "status": "addressed",
+      "action": "Added test_validator_accepts_count_at_upper_boundary for explicit coverage of the 28-player boundary."
+    },
+    {
+      "title": "Demonstrate practical unit/integration marker separation",
+      "severity": "minor",
+      "file": "pytest.ini",
+      "line_range": "1-4",
+      "status": "partially_addressed",
+      "action": "Added explicit unit marker definition and applied pytest.mark.unit to test modules; no integration test was added because this QA issue scope is unit-test coverage with fully mocked dependencies."
+    }
+  ]
+}

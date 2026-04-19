@@ -1,0 +1,18 @@
+{
+  "issue_id": "QA-01",
+  "pr_number": 678,
+  "prompt_improvements": [
+    {
+      "category": "Coverage-target validation",
+      "improvement": "Require the implementor to verify every --cov target maps to an actually imported module path and to fix mismatches before final validation."
+    },
+    {
+      "category": "Failure-path completeness",
+      "improvement": "Explicitly require at least one test where persistence of the failed payload itself fails (e.g., write_failed raises) and expected behavior is asserted."
+    },
+    {
+      "category": "Acceptance boundary traceability",
+      "improvement": "Require one explicit test per listed boundary value (23, 24, 28, 29) with direct assertion mapping noted in the final checklist."
+    }
+  ]
+}

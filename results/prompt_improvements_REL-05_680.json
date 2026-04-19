@@ -1,0 +1,19 @@
+{
+  "issue_number": "REL-05",
+  "pr_number": 680,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/680",
+  "improvements": [
+    {
+      "category": "Operational evidence requirements",
+      "change": "When implementing release-validation tasks, explicitly require linking workflow run URLs and production verification evidence in the PR so review can validate non-code acceptance criteria."
+    },
+    {
+      "category": "Review sequencing",
+      "change": "Require pushing commits before invoking the Code Review Agent to ensure the review runs on the latest PR diff."
+    },
+    {
+      "category": "Artifact expectations",
+      "change": "State expected output filenames for production sign-off and agent activity logs (for example results/production_deployment_signoff_<ISSUE>.md and results/agent-activity-<ISSUE>.log) to keep release tasks consistent."
+    }
+  ]
+}

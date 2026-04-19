@@ -1,0 +1,19 @@
+{
+  "issue_number": "REL-04",
+  "pr_number": 665,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/665",
+  "improvements": [
+    {
+      "category": "Acceptance criteria precision",
+      "change": "Require implementors to define and validate an immutable deployment identifier strategy for any 'new version served' criterion before coding."
+    },
+    {
+      "category": "Workflow resilience",
+      "change": "Explicitly require HTTP timeout settings for all workflow smoke-test network calls so retries cannot hang indefinitely."
+    },
+    {
+      "category": "Release safety",
+      "change": "Include a mandatory concurrency requirement for manually triggered promotion workflows to prevent overlapping slot swaps."
+    }
+  ]
+}

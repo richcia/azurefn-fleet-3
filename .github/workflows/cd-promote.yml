@@ -18,6 +18,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: cd-promote
+  cancel-in-progress: false
+
 jobs:
   promote:
     name: Promote source slot to target slot
@@ -75,6 +79,22 @@ jobs:
               exit 1
             fi
 
+            TARGET_APPSETTINGS_SLOT_ARGS=()
+            if [ "$TARGET_SLOT" != 'production' ]; then
+              TARGET_APPSETTINGS_SLOT_ARGS=(--slot "$TARGET_SLOT")
+            fi
+            TARGET_MARKER_BEFORE="$(az functionapp config appsettings list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_APPSETTINGS_SLOT_ARGS[@]}" --query "[?name=='WEBSITE_RUN_FROM_PACKAGE' || name=='SCM_RUN_FROM_PACKAGE'].value | [0]" -o tsv)"
+            if [ -z "$TARGET_MARKER_BEFORE" ]; then
+              echo "Unable to read deployment version marker from target slot '$TARGET_SLOT' before swap."
+              exit 1
+            fi
+
+            if [ "$SOURCE_MARKER" = "$TARGET_MARKER_BEFORE" ]; then
+              echo "Source and target deployment markers are identical before swap."
+              echo "Cannot reliably verify that target receives a newly promoted version."
+              exit 1
+            fi
+
             SOURCE_HOSTNAME="$(az functionapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --query defaultHostName -o tsv)"
             SOURCE_MASTER_KEY="$(az functionapp keys list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --query masterKey -o tsv)"
             SOURCE_FUNCTION_RESOURCE="$(az functionapp function show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --slot "$SOURCE_SLOT" --function-name "$FUNCTION_NAME" --query name -o tsv 2>/dev/null || true)"
@@ -86,6 +106,8 @@ jobs:
 
             for attempt in 1 2 3 4 5 6; do
               STATUS_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+                --connect-timeout 5 \
+                --max-time 15 \
                 -X POST "https://${SOURCE_HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
                 -H 'Content-Type: application/json' \
                 -H "x-functions-key: ${SOURCE_MASTER_KEY}" \
@@ -109,6 +131,7 @@ jobs:
               echo "resource-group=$RESOURCE_GROUP"
               echo "function-name=$FUNCTION_NAME"
               echo "source-marker=$SOURCE_MARKER"
+              echo "target-marker-before=$TARGET_MARKER_BEFORE"
             } >> "$GITHUB_OUTPUT"
 
       - name: Swap source slot to target slot
@@ -134,6 +157,7 @@ jobs:
             TARGET_SLOT='${{ inputs.target-slot }}'
             FUNCTION_NAME='${{ steps.precheck.outputs.function-name }}'
             SOURCE_MARKER='${{ steps.precheck.outputs.source-marker }}'
+            TARGET_MARKER_BEFORE='${{ steps.precheck.outputs.target-marker-before }}'
 
             TARGET_SHOW_SLOT_ARGS=()
             TARGET_KEYS_SLOT_ARGS=()
@@ -158,6 +182,12 @@ jobs:
               echo "Target slot marker after swap: '$TARGET_MARKER'"
               exit 1
             fi
+            if [ "$TARGET_MARKER" = "$TARGET_MARKER_BEFORE" ]; then
+              echo "Post-swap marker did not change on target slot."
+              echo "Target marker before swap: '$TARGET_MARKER_BEFORE'"
+              echo "Target marker after swap: '$TARGET_MARKER'"
+              exit 1
+            fi
 
             TARGET_HOSTNAME="$(az functionapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_SHOW_SLOT_ARGS[@]}" --query defaultHostName -o tsv)"
             TARGET_MASTER_KEY="$(az functionapp keys list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${TARGET_KEYS_SLOT_ARGS[@]}" --query masterKey -o tsv)"
@@ -170,6 +200,8 @@ jobs:
 
             for attempt in 1 2 3 4 5 6; do
               STATUS_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+                --connect-timeout 5 \
+                --max-time 15 \
                 -X POST "https://${TARGET_HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
                 -H 'Content-Type: application/json' \
                 -H "x-functions-key: ${TARGET_MASTER_KEY}" \
@@ -179,12 +211,9 @@ jobs:
                 echo "Post-swap smoke test passed with HTTP $STATUS_CODE on attempt ${attempt}."
                 {
                   echo '### CD Promote completed successfully'
-                  echo "- Source slot: \
-`'${{ inputs.source-slot }}'`"
-                  echo "- Target slot: \
-`'${{ inputs.target-slot }}'`"
-                  echo "- Verified promoted version marker: \
-`$TARGET_MARKER`"
+                  echo "- Source slot: \`${{ inputs.source-slot }}\`"
+                  echo "- Target slot: \`${{ inputs.target-slot }}\`"
+                  echo "- Verified promoted version marker: \`$TARGET_MARKER\`"
                 } >> "$GITHUB_STEP_SUMMARY"
                 exit 0
               fi

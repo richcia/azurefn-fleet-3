@@ -35,6 +35,12 @@ def _az(*args: str) -> str:
             text=True,
             timeout=60,
         )
+    except FileNotFoundError as exc:
+        raise AssertionError("Azure CLI is required for integration tests but was not found on PATH") from exc
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"Azure CLI command failed: az {' '.join(args)}\nstdout: {exc.stdout}\nstderr: {exc.stderr}"
+        ) from exc
     except subprocess.TimeoutExpired as exc:
         raise AssertionError(f"Azure CLI timed out while running: az {' '.join(args)}") from exc
     return completed.stdout.strip()
@@ -136,7 +142,7 @@ def _int_env(name: str, default: int, minimum: int) -> int:
 
 def test_staging_output_blob_contains_known_players():
     app_name = _env("AZURE_FUNCTIONAPP_NAME")
-    slot_name = os.getenv("AZURE_FUNCTIONAPP_SLOT", "staging").strip() or "staging"
+    slot_name = os.getenv("AZURE_FUNCTIONAPP_SLOT", "staging").strip().lower() or "staging"
     function_name = os.getenv("SMOKE_TEST_FUNCTION_NAME", "GetAndStoreYankeesRoster").strip()
     storage_account_name = _env("DATA_STORAGE_ACCOUNT_NAME")
     resource_group = _get_resource_group(app_name)
@@ -150,6 +156,15 @@ def test_staging_output_blob_contains_known_players():
 
     candidate_blob_names = _candidate_blob_names()
     delete_existing = os.getenv("INTEGRATION_DELETE_EXISTING_BLOBS_BEFORE_INVOKE", "false").lower() == "true"
+    destructive_cleanup_enabled = (
+        os.getenv("INTEGRATION_ALLOW_DESTRUCTIVE_BLOB_CLEANUP", "false").lower() == "true"
+    )
+    if (delete_existing or os.getenv("INTEGRATION_DELETE_CREATED_BLOB", "false").lower() == "true") and (
+        not destructive_cleanup_enabled or slot_name == "production"
+    ):
+        raise AssertionError(
+            "Blob deletion requires INTEGRATION_ALLOW_DESTRUCTIVE_BLOB_CLEANUP=true and non-production slot"
+        )
     if delete_existing:
         for blob_name in candidate_blob_names:
             blob_client = container_client.get_blob_client(blob_name)

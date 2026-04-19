@@ -127,12 +127,14 @@ def test_staging_output_blob_contains_known_players():
     container_client = service_client.get_container_client("yankees-roster")
 
     candidate_blob_names = _candidate_blob_names()
-    for blob_name in candidate_blob_names:
-        blob_client = container_client.get_blob_client(blob_name)
-        if blob_client.exists():
-            blob_client.delete_blob()
+    existing_before = {
+        blob_name
+        for blob_name in candidate_blob_names
+        if container_client.get_blob_client(blob_name).exists()
+    }
 
     found_blob_name = None
+    created_by_test = False
     try:
         _invoke_function_admin_api(
             app_name=app_name,
@@ -151,8 +153,9 @@ def test_staging_output_blob_contains_known_players():
                 blob_client = container_client.get_blob_client(blob_name)
                 if not blob_client.exists():
                     continue
-                payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
                 found_blob_name = blob_name
+                created_by_test = blob_name not in existing_before
+                payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
                 break
             if payload is not None:
                 break
@@ -170,5 +173,5 @@ def test_staging_output_blob_contains_known_players():
         assert "Rickey Henderson" in names
         assert 24 <= len(players) <= 28, f"Unexpected player count: {len(players)}"
     finally:
-        if found_blob_name:
+        if found_blob_name and created_by_test and container_client.get_blob_client(found_blob_name).exists():
             container_client.get_blob_client(found_blob_name).delete_blob()

@@ -27,12 +27,16 @@ def _env(name: str) -> str:
 
 
 def _az(*args: str) -> str:
-    completed = subprocess.run(
-        ["az", *args],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            ["az", *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError(f"Azure CLI timed out while running: az {' '.join(args)}") from exc
     return completed.stdout.strip()
 
 
@@ -121,6 +125,15 @@ def _blob_snapshot(container_client, blob_name: str) -> dict[str, object] | None
     }
 
 
+def _int_env(name: str, default: int, minimum: int) -> int:
+    raw = os.getenv(name, str(default))
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise AssertionError(f"{name} must be an integer, got: {raw!r}") from exc
+    return max(minimum, value)
+
+
 def test_staging_output_blob_contains_known_players():
     app_name = _env("AZURE_FUNCTIONAPP_NAME")
     slot_name = os.getenv("AZURE_FUNCTIONAPP_SLOT", "staging").strip() or "staging"
@@ -147,6 +160,8 @@ def test_staging_output_blob_contains_known_players():
         for blob_name in candidate_blob_names
         if (snapshot := _blob_snapshot(container_client, blob_name)) is not None
     }
+    if delete_existing:
+        assert not existing_before, "Pre-invocation blob cleanup did not clear candidate blobs"
 
     found_blob_name = None
     found_blob_etag = None
@@ -161,8 +176,8 @@ def test_staging_output_blob_contains_known_players():
             function_name=function_name,
         )
 
-        timeout_seconds = max(30, int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "240")))
-        poll_interval_seconds = max(2, int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10")))
+        timeout_seconds = _int_env("INTEGRATION_BLOB_TIMEOUT_SECONDS", 240, 30)
+        poll_interval_seconds = _int_env("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", 10, 2)
         deadline = time.time() + timeout_seconds
 
         payload = None

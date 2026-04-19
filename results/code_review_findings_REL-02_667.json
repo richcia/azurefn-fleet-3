@@ -1,0 +1,39 @@
+{
+  "issue": "REL-02",
+  "pr_number": 667,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/667",
+  "review_rounds": [
+    {
+      "round": 1,
+      "critical_issues": [],
+      "suggestions": [
+        {"title": "Add retry logic for post-deployment validation", "status": "applied"},
+        {"title": "Prevent environment/input mismatch", "status": "applied"},
+        {"title": "Include inherited RBAC assignments", "status": "applied"}
+      ]
+    },
+    {
+      "round": 2,
+      "critical_issues": [],
+      "suggestions": [
+        {"title": "Fail closed when expected environment vars are missing", "status": "applied"},
+        {"title": "Remove duplicated target-validation logic", "status": "applied"}
+      ]
+    },
+    {
+      "round": 3,
+      "critical_issues": [
+        {"title": "Avoid direct shell interpolation of workflow inputs", "status": "applied"},
+        {"title": "Prevent $GITHUB_ENV injection via unsanitized input", "status": "applied"}
+      ],
+      "suggestions": [
+        {"title": "Retry transient authorization/throttling errors in validation", "status": "applied"},
+        {"title": "Tighten container name validation", "status": "applied"},
+        {"title": "Pin actions to commit SHAs", "status": "applied"},
+        {"title": "Set workflow timeout", "status": "applied"},
+        {"title": "Derive deployment target from environment-scoped vars", "status": "applied"}
+      ]
+    }
+  ],
+  "final_status": "all reviewed findings addressed"
+}

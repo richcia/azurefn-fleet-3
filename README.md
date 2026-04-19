@@ -40,7 +40,7 @@ Use `.github/workflows/cd-promote.yml` to run a manual, OIDC-authenticated slot 
 1. In GitHub, open **Actions** > **CD Promote**.
 2. Click **Run workflow** and provide:
    - `source-slot` (default: `staging`)
-   - `target-slot` (default: `production`)
+   - `target-slot` (default: `production`, must remain `production` for this promote workflow)
 3. The workflow:
    - runs a pre-swap smoke test on the source slot,
    - swaps source to target via `az functionapp deployment slot swap`,

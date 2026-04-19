@@ -8,8 +8,8 @@
       "title": "Post-swap version check can produce false positives",
       "severity": "major",
       "file": ".github/workflows/cd-promote.yml",
-      "line_start": 71,
-      "line_end": 160,
+      "line_start": 75,
+      "line_end": 190,
       "recommendation": "Use an immutable deployment identifier and assert target-after equals source-before (and differs from target-before).",
       "status": "addressed"
     },
@@ -17,8 +17,8 @@
       "title": "Smoke-test HTTP calls have no timeout controls",
       "severity": "minor",
       "file": ".github/workflows/cd-promote.yml",
-      "line_start": 88,
-      "line_end": 176,
+      "line_start": 112,
+      "line_end": 208,
       "recommendation": "Add curl --connect-timeout and --max-time in pre/post smoke test calls.",
       "status": "addressed"
     },
@@ -26,9 +26,27 @@
       "title": "No concurrency guard for manual promotions",
       "severity": "minor",
       "file": ".github/workflows/cd-promote.yml",
-      "line_start": 1,
-      "line_end": 25,
+      "line_start": 21,
+      "line_end": 23,
       "recommendation": "Add workflow concurrency configuration to serialize slot promotion runs.",
+      "status": "addressed"
+    },
+    {
+      "title": "Enforce production verification path",
+      "severity": "minor",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 63,
+      "line_end": 66,
+      "recommendation": "Ensure REL-04 workflow verifies production semantics by enforcing production target for slot promotion.",
+      "status": "addressed"
+    },
+    {
+      "title": "Clarify OIDC identifier sourcing",
+      "severity": "minor",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 34,
+      "line_end": 36,
+      "recommendation": "Prefer vars for non-secret IDs, with compatibility fallback to secrets.",
       "status": "addressed"
     }
   ]

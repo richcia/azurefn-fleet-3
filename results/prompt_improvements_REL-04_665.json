@@ -14,6 +14,14 @@
     {
       "category": "Release safety",
       "change": "Include a mandatory concurrency requirement for manually triggered promotion workflows to prevent overlapping slot swaps."
+    },
+    {
+      "category": "Requirement interpretation",
+      "change": "When acceptance criteria references production verification, require implementors to preserve or enforce a production-target validation path even if inputs are configurable."
+    },
+    {
+      "category": "OIDC clarity",
+      "change": "Instruct implementors to prefer repository/environment vars for non-secret Azure identifiers and reserve secrets for secret material, while preserving backward compatibility where needed."
     }
   ]
 }

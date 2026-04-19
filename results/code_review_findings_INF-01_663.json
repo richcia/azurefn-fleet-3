@@ -1,0 +1,49 @@
+{
+  "issue_number": "INF-01",
+  "pr_number": 663,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/663",
+  "critical_issues": [
+    {
+      "file": "infra/main.bicep",
+      "line_start": 45,
+      "line_end": 52,
+      "summary": "Function App app settings overwrite risk",
+      "details": "sites/config appsettings originally used a partial object that could remove required existing settings.",
+      "status": "addressed"
+    }
+  ],
+  "suggestions": [
+    {
+      "file": "infra/modules/keyvault.bicep",
+      "line_start": 13,
+      "line_end": 17,
+      "summary": "Add explicit zone-redundancy confirmation guard",
+      "details": "Added a required-true confirmation parameter in the module and propagated it from main for explicit deployment acknowledgement.",
+      "status": "addressed"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "line_start": 56,
+      "line_end": 60,
+      "summary": "Add CI verification for infrastructure templates",
+      "details": "Added Bicep build validation in CI to provide deployment-readiness evidence.",
+      "status": "addressed"
+    },
+    {
+      "file": "infra/modules/keyvault.bicep",
+      "line_start": 46,
+      "line_end": 46,
+      "summary": "Consider hardening Key Vault network exposure",
+      "details": "publicNetworkAccess remains Enabled by design in this issue scope to avoid changing networking behavior unexpectedly.",
+      "status": "not_addressed"
+    },
+    {
+      "file": "infra/main.bicep",
+      "line_start": 50,
+      "line_end": 50,
+      "summary": "Key Vault reference assumes secret exists",
+      "details": "Secret seeding is out of scope for INF-01 and would require introducing secret management inputs/processes.",
+      "status": "not_addressed"
+    }
+  ]
+}

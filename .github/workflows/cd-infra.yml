@@ -109,6 +109,18 @@ jobs:
               exit 1
             fi
 
+            DATA_STORAGE_ACCOUNT_NAME="$(az functionapp config appsettings list \
+              --name "$FUNCTION_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              "${SLOT_ARG[@]}" \
+              --query "[?name=='DATA_STORAGE_ACCOUNT_NAME'].value | [0]" \
+              -o tsv)"
+
+            if [ -z "$DATA_STORAGE_ACCOUNT_NAME" ]; then
+              echo "DATA_STORAGE_ACCOUNT_NAME app setting is missing."
+              exit 1
+            fi
+
             az deployment group create \
               --resource-group "$RESOURCE_GROUP" \
               --template-file infra/main.bicep \

@@ -26,6 +26,11 @@
       "name": "Blob container anonymous access disabled",
       "status": "pass",
       "evidence": "infra/main.bicep enforces roster container publicAccess: None and cd-infra.yml validates container public access remains private"
+    },
+    {
+      "name": "Azure Portal verification record",
+      "status": "manual-follow-up",
+      "evidence": "Portal confirmation must be captured from the deployed environment because it cannot be executed from this local sandbox."
     }
   ]
 }

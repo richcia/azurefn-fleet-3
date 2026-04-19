@@ -92,8 +92,31 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 
 ### Deployment Model
 - **Target Environment:** Azure Functions Consumption Plan (serverless)
-- **CI/CD Pipeline:** GitHub Actions — triggered on push to `main`; deploys to staging slot, runs smoke test, then swaps to production
 - **Infrastructure as Code:** Bicep — provisions Function App, dedicated Storage Account, App Insights workspace, Key Vault, and all Managed Identity role assignments
+- **CI/CD Pipelines:** 
+  - All implemented as GitHub Actions 
+  - Only managed identities should be used for accessing Azure resources in the CD workflows and running application code. No secrets, API keys, or other credentials should be stored in the repository or workflow files.
+  - README.md should have full instructions on how to run the CI/CD workflows, including how to set up the Azure federated identity for the managed identity used in the CD workflows.
+  - CI 
+    - Triggered on push to 'main'
+    - Disabled by default
+    - Runs all unit tests
+  - CD Setup 
+    - Trigger manually
+    - Provisions GitHub actions with federated identity for provisioning Azure resources and deploying apps to Azure via OIDC
+  - CD App 
+    - Triggered manually
+    - Deploys to environment specified as workflow parameter
+    - Runs smoke test
+  - CD Promote
+    - Promotes a deployed application from a source environment to a target environment by doing an Azure deployment swap
+    - Source default is Stage
+    - Target default is Prod
+  - CD Infra 
+    - Triggered manually
+    - Provisions all required Azure resoures in environment specified as workflow parameter
+    - Runs validation test
+    - Leverages `Infrastructure as Code`
 
 ---
 

@@ -1,0 +1,149 @@
+name: CD Infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      resource_group:
+        description: Azure resource group name
+        required: true
+        type: string
+      function_app_name:
+        description: Azure Function App name
+        required: true
+        type: string
+      storage_container_name:
+        description: Storage container to validate after deployment
+        required: true
+        default: yankees-roster
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd-infra-${{ github.repository }}-${{ inputs.environment }}-${{ inputs.resource_group }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-infra:
+    name: Deploy infra (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep template
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            RESOURCE_GROUP='${{ inputs.resource_group }}'
+            FUNCTION_APP_NAME='${{ inputs.function_app_name }}'
+            ENVIRONMENT='${{ inputs.environment }}'
+
+            SLOT_ARG=()
+            if [ "$ENVIRONMENT" = "staging" ]; then
+              SLOT_ARG+=(--slot staging)
+            fi
+
+            FUNCTION_APP_PRINCIPAL_ID="$(az functionapp identity show \
+              --name "$FUNCTION_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              "${SLOT_ARG[@]}" \
+              --query principalId \
+              -o tsv)"
+
+            if [ -z "$FUNCTION_APP_PRINCIPAL_ID" ]; then
+              echo "Function App principal ID could not be determined."
+              exit 1
+            fi
+
+            az deployment group create \
+              --resource-group "$RESOURCE_GROUP" \
+              --template-file infra/main.bicep \
+              --parameters functionAppName="$FUNCTION_APP_NAME" functionAppPrincipalId="$FUNCTION_APP_PRINCIPAL_ID"
+
+      - name: Validate storage container and RBAC assignment
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            RESOURCE_GROUP='${{ inputs.resource_group }}'
+            FUNCTION_APP_NAME='${{ inputs.function_app_name }}'
+            CONTAINER_NAME='${{ inputs.storage_container_name }}'
+            ENVIRONMENT='${{ inputs.environment }}'
+
+            SLOT_ARG=()
+            if [ "$ENVIRONMENT" = "staging" ]; then
+              SLOT_ARG+=(--slot staging)
+            fi
+
+            FUNCTION_APP_PRINCIPAL_ID="$(az functionapp identity show \
+              --name "$FUNCTION_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              "${SLOT_ARG[@]}" \
+              --query principalId \
+              -o tsv)"
+
+            if [ -z "$FUNCTION_APP_PRINCIPAL_ID" ]; then
+              echo "Function App principal ID could not be determined for validation."
+              exit 1
+            fi
+
+            DATA_STORAGE_ACCOUNT_NAME="$(az functionapp config appsettings list \
+              --name "$FUNCTION_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              "${SLOT_ARG[@]}" \
+              --query "[?name=='DATA_STORAGE_ACCOUNT_NAME'].value | [0]" \
+              -o tsv)"
+
+            if [ -z "$DATA_STORAGE_ACCOUNT_NAME" ]; then
+              echo "DATA_STORAGE_ACCOUNT_NAME app setting is missing."
+              exit 1
+            fi
+
+            CONTAINER_EXISTS="$(az storage container-rm exists \
+              --storage-account "$DATA_STORAGE_ACCOUNT_NAME" \
+              --name "$CONTAINER_NAME" \
+              --query exists \
+              -o tsv)"
+
+            if [ "$CONTAINER_EXISTS" != "true" ]; then
+              echo "Container '$CONTAINER_NAME' does not exist in storage account '$DATA_STORAGE_ACCOUNT_NAME'."
+              exit 1
+            fi
+
+            SUBSCRIPTION_ID='${{ vars.AZURE_SUBSCRIPTION_ID }}'
+            STORAGE_SCOPE="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Storage/storageAccounts/${DATA_STORAGE_ACCOUNT_NAME}"
+
+            STORAGE_ROLE_ASSIGNMENTS="$(az role assignment list \
+              --assignee-object-id "$FUNCTION_APP_PRINCIPAL_ID" \
+              --scope "$STORAGE_SCOPE" \
+              --query "length([?roleDefinitionName=='Storage Blob Data Contributor' || roleDefinitionName=='Storage Blob Data Owner'])" \
+              -o tsv)"
+
+            if [ "${STORAGE_ROLE_ASSIGNMENTS:-0}" -lt 1 ]; then
+              echo "No storage blob data RBAC assignment found for principal '$FUNCTION_APP_PRINCIPAL_ID' at scope '$STORAGE_SCOPE'."
+              exit 1
+            fi
+
+            echo "Validation passed: container '$CONTAINER_NAME' exists and storage RBAC assignment is present."

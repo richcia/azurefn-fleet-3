@@ -154,6 +154,20 @@ jobs:
             rm -f .github/workflows/CD.yml
           fi
 
+      - name: Delete Root Log And Json Files
+        run: |
+          set -euo pipefail
+
+          find . -maxdepth 1 -type f \( -name "*.log" -o -name "*.json" \) -delete
+
+      - name: Delete All Files In prompts
+        run: |
+          set -euo pipefail
+
+          if [ -d "prompts" ]; then
+            find prompts -mindepth 1 -delete
+          fi
+
       - name: Commit Cleanup Changes
         run: |
           set -euo pipefail

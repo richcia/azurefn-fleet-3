@@ -1,0 +1,29 @@
+{
+  "issue_number": "INF-03",
+  "pr_number": 668,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/668",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Duration alert logic can miss >90s executions",
+      "file": "infra/modules/alerts.bicep",
+      "line_range": "87-99",
+      "status": "fixed",
+      "resolution": "Changed duration metric alert aggregation from `Average` to `Maximum` so any execution over 90 seconds triggers the alert."
+    },
+    {
+      "title": "Clarify/reuse existing email action group behavior",
+      "file": "infra/modules/alerts.bicep",
+      "line_range": "19-34",
+      "status": "deferred",
+      "rationale": "Current implementation keeps a single shared action group in the alerts module and all alert rules reference it. Reusing an externally existing action group resource ID can be added as a follow-up enhancement without blocking INF-03 acceptance criteria."
+    },
+    {
+      "title": "Add CD/portal verification evidence for deployment and visibility criteria",
+      "file": "infra/main.bicep",
+      "line_range": "N/A",
+      "status": "deferred",
+      "rationale": "CI/CD workflow execution and Azure Portal visibility validation require runtime environment access outside this repository-only implementation step."
+    }
+  ]
+}

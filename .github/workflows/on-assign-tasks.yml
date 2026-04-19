@@ -147,6 +147,22 @@ jobs:
         run: |
           set -euo pipefail
 
+          DESIGN_ISSUES_JSON=$(jq -c --rawfile ready_file ready_issues.txt '
+            ($ready_file | split("\n") | map(select(length > 0) | tonumber)) as $ready_ids
+            | [ .[]
+                | select((.number as $n | $ready_ids | index($n)) != null)
+                | select((.body // "") | test("(?im)^-\\s*Type:\\s*design\\b"))
+                | { number, url }
+              ]
+          ' all_issues.json)
+
+          if jq -e 'length > 0' <<< "$DESIGN_ISSUES_JSON" > /dev/null; then
+            echo "The follow design Issues must be closed before continuing:"
+            echo
+            jq -r '.[] | "- " + .url' <<< "$DESIGN_ISSUES_JSON"
+            exit 1
+          fi
+
           while IFS= read -r issue_number; do
             [ -z "$issue_number" ] && continue
             echo "Assigning issue #$issue_number to Copilot flow"

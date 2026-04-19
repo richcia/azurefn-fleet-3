@@ -44,13 +44,14 @@ Your job is to transform a design/spec document into an implementation-ready eng
 7. Security controls and access model
 8. Observability and operations
 9. Validation, testing, and rollout
-10. Project management and coordination
+10. Design and architecture
+11. Project management and coordination
 
 ## Task Definition Rules
 For each task, include:
 - `id`: short stable identifier (for example: INF-01)
 - `title`: concise action phrase
-- `type`: one of `infra|app|data|security|ops|qa|release|documentation|project`
+- `type`: one of `infra|app|data|security|ops|qa|release|documentation|design|project`
 - `labels`: list of GitHub labels to apply to the task issue (for example: `["start-assign", "start-plan"]`)
 - `description`: implementation intent in 1-3 sentences
 - `inputs`: required prerequisites, docs, or systems
@@ -83,6 +84,7 @@ Each wave must include:
 - Do not output anything except the valid JSON payload
 - Do not write any files
 - The very first character of output must be `{` and the very last must be `}`
+- Tasks of type `design` should include directions on how to resolve the design issue in the input specification document
 
 ### JSON Output
 When JSON output is requested, JSON is in this shape:
@@ -102,7 +104,7 @@ When JSON output is requested, JSON is in this shape:
 		{
 			"id": "string",
 			"title": "string",
-			"type": "infra|app|data|security|ops|qa|release|documentation|project",
+			"type": "infra|app|data|security|ops|qa|release|documentation|design",
 			"labels": ["string"],
 			"description": "string",
 			"inputs": ["string"],

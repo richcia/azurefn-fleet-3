@@ -1,0 +1,18 @@
+{
+  "issue_id": "APP-04",
+  "pr_number": 672,
+  "prompt_improvements": [
+    {
+      "category": "Commit-state gating",
+      "improvement": "Require the implementor to commit and push code changes before requesting code review, and verify PR changed-files is non-empty first."
+    },
+    {
+      "category": "Acceptance-criteria traceability",
+      "improvement": "Explicitly require one test assertion mapping per acceptance criterion, including complete structured-event coverage and direct validation-branch coverage."
+    },
+    {
+      "category": "Non-functional evidence",
+      "improvement": "Require an explicit automated check proving normal-condition execution budget compliance (e.g., timeout/retry budget assertions for <=60 seconds)."
+    }
+  ]
+}

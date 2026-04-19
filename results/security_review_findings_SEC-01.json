@@ -1,0 +1,36 @@
+{
+  "issue_id": "SEC-01",
+  "summary": "Security review completed for secret scanning, credential handling, OIDC workflow auth, and blob container anonymous access controls.",
+  "checks": [
+    {
+      "name": "local.settings.json ignored",
+      "status": "pass",
+      "evidence": ".gitignore includes local.settings.json"
+    },
+    {
+      "name": "gitleaks full history",
+      "status": "pass",
+      "evidence": "gitleaks git --no-banner --redact --exit-code 1 . returned exit code 0 with no leaks found"
+    },
+    {
+      "name": "No hardcoded credentials in target files",
+      "status": "pass",
+      "evidence": "trapi_client.py and src/blob_writer.py use DefaultAzureCredential and environment configuration; no secrets or connection strings hardcoded"
+    },
+    {
+      "name": "Workflows use OIDC without client secrets",
+      "status": "pass",
+      "evidence": "Workflows use azure/login with id-token: write and no client-secret field; cd.yml uses vars for Azure IDs"
+    },
+    {
+      "name": "Blob container anonymous access disabled",
+      "status": "pass",
+      "evidence": "infra/main.bicep enforces roster container publicAccess: None and cd-infra.yml validates container public access remains private"
+    },
+    {
+      "name": "Azure Portal verification record",
+      "status": "manual-follow-up",
+      "evidence": "Portal confirmation must be captured from the deployed environment because it cannot be executed from this local sandbox."
+    }
+  ]
+}

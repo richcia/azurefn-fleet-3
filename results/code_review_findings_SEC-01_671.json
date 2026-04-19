@@ -1,0 +1,76 @@
+{
+  "issue_number": "SEC-01",
+  "pr_number": 671,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/671",
+  "critical_issues": [
+    {
+      "title": "cd-infra deployment used undefined DATA_STORAGE_ACCOUNT_NAME",
+      "severity": "critical",
+      "file": ".github/workflows/cd-infra.yml",
+      "line_start": 112,
+      "line_end": 127,
+      "recommendation": "Resolve DATA_STORAGE_ACCOUNT_NAME before az deployment and fail fast if missing.",
+      "status": "addressed"
+    },
+    {
+      "title": "OIDC identifier sourcing inconsistent across workflows",
+      "severity": "critical",
+      "file": ".github/workflows/cd-app.yml",
+      "line_start": 60,
+      "line_end": 62,
+      "recommendation": "Use vars.AZURE_* for azure/login OIDC IDs across workflows and remove secret fallbacks.",
+      "status": "addressed"
+    },
+    {
+      "title": "OIDC identifier sourcing inconsistent across workflows",
+      "severity": "critical",
+      "file": ".github/workflows/integration-staging.yml",
+      "line_start": 32,
+      "line_end": 34,
+      "recommendation": "Use vars.AZURE_* for azure/login OIDC IDs across workflows and remove secret fallbacks.",
+      "status": "addressed"
+    },
+    {
+      "title": "OIDC identifier sourcing inconsistent across workflows",
+      "severity": "critical",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 34,
+      "line_end": 36,
+      "recommendation": "Use vars.AZURE_* for azure/login OIDC IDs across workflows and remove secret fallbacks.",
+      "status": "addressed"
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "Add CI regression guard for secret-based OIDC ID usage",
+      "severity": "minor",
+      "file": ".github/workflows/ci.yml",
+      "line_start": 38,
+      "line_end": 43,
+      "recommendation": "Fail CI when workflows reference secrets.AZURE_CLIENT_ID/TENANT_ID/SUBSCRIPTION_ID for azure/login.",
+      "status": "addressed"
+    },
+    {
+      "title": "Capture explicit evidence for gitleaks and portal verification",
+      "severity": "minor",
+      "file": "results/security_review_findings_SEC-01.json",
+      "line_start": 1,
+      "line_end": 38,
+      "recommendation": "Record security validation evidence and track portal-side anonymous access confirmation as manual follow-up.",
+      "status": "addressed"
+    }
+  ],
+  "second_pass_review": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "title": "Keep CI OIDC guard for vars-only Azure login IDs",
+        "status": "already_addressed"
+      },
+      {
+        "title": "Consider workflow lint tooling for future regression prevention",
+        "status": "not_applied"
+      }
+    ]
+  }
+}

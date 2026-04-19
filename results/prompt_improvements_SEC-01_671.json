@@ -1,0 +1,23 @@
+{
+  "issue_number": "SEC-01",
+  "pr_number": 671,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/671",
+  "improvements": [
+    {
+      "category": "Workflow variable safety",
+      "change": "Require implementors to run shellcheck-style pass for workflow scripts to catch unbound variables when using 'set -euo pipefail'."
+    },
+    {
+      "category": "Repository-wide credential consistency",
+      "change": "Explicitly require searching all workflow files for Azure login credential sourcing to avoid partial OIDC migrations."
+    },
+    {
+      "category": "Preventive CI controls",
+      "change": "Require adding or updating CI policy checks that prevent regressions for security requirements (e.g., disallow secrets.AZURE_* in azure/login blocks)."
+    },
+    {
+      "category": "Evidence capture",
+      "change": "Require a dedicated security findings artifact that records executed commands, results, and any manual validation follow-ups when sandbox limitations exist."
+    }
+  ]
+}

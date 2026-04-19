@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pytest
 
@@ -19,14 +20,14 @@ class FakeWriter:
         self.write_calls = []
         self.write_failed_calls = []
 
-    def write(self, payload):
-        self.write_calls.append(payload)
+    def write(self, payload, run_date_utc=None):
+        self.write_calls.append({"payload": payload, "run_date_utc": run_date_utc})
         blob_uri = "https://storage.example/yankees-roster/2026-04-19.json"
         logging.getLogger(__name__).info("blob_write_succeeded", extra={"blob_uri": blob_uri})
         return blob_uri
 
-    def write_failed(self, payload):
-        self.write_failed_calls.append(payload)
+    def write_failed(self, payload, run_date_utc=None):
+        self.write_failed_calls.append({"payload": payload, "run_date_utc": run_date_utc})
         return "https://storage.example/yankees-roster/failed/2026-04-19.json"
 
 
@@ -61,14 +62,16 @@ def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
     monkeypatch.setattr(
         function_app,
         "_PLAYER_COUNT_RETURNED",
-        type("Metric", (), {"record": lambda self, value: recorded.append(value)})(),
+        type("Metric", (), {"add": lambda self, value, attrs: recorded.append((value, attrs))})(),
     )
 
     function_app.get_and_store_yankees_roster(None)
 
-    assert fake_writer.write_calls == [roster_payload]
+    started = next(record for record in caplog.records if record.message == "function_started")
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", started.run_date_utc)
+    assert fake_writer.write_calls == [{"payload": roster_payload, "run_date_utc": started.run_date_utc}]
     assert fake_writer.write_failed_calls == []
-    assert recorded == [24]
+    assert recorded == [(24, {"run_date_utc": started.run_date_utc})]
     emitted_events = {record.message for record in caplog.records}
     assert {
         "function_started",
@@ -113,7 +116,9 @@ def test_get_and_store_yankees_roster_validation_failure_path(monkeypatch):
         function_app.get_and_store_yankees_roster(None)
 
     assert fake_writer.write_calls == []
-    assert fake_writer.write_failed_calls == [invalid_payload]
+    assert len(fake_writer.write_failed_calls) == 1
+    assert fake_writer.write_failed_calls[0]["payload"] == invalid_payload
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", fake_writer.write_failed_calls[0]["run_date_utc"])
 
 
 def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch):
@@ -127,7 +132,9 @@ def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch
         function_app.get_and_store_yankees_roster(None)
 
     assert fake_writer.write_calls == []
-    assert fake_writer.write_failed_calls == [invalid_payload]
+    assert len(fake_writer.write_failed_calls) == 1
+    assert fake_writer.write_failed_calls[0]["payload"] == invalid_payload
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", fake_writer.write_failed_calls[0]["run_date_utc"])
 
 
 def test_normal_condition_calls_fetch_once_and_uses_sub_60_second_trapi_timeout(monkeypatch):
@@ -144,7 +151,7 @@ def test_normal_condition_calls_fetch_once_and_uses_sub_60_second_trapi_timeout(
     monkeypatch.setattr(
         function_app,
         "_PLAYER_COUNT_RETURNED",
-        type("Metric", (), {"record": lambda self, value: None})(),
+        type("Metric", (), {"add": lambda self, value, attrs: None})(),
     )
 
     function_app.get_and_store_yankees_roster(None)

@@ -1,0 +1,49 @@
+{
+  "issue_id": "DOC-01",
+  "pr_number": "unknown",
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/compare/main...copilot/doc-01-update-readme",
+  "critical_issues": [
+    {
+      "title": "Workflow credential type mismatch for AZURE_FUNCTIONAPP_NAME",
+      "severity": "critical",
+      "file": "README.md",
+      "line_range": "64-66 (pre-fix)",
+      "status": "addressed",
+      "action": "Updated README to require AZURE_FUNCTIONAPP_NAME as an environment variable for cd-infra.yml and as an environment secret for cd-app.yml/cd-promote.yml."
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "Add local prerequisite for Azure Functions Core Tools",
+      "severity": "minor",
+      "file": "README.md",
+      "line_range": "5",
+      "status": "addressed",
+      "action": "Added prerequisite with Microsoft docs link so func start setup is explicit."
+    },
+    {
+      "title": "Clarify environment variable/secret scoping",
+      "severity": "minor",
+      "file": "README.md",
+      "line_range": "58-67",
+      "status": "addressed",
+      "action": "Specified these values must be configured per deployment environment and identified vars vs secrets usage exactly as referenced by workflow expressions."
+    },
+    {
+      "title": "Add Windows virtualenv activation guidance",
+      "severity": "minor",
+      "file": "README.md",
+      "line_range": "14",
+      "status": "addressed",
+      "action": "Added PowerShell and CMD activation commands for Windows contributors."
+    },
+    {
+      "title": "Acceptance criterion #6 is process-level",
+      "severity": "minor",
+      "file": "README.md",
+      "line_range": "n/a",
+      "status": "not_applicable",
+      "action": "This is verified through PR review state, not README text content."
+    }
+  ]
+}

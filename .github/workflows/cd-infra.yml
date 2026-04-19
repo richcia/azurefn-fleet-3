@@ -116,6 +116,8 @@ jobs:
 
       - name: Validate storage container and RBAC assignment
         uses: azure/cli@d4515bc8e518874d3c814bf5c307a1cb08ec9b35 # v2
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         with:
           inlineScript: |
             set -euo pipefail
@@ -154,14 +156,20 @@ jobs:
               exit 1
             fi
 
-            SUBSCRIPTION_ID='${{ vars.AZURE_SUBSCRIPTION_ID }}'
+            SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+            if [ -z "$SUBSCRIPTION_ID" ]; then
+              echo "Environment-scoped variable AZURE_SUBSCRIPTION_ID is required."
+              exit 1
+            fi
             STORAGE_SCOPE="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Storage/storageAccounts/${DATA_STORAGE_ACCOUNT_NAME}"
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            CONTAINER_SCOPE="${STORAGE_SCOPE}/blobServices/default/containers/${CONTAINER_NAME}"
+            for attempt in $(seq 1 30); do
               CONTAINER_ERROR_FILE="$(mktemp)"
               set +e
               CONTAINER_EXISTS="$(az storage container-rm exists \
                 --storage-account "$DATA_STORAGE_ACCOUNT_NAME" \
                 --name "$CONTAINER_NAME" \
+                --auth-mode login \
                 --query exists \
                 -o tsv 2>"$CONTAINER_ERROR_FILE")"
               CONTAINER_EXIT_CODE=$?
@@ -184,7 +192,7 @@ jobs:
               set +e
               STORAGE_ROLE_ASSIGNMENTS="$(az role assignment list \
                 --assignee-object-id "$FUNCTION_APP_PRINCIPAL_ID" \
-                --scope "$STORAGE_SCOPE" \
+                --scope "$CONTAINER_SCOPE" \
                 --include-inherited \
                 --query "length([?roleDefinitionName=='Storage Blob Data Contributor' || roleDefinitionName=='Storage Blob Data Owner'])" \
                 -o tsv 2>"$ROLE_ASSIGNMENT_ERROR_FILE")"
@@ -209,8 +217,8 @@ jobs:
                 exit 0
               fi
 
-              echo "Validation attempt $attempt/10 not ready yet (container_exists=$CONTAINER_EXISTS, storage_role_assignments=${STORAGE_ROLE_ASSIGNMENTS:-0}). Retrying in 20 seconds..."
-              sleep 20
+              echo "Validation attempt $attempt/30 not ready yet (container_exists=$CONTAINER_EXISTS, storage_role_assignments=${STORAGE_ROLE_ASSIGNMENTS:-0}). Retrying in 30 seconds..."
+              sleep 30
             done
 
             echo "Validation failed after retries: container '$CONTAINER_NAME' exists=$CONTAINER_EXISTS, storage role assignments=${STORAGE_ROLE_ASSIGNMENTS:-0}."

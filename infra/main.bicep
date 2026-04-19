@@ -10,6 +10,9 @@ param functionAppPrincipalId string
 @description('Name of the Key Vault to create.')
 param keyVaultName string = 'kv${uniqueString(resourceGroup().id)}'
 
+@description('Name of the storage account that hosts the roster container.')
+param dataStorageAccountName string
+
 @description('Name of the Log Analytics workspace to create for monitoring.')
 param logAnalyticsWorkspaceName string = 'law${uniqueString(resourceGroup().id)}'
 
@@ -42,6 +45,22 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' existing = {
 }
 
 var existingAppSettings = list('${functionApp.id}/config/appsettings', '2023-12-01').properties
+resource dataStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: dataStorageAccountName
+}
+
+resource dataStorageBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' existing = {
+  parent: dataStorageAccount
+  name: 'default'
+}
+
+resource rosterContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: dataStorageBlobService
+  name: 'yankees-roster'
+  properties: {
+    publicAccess: 'None'
+  }
+}
 
 module keyVault 'modules/keyvault.bicep' = {
   name: 'keyVaultModule'

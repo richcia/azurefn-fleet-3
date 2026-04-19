@@ -1,14 +1,14 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage__accountName": "<your-storage-account-name>",
+    "AzureWebJobsStorage__accountName": "azurefn-agents",
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "FUNCTIONS_EXTENSION_VERSION": "~4",
-    "DATA_STORAGE_ACCOUNT_NAME": "<your-storage-account-name>",
-    "TRAPI_ENDPOINT": "https://<your-azure-openai-endpoint>",
-    "TRAPI_DEPLOYMENT_NAME": "gpt-4o",
-    "TRAPI_API_VERSION": "2024-02-01",
-    "TRAPI_AUTH_SCOPE": "https://cognitiveservices.azure.com/.default",
-    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=<key>;IngestionEndpoint=https://<region>.in.applicationinsights.azure.com/"
+    "DATA_STORAGE_ACCOUNT_NAME": "azurefn-agents",
+    "TRAPI_ENDPOINT": "https://trapi.research.microsoft.com/gcr/shared",
+    "TRAPI_DEPLOYMENT_NAME": "gpt-5.2_2025-12-11",
+    "TRAPI_API_VERSION": "2025-04-01-preview",
+    "TRAPI_AUTH_SCOPE": "api://trapi/.default",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=azure_agents_key;IngestionEndpoint=https://azure_agents.in.applicationinsights.azure.com/"
   }
 }

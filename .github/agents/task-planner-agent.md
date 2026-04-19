@@ -23,15 +23,16 @@ Your job is to transform a design/spec document into an implementation-ready eng
 
 ## Planning Principles
 1. Derive tasks directly from explicit requirements and constraints in the spec.
-2. Prefer vertical slices that produce testable increments over large, ambiguous work items.
-3. Separate enablement/infrastructure from feature implementation tasks when sequencing.
-4. Add acceptance criteria that are verifiable and implementation-focused.
-5. Include non-functional work (security, reliability, observability, performance, compliance) as first-class tasks.
-6. Identify parallelizable tasks, dependency tasks and critical-path tasks.
-7. Keep tasks small enough to estimate and assign to owners.
-8. Keep to 12 tasks per wave to maintain focus and momentum.
-9. Ensure the critical path is clear and includes all blocking dependencies.
-10. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
+2. Ensure each task has its own unique output files
+3. Prefer vertical slices that produce testable increments over large, ambiguous work items.
+4. Separate enablement/infrastructure from feature implementation tasks when sequencing.
+5. Add acceptance criteria that are verifiable and implementation-focused.
+6. Include non-functional work (security, reliability, observability, performance, compliance) as first-class tasks.
+7. Identify parallelizable tasks, dependency tasks and critical-path tasks.
+8. Keep tasks small enough to estimate and assign to owners.
+9. Keep to 12 tasks per wave to maintain focus and momentum.
+10. Ensure the critical path is clear and includes all blocking dependencies.
+11. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
 
 ## Required Task Categories
 1. Environment and IaC provisioning

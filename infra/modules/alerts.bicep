@@ -93,7 +93,7 @@ resource durationAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
           metricName: 'requests/duration'
           operator: 'GreaterThan'
           threshold: 90000
-          timeAggregation: 'Average'
+          timeAggregation: 'Maximum'
         }
       ]
     }

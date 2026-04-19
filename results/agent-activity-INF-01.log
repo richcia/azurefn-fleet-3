@@ -1,0 +1,4 @@
+[Step 0] Reviewed issue INF-01 requirements from problem statement.
+[Step 1] Searched repository context and existing files for infra patterns and conventions.
+[Step 1] Ran baseline setup/checks: installed dependencies and executed pytest baseline (no tests found).
+[Step 1] Implemented infra/modules/keyvault.bicep and infra/main.bicep for Key Vault provisioning, RBAC assignment, and Function App app settings wiring.

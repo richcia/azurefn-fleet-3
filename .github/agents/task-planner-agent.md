@@ -33,6 +33,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 9. Keep to 12 tasks per wave to maintain focus and momentum.
 10. Ensure the critical path is clear and includes all blocking dependencies.
 11. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
+12. Reuse existing open GitHub issues when possible to avoid duplicating work. Update the existing Issues with new information rather than creating new issues for the same work.
 
 ## Required Task Categories
 1. Environment and IaC provisioning

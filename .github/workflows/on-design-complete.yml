@@ -289,4 +289,4 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"
+          # gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"

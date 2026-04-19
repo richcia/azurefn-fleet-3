@@ -74,7 +74,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           echo "::endgroup::"
 
-          PROMPT="Perform a design review of $DESIGN_SPEC_FILE and return new version with suggested changes. Only use spec.md as input and do not review other files in the repo"
+          PROMPT="Perform a design review of $DESIGN_SPEC_FILE and return new version with suggested additions and changes. Only use spec.md as input and do not review other files in the repo"
           TMP_OUTPUT_FILE=$(mktemp)
 
           echo "::group::Run design review agent - $PROMPT on $DESIGN_SPEC_FILE"

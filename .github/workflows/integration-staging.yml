@@ -33,21 +33,10 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Remove existing daily roster blob
-        env:
-          DATA_STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_DATA_STORAGE_ACCOUNT_NAME }}
-        run: |
-          BLOB_NAME="$(date -u +%F).json"
-          az storage blob delete \
-            --auth-mode login \
-            --account-name "$DATA_STORAGE_ACCOUNT_NAME" \
-            --container-name "yankees-roster" \
-            --name "$BLOB_NAME" \
-            --only-show-errors || true
-
       - name: Run staging integration test
         env:
           RUN_INTEGRATION_TESTS: "true"
+          INTEGRATION_DELETE_EXISTING_BLOBS_BEFORE_INVOKE: "true"
           INTEGRATION_DELETE_CREATED_BLOB: "true"
           AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           TRAPI_ENDPOINT: ${{ secrets.STAGING_TRAPI_ENDPOINT }}

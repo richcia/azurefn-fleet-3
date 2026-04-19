@@ -136,6 +136,12 @@ def test_staging_output_blob_contains_known_players():
     container_client = service_client.get_container_client("yankees-roster")
 
     candidate_blob_names = _candidate_blob_names()
+    delete_existing = os.getenv("INTEGRATION_DELETE_EXISTING_BLOBS_BEFORE_INVOKE", "false").lower() == "true"
+    if delete_existing:
+        for blob_name in candidate_blob_names:
+            blob_client = container_client.get_blob_client(blob_name)
+            if blob_client.exists():
+                blob_client.delete_blob()
     existing_before = {
         blob_name: snapshot
         for blob_name in candidate_blob_names
@@ -155,8 +161,8 @@ def test_staging_output_blob_contains_known_players():
             function_name=function_name,
         )
 
-        timeout_seconds = int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "240"))
-        poll_interval_seconds = int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10"))
+        timeout_seconds = max(30, int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "240")))
+        poll_interval_seconds = max(2, int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10")))
         deadline = time.time() + timeout_seconds
 
         payload = None

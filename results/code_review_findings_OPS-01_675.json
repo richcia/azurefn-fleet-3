@@ -1,0 +1,24 @@
+{
+  "issue_id": "OPS-01",
+  "pr_number": 675,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/675",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Counter semantics for player_count_returned can obscure per-run analysis",
+      "severity": "major",
+      "file": "function_app.py",
+      "line_range": "14-17, 44",
+      "status": "addressed",
+      "action": "Kept counter instrument to satisfy issue requirement and added run_date_utc metric attribute on add() to preserve per-run queryability in App Insights/Log Analytics."
+    },
+    {
+      "title": "No staging telemetry verification for App Insights and Log Analytics acceptance criteria",
+      "severity": "minor",
+      "file": "tests/test_function_app.py; tests/test_trapi_client.py",
+      "line_range": "46-83; 38-80",
+      "status": "not_addressed",
+      "action": "Not implemented in this repo-only change set because visibility in Metrics Explorer and workspace queryability requires deployed staging resources and runtime execution outside unit-test scope."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "issue_id": "OPS-01",
+  "pr_number": 675,
+  "prompt_improvements": [
+    {
+      "category": "Telemetry acceptance evidence",
+      "improvement": "Require the implementor prompt to request concrete staging validation artifacts for App Insights and Log Analytics criteria (KQL query text, query results, and timestamped run identifier)."
+    },
+    {
+      "category": "Metric semantics",
+      "improvement": "Require explicit metric-instrument reasoning in the prompt (counter vs gauge vs histogram) and mandate dimension/tag design for per-run vs aggregate analysis before coding."
+    },
+    {
+      "category": "Traceability",
+      "improvement": "Require an acceptance-criteria mapping table in the final response linking each criterion to source lines and at least one test or deployment verification step."
+    }
+  ]
+}

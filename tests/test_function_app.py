@@ -62,7 +62,7 @@ def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
     monkeypatch.setattr(
         function_app,
         "_PLAYER_COUNT_RETURNED",
-        type("Metric", (), {"add": lambda self, value: recorded.append(value)})(),
+        type("Metric", (), {"add": lambda self, value, attrs: recorded.append((value, attrs))})(),
     )
 
     function_app.get_and_store_yankees_roster(None)
@@ -71,7 +71,7 @@ def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", started.run_date_utc)
     assert fake_writer.write_calls == [{"payload": roster_payload, "run_date_utc": started.run_date_utc}]
     assert fake_writer.write_failed_calls == []
-    assert recorded == [24]
+    assert recorded == [(24, {"run_date_utc": started.run_date_utc})]
     emitted_events = {record.message for record in caplog.records}
     assert {
         "function_started",
@@ -151,7 +151,7 @@ def test_normal_condition_calls_fetch_once_and_uses_sub_60_second_trapi_timeout(
     monkeypatch.setattr(
         function_app,
         "_PLAYER_COUNT_RETURNED",
-        type("Metric", (), {"add": lambda self, value: None})(),
+        type("Metric", (), {"add": lambda self, value, attrs: None})(),
     )
 
     function_app.get_and_store_yankees_roster(None)

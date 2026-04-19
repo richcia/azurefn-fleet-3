@@ -69,7 +69,9 @@ def test_fetch_roster_uses_prompt_file_timeout_scope_and_logs(monkeypatch, confi
         == "https://trapi.example/openai/deployments/gpt-4o-2026-01-01/chat/completions?api-version=2025-04-01-preview"
     )
     assert captured["headers"]["Authorization"] == "Bearer token"
-    assert any(r.message == "trapi_request_sent" for r in caplog.records)
+    sent = next(r for r in caplog.records if r.message == "trapi_request_sent")
+    assert sent.model_version == "gpt-4o-2026-01-01"
+    assert sent.prompt_hash == trapi_client._prompt_hash(trapi_client._load_prompt())
     received = next(r for r in caplog.records if r.message == "trapi_response_received")
     assert received.model_version == "gpt-4o-2026-01-01"
     assert received.prompt_hash == trapi_client._prompt_hash(trapi_client._load_prompt())

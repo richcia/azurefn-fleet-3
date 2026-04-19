@@ -1,0 +1,11 @@
+[Step 1] Searched repository for OPS-01 related logging/metrics/tests using explore sub-agent.
+[Step 1] Reviewed function_app.py, trapi_client.py, src/blob_writer.py and tests.
+[Step 2] Installed dependencies with pip install -r requirements.txt.
+[Step 2] Ran baseline tests: 24 passed.
+[Step 1] Implemented changes in function_app.py:
+- Added run_date_utc to function_started structured log.
+- Switched player_count_returned metric instrument from histogram to counter and used add().
+- Threaded run_date_utc through write/write_failed calls for consistent run metadata.
+[Step 1] Updated tests in tests/test_function_app.py and tests/test_trapi_client.py for new log field and metric behavior.
+[Step 2] Ran targeted tests: 12 passed.
+[Step 2] Ran full tests: 24 passed.

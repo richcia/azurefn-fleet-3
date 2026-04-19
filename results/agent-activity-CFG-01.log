@@ -1,0 +1,23 @@
+[Step 1 - Implement Tasks]
+- Parsed CFG-01 requirements from issue statement.
+- Located and reviewed host.json, .github/workflows/ci.yml validation block, and spec.md NFR section.
+- Executed baseline dependency install and validations; confirmed host.json assertions initially failed.
+- Updated host.json with functionTimeout, Application Insights samplingSettings, and timerTrigger maxConcurrentCalls values.
+- Validated JSON syntax and re-ran host.json assertions successfully.
+
+[Step 2 - Build and Test]
+- Ran repository pytest command from CI.
+- Result: pre-existing repo state has no tests/ directory, so pytest exits with "file or directory not found: tests/".
+- Verified changed scope (host.json CI assertions) passes.
+
+[Step 3 - Code Review]
+- Identified open PR for branch: https://github.com/richcia/azurefn-fleet-3/pull/660.
+- Ran Code Review Agent against PR #660 with acceptance criteria.
+- Findings: no critical issues, no suggestions.
+- Wrote structured outputs:
+  - results/code_review_findings_CFG-01_660.json
+  - results/prompt_improvements_CFG-01_660.json
+
+[Step 4 - Apply Review Feedback and Re-test]
+- No review findings to apply.
+- Re-validated host.json assertions remain passing.

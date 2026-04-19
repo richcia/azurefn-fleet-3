@@ -1,0 +1,18 @@
+{
+  "issue_number": "REL-01",
+  "pr_number": "unknown",
+  "improvements": [
+    {
+      "category": "Idempotency precision",
+      "change": "Explicitly require deterministic handling when identifier fields are not unique (e.g., fail on duplicate display names)."
+    },
+    {
+      "category": "Safety during convergence",
+      "change": "Require non-destructive update behavior for existing resources whenever API supports update operations."
+    },
+    {
+      "category": "Evidence requirements",
+      "change": "Ask implementor to include an acceptance-criteria-to-implementation mapping and command output evidence in agent activity log."
+    }
+  ]
+}

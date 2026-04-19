@@ -1,62 +1,101 @@
 # azurefn-fleet-3
 
-## First-time OIDC setup for GitHub Actions CD
+## Local development setup
 
-Use `.github/workflows/cd-setup.yml` to provision the Microsoft Entra app registration, service principal, and federated identity credential used by GitHub Actions OIDC.
+Prerequisite: install [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) so `func start` is available locally.
 
-### Prerequisites
+1. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+   On Windows, use `.venv\\Scripts\\Activate.ps1` (PowerShell) or `.venv\\Scripts\\activate.bat` (CMD).
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create `local.settings.json` from the example and update values for your environment:
+   ```bash
+   cp local.settings.json.example local.settings.json
+   ```
+4. Sign in locally so `DefaultAzureCredential` can get tokens:
+   ```bash
+   az login
+   ```
+5. Start the Azure Functions host:
+   ```bash
+   func start
+   ```
 
-1. You have Azure permissions to create app registrations/service principals (for example, Application Administrator or equivalent delegated rights).
-2. You already have a **bootstrap** OIDC-enabled identity that can sign in from GitHub Actions and manage app registrations.
-3. You know the Azure tenant ID and subscription ID used for deployments.
+## TRAPI authentication
 
-### Run CD Setup workflow
+- The function requests a bearer token for scope `api://trapi/.default` (`TRAPI_AUTH_SCOPE`).
+- In Azure, the Function App uses Managed Identity through `DefaultAzureCredential`.
+- For local development, `DefaultAzureCredential` can use your Azure CLI session from `az login`.
+- To manually obtain and inspect a local token:
+  ```bash
+  az account get-access-token --scope api://trapi/.default --query accessToken -o tsv
+  ```
+- You can override the scope in `local.settings.json` with `TRAPI_AUTH_SCOPE` when needed.
 
-1. In GitHub, open **Actions** > **CD Setup**.
+## Blob naming convention
+
+- Container name: `yankees-roster`
+- Success blob path: `yankees-roster/{run_date_utc}.json`
+- `run_date_utc` is `YYYY-MM-DD` (UTC) by default.
+- Failed payloads are written as: `yankees-roster/failed/{run_date_utc}.json`
+
+## GitHub Actions workflows (OIDC + deployments)
+
+### 1) Run `cd-setup.yml` (configure OIDC federated identity)
+
+1. Open **Actions** → **CD Setup** (`.github/workflows/cd-setup.yml`).
 2. Click **Run workflow** and provide:
-   - `azure_subscription_id`: target subscription ID
-   - `azure_tenant_id`: target tenant ID
-   - `bootstrap_client_id`: client ID of existing bootstrap OIDC identity
-   - `app_registration_name`: display name for the new GitHub Actions app registration
-   - `federated_credential_name`: unique credential name inside the app registration
-   - `subject_type`: `branch` or `environment`
-   - `subject_value`: branch name (for `branch`) or environment name (for `environment`)
-3. Wait for the run to finish and copy values from the workflow summary.
+   - `azure_subscription_id`
+   - `azure_tenant_id`
+   - `bootstrap_client_id`
+   - `app_registration_name`
+   - `federated_credential_name`
+   - `subject_type` (`branch` or `environment`)
+   - `subject_value` (branch/environment value)
+3. After completion, copy the emitted values and configure deployment credentials per environment (`staging`, `production`):
+   - `AZURE_CLIENT_ID`
+   - `AZURE_TENANT_ID`
+   - `AZURE_SUBSCRIPTION_ID`
+   Set these as **environment variables** because deployment workflows read them via `${{ vars.* }}`.
+4. Ensure deployment targets are configured:
+   - environment variable `AZURE_RESOURCE_GROUP`
+   - environment variable `AZURE_FUNCTIONAPP_NAME` (used by `cd-infra.yml` via `${{ vars.AZURE_FUNCTIONAPP_NAME }}`)
+   - environment secret `AZURE_FUNCTIONAPP_NAME` (used by `cd-app.yml` and `cd-promote.yml` via `${{ secrets.AZURE_FUNCTIONAPP_NAME }}`)
 
-### Configure repository secrets
+### 2) Run `cd-infra.yml` (deploy/validate infrastructure)
 
-After the setup run, create/update repository secrets:
+1. Open **Actions** → **CD Infra** (`.github/workflows/cd-infra.yml`).
+2. Click **Run workflow**.
+3. Set inputs:
+   - `environment`: `staging` or `production`
+   - `storage_container_name`: keep `yankees-roster` unless intentionally changing
+4. Confirm the workflow finishes with successful Bicep deployment and storage/RBAC validation.
 
-- `AZURE_CLIENT_ID` (from workflow summary)
-- `AZURE_TENANT_ID`
-- `AZURE_SUBSCRIPTION_ID`
+### 3) Run `cd-app.yml` (deploy Function App code)
 
-These are consumed by deployment workflows such as `.github/workflows/cd.yml` via `azure/login@v2`.
+1. Open **Actions** → **CD App** (`.github/workflows/cd-app.yml`).
+2. Click **Run workflow**.
+3. Set `environment` to `staging` (recommended before promote) or `production`.
+4. Confirm deployment and smoke test succeed.
 
-## Promote staging to production
+### 4) Run `cd-promote.yml` (promote staging to production)
 
-Use `.github/workflows/cd-promote.yml` to run a manual, OIDC-authenticated slot promotion with gates.
+1. Open **Actions** → **CD Promote** (`.github/workflows/cd-promote.yml`).
+2. Click **Run workflow**.
+3. Use:
+   - `source-slot`: `staging`
+   - `target-slot`: `production`
+4. Confirm pre-swap smoke test, slot swap, post-swap verification, and post-swap smoke test all pass.
 
-1. In GitHub, open **Actions** > **CD Promote**.
-2. Click **Run workflow** and provide:
-   - `source-slot` (default: `staging`)
-   - `target-slot` (default: `production`, must remain `production` for this promote workflow)
-3. The workflow:
-   - runs a pre-swap smoke test on the source slot,
-   - swaps source to target via `az functionapp deployment slot swap`,
-   - verifies the target slot has the promoted deployment marker and passes a post-swap smoke test.
-
-### Subject examples
+### OIDC subject examples
 
 - Branch trust for `main`: `repo:richcia/azurefn-fleet-3:ref:refs/heads/main`
 - Environment trust for `staging`: `repo:richcia/azurefn-fleet-3:environment:staging`
 
-The subject must exactly match the GitHub repo + branch/environment used by the deployment workflow.
-
-### Idempotency behavior
-
-`cd-setup.yml` is idempotent:
-
-- Reuses existing app registration if the display name already exists
-- Reuses existing service principal if already present
-- Recreates the same named federated credential so re-runs converge to the requested subject configuration without duplicates
+`cd-setup.yml` is idempotent: it reuses existing app/service principal and updates the named federated credential to the requested subject.

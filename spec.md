@@ -20,7 +20,7 @@ rciapala
 ### Functional Requirements
 
 #### Requirement 1: Get Players
-- **Description:** Query GPT-4o via TRAPI using a pinned, version-controlled prompt template to retrieve the 1985 New York Yankees roster. The response must be validated for completeness (expected player count: 24–28 active roster members) before proceeding. If validation fails, write the raw response to a `failed/` blob prefix and raise an alert — do not write to the primary output path.
+- **Description:** Query GPT-4o via TRAPI using a pinned, version-controlled prompt template to retrieve the 1985 New York Yankees roster (active players only). The response must be validated for completeness (expected player count: 24–28 active roster members) before proceeding. If validation fails, write the raw response to a `failed/` blob prefix and raise an alert — do not write to the primary output path.
 - **Prompt Template:** Stored in `prompts/get_1985_yankees.txt` in source control. Pinned to a specific GPT-4o model version to ensure deterministic output.
 - **Expected Response Schema:**
   ```json
@@ -127,14 +127,17 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 - [x] **Storage Account (dedicated):** Standard_LRS, container `yankees-roster` (private), soft-delete 7 days, Cool access tier
 - [x] **Application Insights:** Connected to Function App; 30-day log retention; sampling enabled
 - [x] **Azure Key Vault:** Stores TRAPI credentials (if Managed Identity auth is unsupported by TRAPI); zone-redundant
-- [ ] **Networking:** No VNet required for initial deployment. If TRAPI is network-restricted, add VNet integration and private endpoint for storage.
+- [ ] **Networking:** TRAPI is available over the public network at https://trapi.research.microsoft.com/gcr/shared
+- [ ] **TRAPI endpoint** 
 
 ### Access and Permissions
 - [x] **Identity:** System-assigned Managed Identity on the Function App
 - [x] **Storage RBAC:** `Storage Blob Data Contributor` on the `yankees-roster` container (scoped, not account-level)
 - [x] **Key Vault RBAC:** `Key Vault Secrets User` on the Key Vault (if TRAPI credentials are stored there)
-- [x] **TRAPI Auth:** Managed Identity bearer token with TRAPI-specific scope (scope TBD — confirm with TRAPI team)
+- [x] **TRAPI Auth:** Managed Identity bearer token with TRAPI-specific scope (scope api://trapi/.default)
 - [ ] **Host Storage:** Function App host storage account is separate from application data storage account
+
+
 
 ---
 
@@ -180,14 +183,3 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
 - [ ] Monitoring and alerting active (failure alert + duration alert + data quality metric)
 - [ ] Documentation complete (README includes local dev setup, TRAPI auth instructions, and blob naming convention)
 
----
-
-## Open Questions / Decisions Pending
-
-1. **TRAPI auth mechanism:** Does TRAPI support Azure AD Managed Identity bearer tokens? If not, what credential type is required and where will it be stored (Key Vault)? — *Owner: rciapala to confirm with TRAPI team*
-2. **TRAPI endpoint and API version:** What is the base URL and API version for the TRAPI GPT-4o endpoint? — *Required before implementation*
-3. **Player scope:** Should the roster include only the 25-man active roster, or also coaching staff, front-office personnel, and injured list? — *Affects prompt template and validation thresholds*
-4. **Networking:** Is TRAPI accessible over public internet or does it require VNet integration? — *Affects infrastructure design*
-5. **Consumption Plan vs. Premium Plan:** Is there a strict SLA on the 2 AM execution time? If yes, Premium Plan with always-ready instances is required to eliminate cold-start risk.
-
----

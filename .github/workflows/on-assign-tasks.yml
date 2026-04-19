@@ -157,7 +157,7 @@ jobs:
           ' all_issues.json)
 
           if jq -e 'length > 0' <<< "$DESIGN_ISSUES_JSON" > /dev/null; then
-            echo "The follow design Issues must be closed before continuing:"
+            echo "The follow design Issues must be manuallycompleted and closed before continuing:"
             echo
             jq -r '.[] | "- " + .url' <<< "$DESIGN_ISSUES_JSON"
             exit 1

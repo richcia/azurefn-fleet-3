@@ -1,0 +1,144 @@
+name: CD App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy app and run smoke test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: cd-app-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install production dependencies
+        run: |
+          pip install \
+            --target=".python_packages/lib/site-packages" \
+            -r requirements-prod.txt
+
+      - name: Create deployment zip package
+        run: |
+          zip -r deploy.zip . \
+            --exclude "*.git*" \
+            --exclude "tests/*" \
+            --exclude ".github/*" \
+            --exclude "infra/*" \
+            --exclude "local.settings.json*" \
+            --exclude "*.md" \
+            --exclude "coverage.xml" \
+            --exclude "deploy.zip" \
+            --exclude '*__pycache__*' \
+            --exclude '*.pyc'
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve deployment target
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_NAME="${{ secrets.AZURE_FUNCTIONAPP_NAME }}"
+          SLOT_NAME="${{ inputs.environment }}"
+          RESOURCE_GROUP="$(az resource list --name "$APP_NAME" --resource-type "Microsoft.Web/sites" --query "[0].resourceGroup" -o tsv)"
+          if [ -z "$RESOURCE_GROUP" ]; then
+            echo "Unable to determine resource group for $APP_NAME"
+            exit 1
+          fi
+
+          echo "app_name=$APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "slot_name=$SLOT_NAME" >> "$GITHUB_OUTPUT"
+          echo "resource_group=$RESOURCE_GROUP" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy zip package to staging slot
+        if: ${{ steps.target.outputs.slot_name == 'staging' }}
+        uses: azure/functions-action@bc63708cc6539760eea18d8a7de4ce8ef5fdf593
+        with:
+          app-name: ${{ steps.target.outputs.app_name }}
+          slot-name: staging
+          package: deploy.zip
+
+      - name: Deploy zip package to production slot
+        if: ${{ steps.target.outputs.slot_name == 'production' }}
+        uses: azure/functions-action@bc63708cc6539760eea18d8a7de4ce8ef5fdf593
+        with:
+          app-name: ${{ steps.target.outputs.app_name }}
+          package: deploy.zip
+
+      - name: Smoke test deployed slot by invoking timer function
+        uses: azure/cli@9f7ce6f37c31b777ec6c6b6d1dfe7db79f497956
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            APP_NAME="${{ steps.target.outputs.app_name }}"
+            RESOURCE_GROUP="${{ steps.target.outputs.resource_group }}"
+            SLOT_NAME="${{ steps.target.outputs.slot_name }}"
+            FUNCTION_NAME="${{ vars.SMOKE_TEST_FUNCTION_NAME || 'GetAndStoreYankeesRoster' }}"
+
+            SLOT_ARGS=()
+            if [ "$SLOT_NAME" != "production" ]; then
+              SLOT_ARGS=(--slot "$SLOT_NAME")
+            fi
+
+            FUNCTION_RESOURCE_NAME="$(az functionapp function show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${SLOT_ARGS[@]}" --function-name "$FUNCTION_NAME" --query name -o tsv 2>/dev/null || true)"
+            if [ -z "$FUNCTION_RESOURCE_NAME" ]; then
+              echo "Function '$FUNCTION_NAME' not found in slot '$SLOT_NAME'."
+              exit 1
+            fi
+
+            HOSTNAME="$(az functionapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${SLOT_ARGS[@]}" --query defaultHostName -o tsv)"
+            MASTER_KEY="$(az functionapp keys list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" "${SLOT_ARGS[@]}" --query masterKey -o tsv)"
+
+            if [ -z "$HOSTNAME" ] || [ -z "$MASTER_KEY" ]; then
+              echo "Unable to resolve host name or host key for slot '$SLOT_NAME'."
+              exit 1
+            fi
+            echo "::add-mask::$MASTER_KEY"
+
+            for attempt in 1 2 3 4 5 6; do
+              STATUS_CODE="$(curl -sS -o /dev/null -w "%{http_code}" \
+                -X POST "https://${HOSTNAME}/admin/functions/${FUNCTION_NAME}" \
+                -H "Content-Type: application/json" \
+                -H "x-functions-key: ${MASTER_KEY}" \
+                --data '{}')"
+
+              if [ "$STATUS_CODE" = "200" ] || [ "$STATUS_CODE" = "202" ] || [ "$STATUS_CODE" = "204" ]; then
+                echo "Smoke test passed with HTTP $STATUS_CODE on attempt ${attempt}."
+                exit 0
+              fi
+
+              echo "Smoke test attempt ${attempt} failed with HTTP $STATUS_CODE. Retrying in 10 seconds..."
+              sleep 10
+            done
+
+            echo "Smoke test failed after retries."
+            exit 1

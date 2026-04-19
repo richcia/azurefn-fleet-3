@@ -1,0 +1,18 @@
+{
+  "issue_number": "REL-03",
+  "pr_number": "unknown",
+  "improvements": [
+    {
+      "category": "Workflow hardening defaults",
+      "change": "Require adding an environment-scoped concurrency guard for deployment workflows unless the issue explicitly rejects it."
+    },
+    {
+      "category": "Supply chain security",
+      "change": "Require pinning third-party and first-party GitHub Actions to immutable commit SHAs instead of floating major tags."
+    },
+    {
+      "category": "Review readiness",
+      "change": "Require an acceptance-criteria traceability checklist in the activity log mapping each criterion to workflow lines and validation evidence."
+    }
+  ]
+}

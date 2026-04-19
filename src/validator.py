@@ -32,6 +32,14 @@ def validate_roster_response(
     min_players: int = 24,
     max_players: int = 28,
 ) -> ValidationResult:
+    if not isinstance(response, dict):
+        return ValidationResult(
+            error=ValidationError(
+                kind=ValidationErrorKind.SCHEMA_FAILURE,
+                message="response must be an object",
+            )
+        )
+
     players = response.get("players")
     if not isinstance(players, list):
         return ValidationResult(

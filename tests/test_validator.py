@@ -34,6 +34,14 @@ def test_validator_rejects_schema_violation_missing_required_field():
     assert result.error.kind == ValidationErrorKind.SCHEMA_FAILURE
 
 
+def test_validator_rejects_non_object_response():
+    result = validate_roster_response(None)
+
+    assert result.is_valid is False
+    assert result.error is not None
+    assert result.error.kind == ValidationErrorKind.SCHEMA_FAILURE
+
+
 def test_validator_rejects_count_too_low():
     result = validate_roster_response({"players": _players(23)})
 

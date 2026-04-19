@@ -8,6 +8,8 @@ from typing import Any
 import requests
 from azure.identity import DefaultAzureCredential
 
+from src.validator import ValidationErrorKind, validate_roster_response
+
 
 TRAPI_AUTH_SCOPE = os.getenv("TRAPI_AUTH_SCOPE", "api://trapi/.default")
 TRAPI_ENDPOINT = os.getenv("TRAPI_ENDPOINT", "").rstrip("/")
@@ -20,6 +22,13 @@ PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "get_1985_yankees.tx
 
 _DEFAULT_AZURE_CREDENTIAL = DefaultAzureCredential()
 _LOGGER = logging.getLogger(__name__)
+
+
+class RosterValidationError(RuntimeError):
+    def __init__(self, kind: ValidationErrorKind, message: str, response_payload: Any):
+        super().__init__(message)
+        self.kind = kind
+        self.response_payload = response_payload
 
 
 def _normalize_prompt(prompt_text: str) -> str:
@@ -91,8 +100,13 @@ def fetch_1985_yankees_roster() -> dict[str, Any]:
 
         response.raise_for_status()
         response_json = response.json()
-        token_count = int(response_json.get("usage", {}).get("total_tokens", 0))
-        player_count = len(response_json.get("players", []))
+        token_count = (
+            int(response_json.get("usage", {}).get("total_tokens", 0))
+            if isinstance(response_json, dict)
+            else 0
+        )
+        players = response_json.get("players", []) if isinstance(response_json, dict) else []
+        player_count = len(players) if isinstance(players, list) else 0
 
         _LOGGER.info(
             "trapi_response_received",
@@ -104,6 +118,14 @@ def fetch_1985_yankees_roster() -> dict[str, Any]:
                 "player_count": player_count,
             },
         )
+        validation_result = validate_roster_response(response_json)
+        if not validation_result.is_valid and validation_result.error is not None:
+            raise RosterValidationError(
+                kind=validation_result.error.kind,
+                message=validation_result.error.message,
+                response_payload=response_json,
+            )
+
         return response_json
 
     raise RuntimeError("TRAPI request failed after maximum retries")

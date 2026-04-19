@@ -4,6 +4,7 @@ import types
 import pytest
 
 import trapi_client
+from src.validator import ValidationErrorKind
 
 
 class FakeResponse:
@@ -17,6 +18,13 @@ class FakeResponse:
 
     def json(self):
         return self._payload
+
+
+def _players(count):
+    return [
+        {"name": f"Player {i}", "position": "P", "jersey_number": i}
+        for i in range(1, count + 1)
+    ]
 
 
 @pytest.fixture
@@ -45,14 +53,14 @@ def test_fetch_roster_uses_prompt_file_timeout_scope_and_logs(monkeypatch, confi
         captured["timeout"] = timeout
         return FakeResponse(
             200,
-            {"players": [{"name": "Don Mattingly"}], "usage": {"total_tokens": 321}},
+            {"players": _players(24), "usage": {"total_tokens": 321}},
         )
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
 
     response = trapi_client.fetch_1985_yankees_roster()
 
-    assert response["players"][0]["name"] == "Don Mattingly"
+    assert response["players"][0]["name"] == "Player 1"
     assert captured["timeout"] == 45
     assert captured["json"]["messages"][0]["content"] == trapi_client._load_prompt()
     assert captured["json"]["model"] == "gpt-4o-2026-01-01"
@@ -66,7 +74,7 @@ def test_fetch_roster_uses_prompt_file_timeout_scope_and_logs(monkeypatch, confi
     assert received.model_version == "gpt-4o-2026-01-01"
     assert received.prompt_hash == trapi_client._prompt_hash(trapi_client._load_prompt())
     assert received.token_count == 321
-    assert received.player_count == 1
+    assert received.player_count == 24
 
 
 def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_env):
@@ -84,7 +92,7 @@ def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_en
         status = statuses[calls["count"]]
         calls["count"] += 1
         if status == 200:
-            return FakeResponse(200, {"players": [{"name": "Dave Winfield"}], "usage": {"total_tokens": 77}})
+            return FakeResponse(200, {"players": _players(24), "usage": {"total_tokens": 77}})
         return FakeResponse(status, {})
 
     monkeypatch.setattr(trapi_client.requests, "post", fake_post)
@@ -92,7 +100,7 @@ def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_en
 
     response = trapi_client.fetch_1985_yankees_roster()
 
-    assert response["players"][0]["name"] == "Dave Winfield"
+    assert response["players"][0]["name"] == "Player 1"
     assert calls["count"] == 4
     assert sleeps == [1, 2, 4]
 
@@ -128,3 +136,41 @@ def test_fetch_roster_does_not_retry_non_retryable_status(monkeypatch, configure
         trapi_client.fetch_1985_yankees_roster()
 
     assert calls["count"] == 1
+
+
+def test_fetch_roster_raises_typed_validation_error(monkeypatch, configure_env):
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        types.SimpleNamespace(get_token=lambda _: types.SimpleNamespace(token="token")),
+    )
+    monkeypatch.setattr(
+        trapi_client.requests,
+        "post",
+        lambda *_, **__: FakeResponse(200, {"players": [{"name": "Don Mattingly"}], "usage": {"total_tokens": 5}}),
+    )
+
+    with pytest.raises(trapi_client.RosterValidationError) as exc:
+        trapi_client.fetch_1985_yankees_roster()
+
+    assert exc.value.kind == ValidationErrorKind.SCHEMA_FAILURE
+    assert exc.value.response_payload == {"players": [{"name": "Don Mattingly"}], "usage": {"total_tokens": 5}}
+
+
+def test_fetch_roster_raises_typed_validation_error_for_non_object_payload(monkeypatch, configure_env):
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        types.SimpleNamespace(get_token=lambda _: types.SimpleNamespace(token="token")),
+    )
+    monkeypatch.setattr(
+        trapi_client.requests,
+        "post",
+        lambda *_, **__: FakeResponse(200, ["not-an-object"]),
+    )
+
+    with pytest.raises(trapi_client.RosterValidationError) as exc:
+        trapi_client.fetch_1985_yankees_roster()
+
+    assert exc.value.kind == ValidationErrorKind.SCHEMA_FAILURE
+    assert exc.value.response_payload == ["not-an-object"]

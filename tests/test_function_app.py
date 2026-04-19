@@ -150,7 +150,9 @@ def test_get_and_store_yankees_roster_retry_exhaustion_failure_path(monkeypatch)
         function_app.get_and_store_yankees_roster(None)
 
     assert fake_writer.write_calls == []
-    assert fake_writer.write_failed_calls == [{"payload": failed_payload, "run_date_utc": None}]
+    assert len(fake_writer.write_failed_calls) == 1
+    assert fake_writer.write_failed_calls[0]["payload"] == failed_payload
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", fake_writer.write_failed_calls[0]["run_date_utc"])
 
 
 def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch):

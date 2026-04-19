@@ -11,6 +11,12 @@ param functionAppPrincipalId string
 param tags object = {}
 
 @allowed([
+  true
+])
+@description('Set this to true only after confirming the target region supports zone-redundant Key Vault deployments.')
+param zoneRedundancyRegionConfirmed bool
+
+@allowed([
   'premium'
 ])
 @description('Key Vault SKU. Premium is used to satisfy zone-redundant SKU requirements.')
@@ -24,7 +30,9 @@ var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId(
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
-  tags: tags
+  tags: union(tags, {
+    zoneRedundancyRegionConfirmed: string(zoneRedundancyRegionConfirmed)
+  })
   properties: {
     tenantId: subscription().tenantId
     sku: {

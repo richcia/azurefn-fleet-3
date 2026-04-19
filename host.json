@@ -1,6 +1,20 @@
 {
   "version": "2.0",
   "isDefaultHostConfig": true,
+  "functionTimeout": "00:02:00",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request;Exception"
+      }
+    }
+  },
+  "extensions": {
+    "timerTrigger": {
+      "maxConcurrentCalls": 1
+    }
+  },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"

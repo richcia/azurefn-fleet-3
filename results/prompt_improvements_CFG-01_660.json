@@ -1,0 +1,14 @@
+{
+  "issue_number": "CFG-01",
+  "pr_number": 660,
+  "proposed_improvements": [
+    {
+      "title": "Add explicit no-op handling for config-only tasks",
+      "description": "When a code review returns no critical issues and no suggestions, the implementor prompt should explicitly allow a no-op Step 4 with only re-validation and documentation artifacts."
+    },
+    {
+      "title": "Require deterministic findings schema from review agent",
+      "description": "Ask the review agent to always return machine-readable entries with file, start_line, end_line, severity, and recommendation so findings can be persisted without manual normalization."
+    }
+  ]
+}

@@ -75,13 +75,16 @@ jobs:
               exit 1
             fi
 
-            FUNCTION_RESOURCE_NAME="$(az functionapp function list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query "[0].name" -o tsv)"
-            if [ -z "$FUNCTION_RESOURCE_NAME" ]; then
-              echo "No functions found in staging slot."
-              exit 1
+            FUNCTION_NAME="${{ vars.SMOKE_TEST_FUNCTION_NAME }}"
+            if [ -z "$FUNCTION_NAME" ]; then
+              FUNCTION_NAME="GetAndStoreYankeesRoster"
             fi
 
-            FUNCTION_NAME="${FUNCTION_RESOURCE_NAME##*/}"
+            FUNCTION_RESOURCE_NAME="$(az functionapp function show --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --function-name "$FUNCTION_NAME" --query name -o tsv 2>/dev/null || true)"
+            if [ -z "$FUNCTION_RESOURCE_NAME" ]; then
+              echo "Function '$FUNCTION_NAME' not found in staging slot."
+              exit 1
+            fi
             HOSTNAME="$(az functionapp show --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query defaultHostName -o tsv)"
             MASTER_KEY="$(az functionapp keys list --name "${{ secrets.AZURE_FUNCTIONAPP_NAME }}" --resource-group "$RESOURCE_GROUP" --slot staging --query masterKey -o tsv)"
 

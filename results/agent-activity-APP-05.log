@@ -11,3 +11,5 @@
 [Step 3] Captured review findings in results/code_review_findings_APP-05_677.json.
 [Step 3] Captured prompt improvement recommendations in results/prompt_improvements_APP-05_677.json.
 [Step 4] Applied valid review suggestions: removed stale retry constant and added explicit 502 retry test coverage.
+[Step 4] Re-ran full unit test suite after review fixes: 28 passed.
+[Step 4] Created follow-up commit with prompt-improvement section and PR link in commit message.

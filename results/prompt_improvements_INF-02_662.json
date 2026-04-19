@@ -1,0 +1,19 @@
+{
+  "issue_number": "INF-02",
+  "pr_number": 662,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/662",
+  "improvements": [
+    {
+      "category": "Scope accuracy",
+      "change": "Explicitly instruct implementor to scope staging-slot RBAC to staging-specific storage resources, not production resources, when separate settings/parameters exist."
+    },
+    {
+      "category": "Validation",
+      "change": "Require an acceptance-criteria mapping table in the implementation notes that ties each criterion to exact file/line changes and validation commands."
+    },
+    {
+      "category": "Pre-review hygiene",
+      "change": "Add a mandatory check before requesting code review: ensure git status is clean and all intended files are committed/pushed so PR file list is non-empty."
+    }
+  ]
+}

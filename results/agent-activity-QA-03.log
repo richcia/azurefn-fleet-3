@@ -8,3 +8,6 @@
 [Step 3] Captured code review findings in results/code_review_findings_QA-03_679.json.
 [Step 3] Captured prompt improvement proposals in results/prompt_improvements_QA-03_679.json.
 [Step 4] Applied review feedback by strengthening checklist with a concrete staging validation procedure and telemetry query steps.
+[Step 4] Re-ran full tests after review-driven updates (31 passed, 1 skipped).
+[Step 4] Resolved parent issue number (#657) from GitHub metadata.
+[Step 4] Attempted to post issue update with PR and findings links, but GitHub token lacked permission (GraphQL: Resource not accessible by integration).

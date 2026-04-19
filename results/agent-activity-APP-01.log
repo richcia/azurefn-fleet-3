@@ -3,3 +3,13 @@ Step 1 - Implement Tasks
 - Implemented trapi_client.py with prompt loading, DefaultAzureCredential token acquisition, 45s timeout, and retry with exponential backoff.
 - Added pinned prompt file prompts/get_1985_yankees.txt.
 - Added unit tests for prompt loading, auth scope usage, retry behavior, timeout, and logging fields.
+Step 2 - Build and Test
+- Installed dependencies from requirements.txt.
+- Ran targeted tests for trapi_client and full unit tests with coverage (all passing).
+Step 3 - Code Review
+- Ran Code Review Agent against PR https://github.com/richcia/azurefn-fleet-3/pull/664.
+- Saved findings to results/code_review_findings_APP-01_664.json.
+- Saved prompt improvement proposals to results/prompt_improvements_APP-01_664.json.
+Step 4 - Apply Code Review Feedback
+- Updated _get_bearer_token to resolve scope at runtime.
+- Added tests for retry exhaustion and non-retryable response behavior.

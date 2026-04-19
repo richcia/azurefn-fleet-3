@@ -34,8 +34,9 @@ def _prompt_hash(prompt_text: str) -> str:
     return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
-def _get_bearer_token(scope: str = TRAPI_AUTH_SCOPE) -> str:
-    return _DEFAULT_AZURE_CREDENTIAL.get_token(scope).token
+def _get_bearer_token(scope: str | None = None) -> str:
+    resolved_scope = scope or TRAPI_AUTH_SCOPE
+    return _DEFAULT_AZURE_CREDENTIAL.get_token(resolved_scope).token
 
 
 def _build_url() -> str:

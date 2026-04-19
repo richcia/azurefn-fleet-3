@@ -95,3 +95,36 @@ def test_fetch_roster_retries_with_exponential_backoff(monkeypatch, configure_en
     assert response["players"][0]["name"] == "Dave Winfield"
     assert calls["count"] == 4
     assert sleeps == [1, 2, 4]
+
+
+def test_fetch_roster_raises_after_retry_exhaustion(monkeypatch, configure_env):
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        types.SimpleNamespace(get_token=lambda _: types.SimpleNamespace(token="token")),
+    )
+    monkeypatch.setattr(trapi_client.requests, "post", lambda *_, **__: FakeResponse(503, {}))
+    monkeypatch.setattr(trapi_client.time, "sleep", lambda *_: None)
+
+    with pytest.raises(RuntimeError, match="http 503"):
+        trapi_client.fetch_1985_yankees_roster()
+
+
+def test_fetch_roster_does_not_retry_non_retryable_status(monkeypatch, configure_env):
+    monkeypatch.setattr(
+        trapi_client,
+        "_DEFAULT_AZURE_CREDENTIAL",
+        types.SimpleNamespace(get_token=lambda _: types.SimpleNamespace(token="token")),
+    )
+    calls = {"count": 0}
+
+    def fake_post(*_, **__):
+        calls["count"] += 1
+        return FakeResponse(400, {})
+
+    monkeypatch.setattr(trapi_client.requests, "post", fake_post)
+
+    with pytest.raises(RuntimeError, match="http 400"):
+        trapi_client.fetch_1985_yankees_roster()
+
+    assert calls["count"] == 1

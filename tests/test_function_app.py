@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -32,10 +31,15 @@ class FakeWriter:
 
 
 def test_timer_trigger_config_includes_schedule_and_use_monitor():
-    source = Path(function_app.__file__).read_text(encoding="utf-8")
+    function = next(
+        item
+        for item in function_app.app.get_functions()
+        if item.get_function_name() == "GetAndStoreYankeesRoster"
+    )
+    trigger = next(binding for binding in function.get_bindings() if binding.type == "timerTrigger")
 
-    assert 'schedule="0 0 2 * * *"' in source
-    assert "use_monitor=True" in source
+    assert trigger.schedule == "0 0 2 * * *"
+    assert trigger.use_monitor is True
 
 
 def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
@@ -126,5 +130,24 @@ def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch
     assert fake_writer.write_failed_calls == [invalid_payload]
 
 
-def test_normal_condition_timeout_budget_is_within_60_seconds():
+def test_normal_condition_calls_fetch_once_and_uses_sub_60_second_trapi_timeout(monkeypatch):
+    fake_writer = FakeWriter()
+    roster_payload = {"players": _players(24), "usage": {"total_tokens": 10}}
+    fetch_calls = {"count": 0}
+
+    def fake_fetch():
+        fetch_calls["count"] += 1
+        return roster_payload
+
+    monkeypatch.setattr(function_app, "BlobWriter", lambda: fake_writer)
+    monkeypatch.setattr(function_app, "fetch_1985_yankees_roster", fake_fetch)
+    monkeypatch.setattr(
+        function_app,
+        "_PLAYER_COUNT_RETURNED",
+        type("Metric", (), {"record": lambda self, value: None})(),
+    )
+
+    function_app.get_and_store_yankees_roster(None)
+
+    assert fetch_calls["count"] == 1
     assert trapi_client.TRAPI_TIMEOUT_SECONDS <= 60

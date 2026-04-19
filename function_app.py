@@ -42,7 +42,11 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
         _PLAYER_COUNT_RETURNED.record(player_count)
         _LOGGER.info(
             "function_completed",
-            extra={"player_count": player_count, "blob_uri": blob_uri},
+            extra={
+                "player_count": player_count,
+                "blob_uri": blob_uri,
+                "write_conflict": blob_uri is None,
+            },
         )
     except RosterValidationError as exc:
         writer.write_failed(exc.response_payload)

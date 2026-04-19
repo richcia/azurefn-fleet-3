@@ -17,7 +17,7 @@
       "title": "Add explicit test coverage for all five required structured log events",
       "severity": "minor",
       "file": "tests/test_function_app.py",
-      "line_range": "39-72",
+      "line_range": "48-79",
       "status": "addressed",
       "action": "Expanded happy-path test to assert the full required event set: function_started, trapi_request_sent, trapi_response_received, blob_write_succeeded, function_completed."
     },
@@ -25,17 +25,33 @@
       "title": "Add a test for the direct validation-failure branch in function_app",
       "severity": "minor",
       "file": "tests/test_function_app.py",
-      "line_range": "104-116",
+      "line_range": "111-123",
       "status": "addressed",
       "action": "Added test_get_and_store_yankees_roster_direct_validation_failure_path to cover fetch returns invalid payload branch."
     },
     {
-      "title": "Add bounded-duration evidence aligned to the 60-second requirement",
+      "title": "Strengthen trigger configuration test robustness",
       "severity": "minor",
       "file": "tests/test_function_app.py",
-      "line_range": "119-120",
+      "line_range": "32-40",
       "status": "addressed",
-      "action": "Added test asserting TRAPI timeout budget is <= 60 seconds under normal single-attempt conditions."
+      "action": "Replaced source-text matching with FunctionApp metadata inspection by function name and timer binding type."
+    },
+    {
+      "title": "Clarify timeout-budget test intent",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line_range": "126-145",
+      "status": "addressed",
+      "action": "Updated test to verify single-fetch normal-path behavior and renamed the test to match what is asserted."
+    },
+    {
+      "title": "Improve completion telemetry for idempotent blob conflicts",
+      "severity": "minor",
+      "file": "function_app.py",
+      "line_range": "44-50",
+      "status": "addressed",
+      "action": "Added write_conflict boolean field to function_completed structured log when blob_uri is None."
     }
   ]
 }

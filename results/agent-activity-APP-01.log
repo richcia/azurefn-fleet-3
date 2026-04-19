@@ -1,0 +1,5 @@
+Step 1 - Implement Tasks
+- Reviewed APP-01 requirements and repository conventions.
+- Implemented trapi_client.py with prompt loading, DefaultAzureCredential token acquisition, 45s timeout, and retry with exponential backoff.
+- Added pinned prompt file prompts/get_1985_yankees.txt.
+- Added unit tests for prompt loading, auth scope usage, retry behavior, timeout, and logging fields.

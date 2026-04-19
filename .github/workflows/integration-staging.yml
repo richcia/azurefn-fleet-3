@@ -34,8 +34,9 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run staging integration test
-        env:
-          RUN_INTEGRATION_TESTS: "true"
+       env:
+         RUN_INTEGRATION_TESTS: "true"
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           TRAPI_ENDPOINT: ${{ secrets.STAGING_TRAPI_ENDPOINT }}
           TRAPI_DEPLOYMENT_NAME: ${{ secrets.STAGING_TRAPI_DEPLOYMENT_NAME }}
           TRAPI_API_VERSION: ${{ secrets.STAGING_TRAPI_API_VERSION }}

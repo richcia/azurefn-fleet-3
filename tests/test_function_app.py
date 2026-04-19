@@ -6,6 +6,8 @@ import function_app
 import trapi_client
 from src.validator import ValidationErrorKind
 
+pytestmark = pytest.mark.unit
+
 
 def _players(count):
     return [
@@ -46,13 +48,19 @@ def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
     caplog.set_level(logging.INFO)
     fake_writer = FakeWriter()
     recorded = []
-    roster_payload = {"players": _players(24), "usage": {"total_tokens": 10}}
+    players = [
+        {"name": "Don Mattingly", "position": "1B", "jersey_number": 23},
+        {"name": "Dave Winfield", "position": "RF", "jersey_number": 31},
+        {"name": "Rickey Henderson", "position": "LF", "jersey_number": 24},
+        *_players(25),
+    ]
+    roster_payload = {"players": players, "usage": {"total_tokens": 10}}
 
     def fake_fetch():
         logging.getLogger(__name__).info("trapi_request_sent")
         logging.getLogger(__name__).info(
             "trapi_response_received",
-            extra={"player_count": 24, "token_count": 10, "latency_ms": 5},
+            extra={"player_count": 28, "token_count": 10, "latency_ms": 5},
         )
         return roster_payload
 
@@ -68,7 +76,10 @@ def test_get_and_store_yankees_roster_happy_path(monkeypatch, caplog):
 
     assert fake_writer.write_calls == [roster_payload]
     assert fake_writer.write_failed_calls == []
-    assert recorded == [24]
+    assert recorded == [28]
+    stored_players = fake_writer.write_calls[0]["players"]
+    stored_names = {player["name"] for player in stored_players}
+    assert {"Don Mattingly", "Dave Winfield", "Rickey Henderson"}.issubset(stored_names)
     emitted_events = {record.message for record in caplog.records}
     assert {
         "function_started",
@@ -128,6 +139,20 @@ def test_get_and_store_yankees_roster_direct_validation_failure_path(monkeypatch
 
     assert fake_writer.write_calls == []
     assert fake_writer.write_failed_calls == [invalid_payload]
+
+
+def test_get_and_store_yankees_roster_raises_when_failed_blob_write_fails(monkeypatch):
+    class FailingWriter(FakeWriter):
+        def write_failed(self, payload):
+            super().write_failed(payload)
+            raise RuntimeError("failed blob write")
+
+    invalid_payload = {"players": [{"name": "Don Mattingly"}]}
+    monkeypatch.setattr(function_app, "BlobWriter", lambda: FailingWriter())
+    monkeypatch.setattr(function_app, "fetch_1985_yankees_roster", lambda: invalid_payload)
+
+    with pytest.raises(RuntimeError, match="failed blob write"):
+        function_app.get_and_store_yankees_roster(None)
 
 
 def test_normal_condition_calls_fetch_once_and_uses_sub_60_second_trapi_timeout(monkeypatch):

@@ -6,6 +6,8 @@ import pytest
 import trapi_client
 from src.validator import ValidationErrorKind
 
+pytestmark = pytest.mark.unit
+
 
 class FakeResponse:
     def __init__(self, status_code, payload=None):

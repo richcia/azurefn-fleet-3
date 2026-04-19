@@ -1,4 +1,8 @@
+import pytest
+
 from src.validator import ValidationErrorKind, validate_roster_response
+
+pytestmark = pytest.mark.unit
 
 
 def _player(i: int) -> dict[str, object]:
@@ -56,6 +60,13 @@ def test_validator_rejects_count_too_high():
     assert result.is_valid is False
     assert result.error is not None
     assert result.error.kind == ValidationErrorKind.COUNT_FAILURE
+
+
+def test_validator_accepts_count_at_upper_boundary():
+    result = validate_roster_response({"players": _players(28)})
+
+    assert result.is_valid is True
+    assert result.error is None
 
 
 def test_validator_passes_with_known_players_present():

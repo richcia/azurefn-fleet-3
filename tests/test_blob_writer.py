@@ -1,9 +1,12 @@
 import logging
 import types
 
+import pytest
 from azure.core.exceptions import HttpResponseError, ResourceExistsError
 
 from src import blob_writer
+
+pytestmark = pytest.mark.unit
 
 
 class FakeBlobClient:

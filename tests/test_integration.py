@@ -38,14 +38,12 @@ def _az(*args: str) -> str:
 
 def _get_resource_group(app_name: str) -> str:
     return _az(
-        "resource",
-        "list",
+        "functionapp",
+        "show",
         "--name",
         app_name,
-        "--resource-type",
-        "Microsoft.Web/sites",
         "--query",
-        "[0].resourceGroup",
+        "resourceGroup",
         "-o",
         "tsv",
     )
@@ -112,6 +110,17 @@ def _candidate_blob_names() -> list[str]:
     ]
 
 
+def _blob_snapshot(container_client, blob_name: str) -> dict[str, object] | None:
+    blob_client = container_client.get_blob_client(blob_name)
+    if not blob_client.exists():
+        return None
+    properties = blob_client.get_blob_properties()
+    return {
+        "etag": str(properties.etag),
+        "last_modified": properties.last_modified,
+    }
+
+
 def test_staging_output_blob_contains_known_players():
     app_name = _env("AZURE_FUNCTIONAPP_NAME")
     slot_name = os.getenv("AZURE_FUNCTIONAPP_SLOT", "staging").strip() or "staging"
@@ -128,14 +137,15 @@ def test_staging_output_blob_contains_known_players():
 
     candidate_blob_names = _candidate_blob_names()
     existing_before = {
-        blob_name
+        blob_name: snapshot
         for blob_name in candidate_blob_names
-        if container_client.get_blob_client(blob_name).exists()
+        if (snapshot := _blob_snapshot(container_client, blob_name)) is not None
     }
 
     found_blob_name = None
     created_by_test = False
     try:
+        invoked_at = datetime.now(timezone.utc)
         _invoke_function_admin_api(
             app_name=app_name,
             resource_group=resource_group,
@@ -153,8 +163,18 @@ def test_staging_output_blob_contains_known_players():
                 blob_client = container_client.get_blob_client(blob_name)
                 if not blob_client.exists():
                     continue
+                snapshot_after = _blob_snapshot(container_client, blob_name)
+                if snapshot_after is None:
+                    continue
+                snapshot_before = existing_before.get(blob_name)
+                is_fresh = snapshot_before is None or (
+                    snapshot_after["etag"] != snapshot_before["etag"]
+                    or snapshot_after["last_modified"] > invoked_at
+                )
+                if not is_fresh:
+                    continue
                 found_blob_name = blob_name
-                created_by_test = blob_name not in existing_before
+                created_by_test = snapshot_before is None
                 payload = json.loads(blob_client.download_blob().readall().decode("utf-8"))
                 break
             if payload is not None:

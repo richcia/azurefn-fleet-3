@@ -1,0 +1,12 @@
+Step 1 - Implement Tasks
+- Reviewed APP-02 issue requirements and repository contracts (function_app import path, env vars, spec logging event requirements).
+- Implemented src/blob_writer.py with BlobWriter.write and BlobWriter.write_failed.
+- Added DefaultAzureCredential-based BlobServiceClient initialization using account URL from ROSTER_STORAGE_ACCOUNT_NAME and container from ROSTER_CONTAINER_NAME (default yankees-roster).
+- Implemented conditional write via upload_blob(overwrite=False), returning None on ResourceExistsError and URI on success.
+- Implemented failed payload writes to failed/{run_date_utc}.json.
+
+Step 2 - Build and Test
+- Installed dependencies from requirements.txt.
+- Ran baseline test suite before modifications: all tests passed.
+- Added tests/test_blob_writer.py covering conditional write success, conflict handling, failed prefix path/default container, account URL/credential wiring, and blob_write_succeeded logging.
+- Ran targeted BlobWriter tests and then full unit suite: all tests passed.

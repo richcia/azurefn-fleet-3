@@ -45,4 +45,4 @@ jobs:
           TRAPI_API_VERSION: ${{ secrets.STAGING_TRAPI_API_VERSION }}
           DATA_STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_DATA_STORAGE_ACCOUNT_NAME }}
         run: |
-          python -m pytest tests/test_integration.py -v -m integration
+          python -m pytest tests/integration/test_roster_integration.py -v -m integration

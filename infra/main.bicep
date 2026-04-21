@@ -3,11 +3,16 @@ param tags object = {
   project: '1985-NY-Yankees'
   owner: 'rciapala'
 }
+param trapiEndpoint string
+param trapiDeploymentName string
+@secure()
+param trapiFallbackCredential string = ''
 
 var nameSuffix = uniqueString(resourceGroup().id)
 var functionAppName = 'func-${nameSuffix}'
 var dataStorageAccountName = 'st${take(uniqueString(resourceGroup().id, 'data'), 22)}'
 var hostStorageAccountName = 'st${take(uniqueString(resourceGroup().id, 'host'), 22)}'
+var keyVaultName = 'kv-${nameSuffix}'
 
 module dataStorage './modules/storage.bicep' = {
   name: 'dataStorage'
@@ -43,6 +48,22 @@ module functionApp './modules/functionapp.bicep' = {
     location: location
     tags: tags
     hostStorageAccountName: hostStorage.outputs.storageAccountName
+    trapiEndpointSettingValue: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-ENDPOINT)'
+    trapiDeploymentNameSettingValue: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-DEPLOYMENT-NAME)'
+    trapiFallbackCredentialSettingValue: empty(trapiFallbackCredential) ? '' : '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-FALLBACK-CREDENTIAL)'
+  }
+}
+
+module keyVault './modules/keyvault.bicep' = {
+  name: 'keyVault'
+  params: {
+    keyVaultName: keyVaultName
+    location: location
+    tags: tags
+    functionPrincipalId: functionApp.outputs.principalId
+    trapiEndpoint: trapiEndpoint
+    trapiDeploymentName: trapiDeploymentName
+    trapiFallbackCredential: trapiFallbackCredential
   }
 }
 
@@ -61,3 +82,4 @@ output functionPrincipalId string = functionApp.outputs.principalId
 output dataStorageAccountName string = dataStorage.outputs.storageAccountName
 output hostStorageAccountName string = hostStorage.outputs.storageAccountName
 output dataContainerResourceId string = dataStorage.outputs.containerResourceId
+output keyVaultName string = keyVault.outputs.keyVaultName

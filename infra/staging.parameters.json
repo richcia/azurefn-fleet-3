@@ -11,6 +11,12 @@
         "owner": "rciapala",
         "environment": "staging"
       }
+    },
+    "trapiEndpoint": {
+      "value": "https://trapi.research.microsoft.com/gcr/shared"
+    },
+    "trapiDeploymentName": {
+      "value": "gcr-shared"
     }
   }
 }

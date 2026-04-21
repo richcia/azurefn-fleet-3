@@ -44,7 +44,7 @@ resource executionFailureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-0
     criteria: {
       allOf: [
         {
-          query: 'requests | where timestamp >= ago(1h) | where cloud_RoleName =~ "${functionAppName}" | where success == false | summarize failureCount = count()'
+          query: 'requests | where cloud_RoleName =~ "${functionAppName}" | where success == false | summarize failureCount = count()'
           timeAggregation: 'Total'
           metricMeasureColumn: 'failureCount'
           operator: 'GreaterThan'
@@ -86,7 +86,7 @@ resource executionDurationAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-
     criteria: {
       allOf: [
         {
-          query: 'requests | where timestamp >= ago(1h) | where cloud_RoleName =~ "${functionAppName}" | summarize maxDurationSeconds = max(duration / 1s)'
+          query: 'requests | where cloud_RoleName =~ "${functionAppName}" | summarize maxDurationSeconds = max(duration / 1s)'
           timeAggregation: 'Maximum'
           metricMeasureColumn: 'maxDurationSeconds'
           operator: 'GreaterThan'
@@ -128,7 +128,7 @@ resource playerCountOutOfRangeAlert 'Microsoft.Insights/scheduledQueryRules@2023
     criteria: {
       allOf: [
         {
-          query: 'customMetrics | where timestamp >= ago(1h) | where name == "player_count_returned" | where value < 24 or value > 40 | summarize outOfRangeCount = count()'
+          query: 'customMetrics | where cloud_RoleName =~ "${functionAppName}" | where name == "player_count_returned" | where value < 24 or value > 40 | summarize outOfRangeCount = count()'
           timeAggregation: 'Total'
           metricMeasureColumn: 'outOfRangeCount'
           operator: 'GreaterThan'

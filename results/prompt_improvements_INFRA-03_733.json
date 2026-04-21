@@ -1,0 +1,31 @@
+{
+  "issue_number": "INFRA-03",
+  "pr_number": 733,
+  "improvements": [
+    {
+      "priority": "high",
+      "change": "Require every scheduled query alert query to include explicit resource scoping (for example cloud_RoleName/function app identity) unless the alert is intentionally global.",
+      "rationale": "Prevents cross-application false positives in shared workspaces."
+    },
+    {
+      "priority": "medium",
+      "change": "Require acceptance criteria that mention portal verification to be implemented with machine-verifiable deployment outputs or validation commands.",
+      "rationale": "Turns manual-only validation into repeatable evidence for CI and reviewers."
+    },
+    {
+      "priority": "medium",
+      "change": "Require alert query windows to be defined in one place (prefer scheduledQueryRules windowSize) and avoid duplicate hardcoded ago() filters unless intentionally different.",
+      "rationale": "Prevents drift between KQL and alert policy windows."
+    },
+    {
+      "priority": "medium",
+      "change": "Instruct the implementor to capture code review findings in required results/*.json files immediately after review before applying fixes.",
+      "rationale": "Ensures traceability of findings and resolution status across review iterations."
+    },
+    {
+      "priority": "low",
+      "change": "Require environment-specific parameter values for alert notification addresses to be validated as monitored operational inboxes.",
+      "rationale": "Reduces the risk of alerts routing to non-actionable email destinations."
+    }
+  ]
+}

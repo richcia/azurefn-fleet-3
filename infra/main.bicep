@@ -88,3 +88,7 @@ output hostStorageAccountName string = hostStorage.outputs.storageAccountName
 output dataContainerResourceId string = dataStorage.outputs.containerResourceId
 output appInsightsId string = monitoring.outputs.appInsightsId
 output logAnalyticsWorkspaceId string = monitoring.outputs.workspaceId
+output alertsActionGroupId string = alerts.outputs.actionGroupId
+output executionFailureAlertId string = alerts.outputs.executionFailureAlertId
+output executionDurationAlertId string = alerts.outputs.executionDurationAlertId
+output playerCountOutOfRangeAlertId string = alerts.outputs.playerCountOutOfRangeAlertId

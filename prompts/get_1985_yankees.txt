@@ -1,8 +1,0 @@
-Return ONLY valid JSON with this schema:
-{
-  "players": [
-    { "name": "string", "position": "string", "jersey_number": "integer" }
-  ]
-}
-
-List the active roster players for the 1985 New York Yankees.

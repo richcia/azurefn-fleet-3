@@ -39,3 +39,13 @@ def test_local_settings_example_has_required_app03_values() -> None:
     }
     assert required_keys.issubset(values.keys())
     assert values["WEBSITE_TIME_ZONE"] == "UTC"
+    placeholder_keys = {
+        "TRAPI_ENDPOINT",
+        "TRAPI_DEPLOYMENT_NAME",
+        "TRAPI_AUTH_SCOPE",
+        "TRAPI_API_VERSION",
+        "ROSTER_STORAGE_ACCOUNT_NAME",
+        "ROSTER_CONTAINER_NAME",
+    }
+    for key in placeholder_keys:
+        assert values[key].startswith("<") and values[key].endswith(">")

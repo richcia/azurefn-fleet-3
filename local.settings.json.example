@@ -5,13 +5,13 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "FUNCTIONS_EXTENSION_VERSION": "~4",
     "WEBSITE_TIME_ZONE": "UTC",
-    "DATA_STORAGE_ACCOUNT_NAME": "azurefn-agents",
-    "ROSTER_STORAGE_ACCOUNT_NAME": "your-roster-storage-account-name",
-    "ROSTER_CONTAINER_NAME": "yankees-roster",
-    "TRAPI_ENDPOINT": "https://trapi.research.microsoft.com/gcr/shared",
-    "TRAPI_DEPLOYMENT_NAME": "gpt-5.2_2025-12-11",
-    "TRAPI_API_VERSION": "2025-04-01-preview",
-    "TRAPI_AUTH_SCOPE": "api://trapi/.default",
+    "DATA_STORAGE_ACCOUNT_NAME": "<your-host-storage-account-name>",
+    "ROSTER_STORAGE_ACCOUNT_NAME": "<your-roster-storage-account-name>",
+    "ROSTER_CONTAINER_NAME": "<your-roster-container-name>",
+    "TRAPI_ENDPOINT": "<your-trapi-endpoint>",
+    "TRAPI_DEPLOYMENT_NAME": "<your-trapi-deployment-name>",
+    "TRAPI_API_VERSION": "<your-trapi-api-version>",
+    "TRAPI_AUTH_SCOPE": "<your-trapi-auth-scope>",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=azure_agents_key;IngestionEndpoint=https://azure_agents.in.applicationinsights.azure.com/"
   }
 }

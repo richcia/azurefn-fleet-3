@@ -1,0 +1,18 @@
+{
+  "issue_number": "CI-01",
+  "pr_number": 736,
+  "improvements": [
+    {
+      "category": "workflow disable strategy",
+      "improvement": "When a workflow must be disabled by default, prefer a repository-variable gate (e.g., vars.CI_ENABLED == 'true') over hardcoded if:false, and document enablement steps in-line."
+    },
+    {
+      "category": "python dependency installation",
+      "improvement": "In GitHub Actions, use python -m pip commands (including pip upgrade) to ensure interpreter-aligned package installation."
+    },
+    {
+      "category": "acceptance criteria validation",
+      "improvement": "Require generated workflow steps to remain runnable under an explicit toggle so criteria like test execution and coverage visibility can be validated without code edits."
+    }
+  ]
+}

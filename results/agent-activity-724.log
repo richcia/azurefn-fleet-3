@@ -1,0 +1,14 @@
+[Step 1 - Implement Tasks]
+- Reviewed issue #724 requirements and acceptance criteria.
+- Audited infra Bicep templates for allowSharedKeyAccess:false and container publicAccess:'None'.
+- Audited Function App app settings and Key Vault reference usage in infra/main.bicep.
+- Audited GitHub workflows for Azure OIDC login usage.
+- Updated local.settings.json.example to use placeholder Application Insights connection string.
+- Updated cd-infra.yml and cd-app.yml to use vars for Azure OIDC IDs (no secret-based IDs).
+- Added focused security/config tests in tests/test_app03_configuration.py.
+
+[Step 2 - Build and Test]
+- Installed dependencies from requirements.txt.
+- Ran targeted test file: tests/test_app03_configuration.py (all passed).
+- Ran full non-integration unit tests with coverage (all passed).
+- Ran trufflehog audit scan (0 findings with false-positive exclusion file).

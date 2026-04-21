@@ -1,0 +1,33 @@
+{
+  "issue": 724,
+  "task_id": "SEC-01",
+  "summary": "Repository security audit across source, infra, workflows, and local settings example.",
+  "checks": {
+    "no_hardcoded_secrets": "PASS",
+    "local_settings_ignored": "PASS",
+    "workflows_oidc_no_client_secret": "PASS",
+    "storage_shared_key_disabled": "PASS",
+    "container_private": "PASS",
+    "key_vault_references_for_sensitive_settings": "PASS",
+    "secret_scanner_head": "PASS"
+  },
+  "evidence": {
+    "local_settings_example": "local.settings.json.example uses placeholders only",
+    "gitignore": ".gitignore includes local.settings.json",
+    "workflows": [
+      ".github/workflows/cd-infra.yml",
+      ".github/workflows/cd-app.yml",
+      ".github/workflows/integration-staging.yml"
+    ],
+    "bicep": [
+      "infra/modules/storage.bicep",
+      "infra/main.bicep"
+    ],
+    "secret_scan": {
+      "tool": "trufflehog",
+      "command": "trufflehog --json --repo_path . -x /tmp/trufflehog-exclude.txt file:///home/runner/work/azurefn-fleet-3/azurefn-fleet-3",
+      "findings": 0,
+      "notes": "Excluded results/copilot-progress.md due to known high-entropy false positive commit hash"
+    }
+  }
+}

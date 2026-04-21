@@ -76,6 +76,46 @@ def test_function_emits_required_events_and_metric(monkeypatch: pytest.MonkeyPat
     assert add_kwargs == {}
 
 
+def test_configure_telemetry_exporter_uses_app_insights_connection_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _reload_function_app()
+    spy = Mock()
+    monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key")
+    monkeypatch.setattr(module, "_configure_azure_monitor", spy)
+
+    module._configure_telemetry_exporter()
+
+    spy.assert_called_once_with(connection_string="InstrumentationKey=test-key")
+
+
+def test_configure_telemetry_exporter_skips_when_connection_string_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _reload_function_app()
+    spy = Mock()
+    monkeypatch.delenv("APPLICATIONINSIGHTS_CONNECTION_STRING", raising=False)
+    monkeypatch.setattr(module, "_configure_azure_monitor", spy)
+
+    module._configure_telemetry_exporter()
+
+    spy.assert_not_called()
+
+
+def test_configure_telemetry_exporter_logs_warning_on_configure_failure(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    module = _reload_function_app()
+    monkeypatch.setenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key")
+
+    def _raise(**kwargs: object) -> None:
+        del kwargs
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(module, "_configure_azure_monitor", _raise)
+    caplog.set_level(logging.WARNING)
+
+    module._configure_telemetry_exporter()
+
+    assert any(record.message == "telemetry_exporter_configuration_failed" for record in caplog.records)
+
+
 def test_function_logs_write_conflict_when_blob_exists(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
     module = _reload_function_app()
     monkeypatch.setattr(module, "_PLAYER_COUNT_RETURNED", Mock())

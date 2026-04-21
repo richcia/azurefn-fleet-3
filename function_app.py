@@ -8,12 +8,33 @@ from pathlib import Path
 import azure.functions as func
 from opentelemetry import metrics
 
+try:
+    from azure.monitor.opentelemetry import configure_azure_monitor as _configure_azure_monitor
+except ImportError:  # pragma: no cover
+    _configure_azure_monitor = None
+
 from src.blob_writer import BlobWriter
 from src.validator import validate_roster_response
 from trapi_client import TRAPIRetryExhaustedError, RosterValidationError, fetch_1985_yankees_roster
 
 app = func.FunctionApp()
 _LOGGER = logging.getLogger(__name__)
+
+
+def _configure_telemetry_exporter() -> None:
+    connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip()
+    if not connection_string:
+        return
+    if _configure_azure_monitor is None:
+        _LOGGER.warning("telemetry_exporter_configuration_skipped")
+        return
+    try:
+        _configure_azure_monitor(connection_string=connection_string)
+    except Exception:
+        _LOGGER.warning("telemetry_exporter_configuration_failed", exc_info=True)
+
+
+_configure_telemetry_exporter()
 _METER = metrics.get_meter(__name__)
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "get_1985_yankees.txt"
 _PLAYER_COUNT_RETURNED = _METER.create_counter(

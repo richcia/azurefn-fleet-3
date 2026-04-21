@@ -83,37 +83,55 @@ def test_roster_blob_contains_known_players() -> None:
     assert storage_account_name, "DATA_STORAGE_ACCOUNT_NAME or ROSTER_STORAGE_ACCOUNT_NAME must be set"
 
     container_name = os.getenv("ROSTER_CONTAINER_NAME", "yankees-roster").strip()
-    run_date_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    blob_path = f"{run_date_utc}.json"
+    assert container_name == "yankees-roster", "QA-02 requires blob path in container 'yankees-roster'"
 
     blob_service_client = BlobServiceClient(
         account_url=f"https://{storage_account_name}.blob.core.windows.net",
         credential=DefaultAzureCredential(),
     )
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_path)
+    run_date_before_invoke_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    blob_client_before_invoke = blob_service_client.get_blob_client(
+        container=container_name,
+        blob=f"{run_date_before_invoke_utc}.json",
+    )
 
     allow_cleanup = _bool_env("INTEGRATION_ALLOW_DESTRUCTIVE_BLOB_CLEANUP")
     if allow_cleanup and _bool_env("INTEGRATION_DELETE_EXISTING_BLOBS_BEFORE_INVOKE"):
         try:
-            blob_client.delete_blob()
+            blob_client_before_invoke.delete_blob()
         except ResourceNotFoundError:
             pass
 
+    invoke_started_at = datetime.now(timezone.utc)
     _invoke_roster_function()
+    run_date_after_invoke_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    candidate_blob_clients = [
+        blob_service_client.get_blob_client(container=container_name, blob=f"{run_date_utc}.json")
+        for run_date_utc in dict.fromkeys([run_date_before_invoke_utc, run_date_after_invoke_utc])
+    ]
 
     timeout_seconds = int(os.getenv("INTEGRATION_BLOB_TIMEOUT_SECONDS", "300"))
     poll_interval_seconds = int(os.getenv("INTEGRATION_BLOB_POLL_INTERVAL_SECONDS", "10"))
     deadline = time.time() + timeout_seconds
 
     payload: dict[str, object] | None = None
+    selected_blob_client = None
     while time.time() < deadline:
-        if blob_client.exists():
+        for blob_client in candidate_blob_clients:
+            if not blob_client.exists():
+                continue
+            blob_properties = blob_client.get_blob_properties()
+            if blob_properties.last_modified < invoke_started_at:
+                continue
             payload = json.loads(blob_client.download_blob().readall())
+            selected_blob_client = blob_client
+            break
+        if payload is not None:
             break
         time.sleep(poll_interval_seconds)
 
     assert payload is not None, (
-        f"Expected blob to exist at {container_name}/{blob_path} within {timeout_seconds}s after function trigger"
+        f"Expected blob to exist at {container_name}/{{today_utc}}.json within {timeout_seconds}s after function trigger"
     )
 
     players = payload.get("players") if isinstance(payload, dict) else None
@@ -129,6 +147,7 @@ def test_roster_blob_contains_known_players() -> None:
 
     if allow_cleanup and _bool_env("INTEGRATION_DELETE_CREATED_BLOB"):
         try:
-            blob_client.delete_blob()
+            assert selected_blob_client is not None
+            selected_blob_client.delete_blob()
         except ResourceNotFoundError:
             pass

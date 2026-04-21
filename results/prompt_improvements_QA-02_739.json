@@ -1,0 +1,18 @@
+{
+  "issue_id": "QA-02",
+  "pr_number": 739,
+  "improvements": [
+    {
+      "category": "integration_test_reliability",
+      "proposed_prompt_text": "For integration tests that verify blob output, require evidence that the observed blob was created/updated by the current invocation (for example, compare blob last_modified or ETag against invocation start state)."
+    },
+    {
+      "category": "utc_date_rollover",
+      "proposed_prompt_text": "When blob names are date-based, account for UTC midnight rollover by polling both pre-invocation and post-invocation date candidates."
+    },
+    {
+      "category": "acceptance_path_enforcement",
+      "proposed_prompt_text": "If acceptance criteria specify an exact storage container/path, assert it explicitly in the test rather than relying on environment overrides."
+    }
+  ]
+}

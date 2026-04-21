@@ -1,0 +1,26 @@
+{
+  "issue_number": "CI-03",
+  "pr_number": 743,
+  "improvements": [
+    {
+      "category": "promotion safety",
+      "improvement": "Prompt should explicitly require rollback behavior for promotion workflows whenever post-deploy validation fails."
+    },
+    {
+      "category": "workflow reliability",
+      "improvement": "Prompt should require retry/backoff + timeout handling for all HTTP smoke checks and explicit handling of transport-level curl failures under set -e."
+    },
+    {
+      "category": "input and guard consistency",
+      "improvement": "Prompt should require workflow_dispatch inputs to match enforced runtime constraints so users cannot select unsupported combinations."
+    },
+    {
+      "category": "pre-swap validation completeness",
+      "improvement": "Prompt should require validating both source and target slot running state before swap operations."
+    },
+    {
+      "category": "workflow hardening",
+      "improvement": "Prompt should require workflow concurrency controls for deploy/promote jobs and SHA-pinning of third-party actions."
+    }
+  ]
+}

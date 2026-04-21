@@ -1,0 +1,66 @@
+{
+  "issue_number": "CI-03",
+  "pr_number": 743,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/743",
+  "review_agent": "Code Review Agent",
+  "critical_issues": [
+    {
+      "title": "No rollback path if post-swap smoke test fails",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 175,
+      "line_end": 243,
+      "recommendation": "Add rollback swap and post-rollback production smoke validation when post-swap validation fails."
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "Guard against unsupported promotion directions",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 11,
+      "line_end": 64,
+      "recommendation": "Enforce source=staging and target=prod and align inputs/descriptions with the supported promotion path."
+    },
+    {
+      "title": "Make smoke test function configurable",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 131,
+      "line_end": 233,
+      "recommendation": "Use configurable SMOKE_TEST_FUNCTION_NAME with default fallback instead of hardcoded function endpoint."
+    },
+    {
+      "title": "Add retry/backoff and timeout to smoke tests",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 139,
+      "line_end": 243,
+      "recommendation": "Use bounded retries and explicit curl connect/max timeouts for pre-swap, post-swap, and rollback smoke checks with transport-error handling."
+    },
+    {
+      "title": "Add concurrency control",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 21,
+      "line_end": 31,
+      "recommendation": "Serialize promotion runs by adding workflow concurrency group with cancel-in-progress disabled."
+    },
+    {
+      "title": "Validate target slot running state before swap",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 112,
+      "line_end": 134,
+      "recommendation": "Check both source and target slot state are Running before executing slot swap."
+    },
+    {
+      "title": "Pin third-party actions to immutable SHAs",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 35,
+      "line_end": 38,
+      "recommendation": "Pin actions/checkout and azure/login to full commit SHAs for supply-chain hardening."
+    },
+    {
+      "title": "Gate rollback to swap-executed failure paths",
+      "file": ".github/workflows/cd-promote.yml",
+      "line_start": 266,
+      "line_end": 273,
+      "recommendation": "Run rollback only when swap step completed successfully and a later step failed."
+    }
+  ]
+}

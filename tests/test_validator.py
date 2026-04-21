@@ -36,6 +36,25 @@ def test_validate_roster_response_valid_payload_upper_boundary() -> None:
     assert result.error is None
 
 
+def test_validate_roster_response_accepts_known_1985_yankees_players() -> None:
+    payload = {
+        "players": [
+            {"name": "Don Mattingly", "position": "1B", "jersey_number": 23},
+            {"name": "Dave Winfield", "position": "RF", "jersey_number": 31},
+            {"name": "Rickey Henderson", "position": "LF", "jersey_number": 24},
+            *_build_players(21),
+        ]
+    }
+
+    result = validate_roster_response(payload)
+
+    assert result.is_valid is True
+    assert result.players is not None
+    player_names = {player["name"] for player in result.players}
+    assert {"Don Mattingly", "Dave Winfield", "Rickey Henderson"}.issubset(player_names)
+    assert result.error is None
+
+
 def test_validate_roster_response_schema_invalid_when_players_missing() -> None:
     result = validate_roster_response({})
 

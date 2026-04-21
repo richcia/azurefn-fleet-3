@@ -17,6 +17,9 @@
     },
     "trapiDeploymentName": {
       "value": "gcr-shared"
+    },
+    "alertEmailAddress": {
+      "value": "rciapala@users.noreply.github.com"
     }
   }
 }

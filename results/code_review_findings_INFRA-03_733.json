@@ -1,0 +1,46 @@
+{
+  "issue_number": "INFRA-03",
+  "pr_number": 733,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/733",
+  "findings": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Scope custom metric alert query to the Function App",
+        "file": "infra/modules/alerts.bicep",
+        "line_start": 131,
+        "line_end": 131,
+        "recommendation": "Include cloud_RoleName filter in player_count_returned query to avoid cross-app false positives.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-2",
+        "title": "Improve post-deploy alert verification observability",
+        "file": "infra/main.bicep",
+        "line_start": 91,
+        "line_end": 94,
+        "recommendation": "Expose alert and action group resource IDs in main outputs to simplify deployment verification in Azure Portal/CLI.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-3",
+        "title": "Avoid duplicated time-window filtering in KQL and alert windowSize",
+        "file": "infra/modules/alerts.bicep",
+        "line_start": 47,
+        "line_end": 131,
+        "recommendation": "Remove explicit timestamp >= ago(1h) filters and rely on windowSize for consistent alert evaluation windows.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-4",
+        "title": "Confirm operational mailbox for Action Group destination",
+        "file": "infra/staging.parameters.json",
+        "line_start": 15,
+        "line_end": 17,
+        "recommendation": "Verify the parameter value is the intended monitored inbox for rciapala in target environments before deployment.",
+        "status": "requires-manual-validation"
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@ param functionAppName string
 param location string
 param tags object = {}
 param hostStorageAccountName string
+param appInsightsConnectionString string
 
 var baseAppSettings = [
   {
@@ -50,7 +51,12 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'Python|3.11'
       minTlsVersion: '1.2'
-      appSettings: baseAppSettings
+      appSettings: concat(baseAppSettings, [
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsightsConnectionString
+        }
+      ])
     }
   }
 }

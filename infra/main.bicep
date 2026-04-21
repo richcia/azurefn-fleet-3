@@ -7,12 +7,15 @@ param trapiEndpoint string
 param trapiDeploymentName string
 @secure()
 param trapiFallbackCredential string = ''
+param alertEmailAddress string
 
 var nameSuffix = uniqueString(resourceGroup().id)
 var functionAppName = 'func-${nameSuffix}'
 var dataStorageAccountName = 'st${take(uniqueString(resourceGroup().id, 'data'), 22)}'
 var hostStorageAccountName = 'st${take(uniqueString(resourceGroup().id, 'host'), 22)}'
 var keyVaultName = 'kv-${nameSuffix}'
+var logAnalyticsWorkspaceName = 'law-${nameSuffix}'
+var appInsightsName = 'appi-${nameSuffix}'
 
 module dataStorage './modules/storage.bicep' = {
   name: 'dataStorage'
@@ -41,6 +44,16 @@ module hostStorage './modules/storage.bicep' = {
   }
 }
 
+module monitoring './modules/monitoring.bicep' = {
+  name: 'monitoring'
+  params: {
+    location: location
+    tags: tags
+    workspaceName: logAnalyticsWorkspaceName
+    applicationInsightsName: appInsightsName
+  }
+}
+
 module functionApp './modules/functionapp.bicep' = {
   name: 'functionApp'
   params: {
@@ -48,6 +61,7 @@ module functionApp './modules/functionapp.bicep' = {
     location: location
     tags: tags
     hostStorageAccountName: hostStorage.outputs.storageAccountName
+    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
   }
 }
 
@@ -86,6 +100,7 @@ resource functionAppKeyVaultAppSettings 'Microsoft.Web/sites/config@2023-12-01' 
     FUNCTIONS_WORKER_RUNTIME: 'python'
     AzureWebJobsStorage__accountName: hostStorage.outputs.storageAccountName
     AzureWebJobsStorage__credential: 'managedidentity'
+    APPLICATIONINSIGHTS_CONNECTION_STRING: monitoring.outputs.appInsightsConnectionString
     TRAPI_ENDPOINT: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.keyVaultName};SecretName=TRAPI-ENDPOINT)'
     TRAPI_DEPLOYMENT_NAME: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.keyVaultName};SecretName=TRAPI-DEPLOYMENT-NAME)'
   }, empty(trapiFallbackCredential) ? {} : {
@@ -96,9 +111,26 @@ resource functionAppKeyVaultAppSettings 'Microsoft.Web/sites/config@2023-12-01' 
   ]
 }
 
+module alerts './modules/alerts.bicep' = {
+  name: 'alerts'
+  params: {
+    location: location
+    tags: tags
+    functionAppName: functionApp.outputs.functionAppName
+    logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
+    alertEmailAddress: alertEmailAddress
+  }
+}
+
 output functionAppName string = functionApp.outputs.functionAppName
 output functionPrincipalId string = functionApp.outputs.principalId
 output dataStorageAccountName string = dataStorage.outputs.storageAccountName
 output hostStorageAccountName string = hostStorage.outputs.storageAccountName
 output dataContainerResourceId string = dataStorage.outputs.containerResourceId
 output keyVaultName string = keyVault.outputs.keyVaultName
+output appInsightsId string = monitoring.outputs.appInsightsId
+output logAnalyticsWorkspaceId string = monitoring.outputs.workspaceId
+output alertsActionGroupId string = alerts.outputs.actionGroupId
+output executionFailureAlertId string = alerts.outputs.executionFailureAlertId
+output executionDurationAlertId string = alerts.outputs.executionDurationAlertId
+output playerCountOutOfRangeAlertId string = alerts.outputs.playerCountOutOfRangeAlertId

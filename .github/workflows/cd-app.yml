@@ -1,0 +1,155 @@
+name: CD App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Function App
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create deployment package
+        run: |
+          set -euo pipefail
+          zip_name="functionapp-${{ github.sha }}.zip"
+
+          zip -r "$zip_name" . \
+            -x ".git/*" \
+               ".github/*" \
+               ".pytest_cache/*" \
+               "__pycache__/*" \
+               "tests/*" \
+               "infra/*" \
+               "results/*" \
+               "template/*" \
+               "knowledge/*" \
+               "*.pyc" \
+               "update.cmd" \
+               "local.settings.json" \
+               "local.settings.json.example"
+
+          echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
+        id: package
+
+      - name: Deploy function app code
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          ZIP_NAME: ${{ steps.package.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+          : "${ZIP_NAME:?Deployment package is required}"
+
+          az functionapp deployment source config-zip \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --src "$ZIP_NAME" \
+            --build-remote true
+
+      - name: Smoke test deployment
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+        run: |
+          set -euo pipefail
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+
+          function_name="GetAndStoreYankeesRoster"
+          start_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          master_key="$(az functionapp keys list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --query masterKey \
+            --output tsv)"
+
+          if [ -z "$master_key" ]; then
+            echo "Failed to retrieve Function App host master key"
+            exit 1
+          fi
+
+          invoke_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/admin/functions/${function_name}"
+          http_code="$(curl -sS -o /tmp/function-invoke-response.json -w "%{http_code}" \
+            -X POST "$invoke_url" \
+            -H "x-functions-key: $master_key" \
+            -H "Content-Type: application/json" \
+            -d '{}')"
+
+          if [ "$http_code" != "200" ] && [ "$http_code" != "202" ]; then
+            echo "Function invocation failed with HTTP status $http_code"
+            cat /tmp/function-invoke-response.json
+            exit 1
+          fi
+
+          app_insights_name="$(az monitor app-insights component list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query "[0].name" \
+            --output tsv)"
+
+          if [ -z "$app_insights_name" ] || [ "$app_insights_name" = "null" ]; then
+            echo "Application Insights component not found in resource group $AZURE_RESOURCE_GROUP"
+            exit 1
+          fi
+
+          smoke_query="traces | where timestamp > datetime(${start_time}) | where message == 'function_completed' | project timestamp, blob_uri=tostring(customDimensions.blob_uri), write_conflict=tostring(customDimensions.write_conflict) | order by timestamp desc"
+
+          max_attempts=30
+          sleep_seconds=10
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            smoke_rows="$(az monitor app-insights query \
+              --app "$app_insights_name" \
+              --analytics-query "$smoke_query" \
+              --query "tables[0].rows" \
+              --output json)"
+
+            row_count="$(jq 'length' <<< "$smoke_rows")"
+            if [ "$row_count" -gt 0 ]; then
+              blob_uri="$(jq -r '.[0][1]' <<< "$smoke_rows")"
+              write_conflict="$(jq -r '.[0][2]' <<< "$smoke_rows")"
+
+              if [ -n "$blob_uri" ] && [ "$blob_uri" != "null" ]; then
+                echo "Smoke test passed: function completed and blob created ($blob_uri)"
+                exit 0
+              fi
+
+              if [ "$write_conflict" = "True" ] || [ "$write_conflict" = "true" ]; then
+                echo "Smoke test passed: function completed and blob already existed for current run date"
+                exit 0
+              fi
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "Smoke test failed: function_completed event with blob confirmation not observed in Application Insights"
+          exit 1

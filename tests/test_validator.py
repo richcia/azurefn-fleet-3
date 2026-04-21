@@ -1,3 +1,7 @@
+import importlib
+import sys
+import types
+
 from src.validator import ValidationErrorKind, validate_roster_response
 
 
@@ -14,6 +18,16 @@ def _build_players(count: int) -> list[dict[str, object]]:
 
 def test_validate_roster_response_valid_payload_in_range() -> None:
     payload = {"players": _build_players(24)}
+
+    result = validate_roster_response(payload)
+
+    assert result.is_valid is True
+    assert result.players == payload["players"]
+    assert result.error is None
+
+
+def test_validate_roster_response_valid_payload_upper_boundary() -> None:
+    payload = {"players": _build_players(28)}
 
     result = validate_roster_response(payload)
 
@@ -58,3 +72,27 @@ def test_validate_roster_response_player_count_high() -> None:
     assert result.is_valid is False
     assert result.error is not None
     assert result.error.kind == ValidationErrorKind.PLAYER_COUNT_HIGH
+
+
+def test_trapi_client_import_contract_uses_validator_module() -> None:
+    module = importlib.import_module("trapi_client")
+
+    assert module.validate_roster_response is validate_roster_response
+
+
+def test_function_app_import_contract_uses_validator_module() -> None:
+    stub_blob_writer = types.ModuleType("src.blob_writer")
+
+    class BlobWriter:  # noqa: D401
+        def __init__(self) -> None:
+            pass
+
+    stub_blob_writer.BlobWriter = BlobWriter
+    sys.modules["src.blob_writer"] = stub_blob_writer
+
+    try:
+        module = importlib.import_module("function_app")
+        assert module.validate_roster_response is validate_roster_response
+    finally:
+        sys.modules.pop("src.blob_writer", None)
+        sys.modules.pop("function_app", None)

@@ -1,0 +1,9 @@
+{
+  "issue_number": "APP-01",
+  "pr_number": 730,
+  "improvements": [
+    "Require boundary tests for all inclusive ranges in acceptance criteria (e.g., both 24 and 28 for valid roster size).",
+    "Require at least one explicit import-contract test when acceptance criteria mention module import compatibility.",
+    "Instruct the implementor to map each acceptance criterion to a concrete test case before finalizing."
+  ]
+}

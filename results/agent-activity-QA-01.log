@@ -12,3 +12,16 @@ Step 2 - Build and test:
 - Ran baseline pytest and coverage to identify trapi_client coverage gap.
 - Ran targeted tests for validator and trapi_client after changes.
 - Ran full pytest with coverage and verified >80% line coverage for src/validator.py, src/blob_writer.py, and trapi_client.py.
+
+Step 3 - Code review:
+- Invoked Code Review Agent for PR https://github.com/richcia/azurefn-fleet-3/pull/735 with QA-01 acceptance criteria.
+- Captured findings in results/code_review_findings_QA-01_735.json.
+- Captured prompt improvements in results/prompt_improvements_QA-01_735.json.
+
+Step 4 - Apply review feedback:
+- Updated tests/test_validator.py import-contract test to restore previous sys.modules entries.
+- Replaced runtime sys.path mutation in tests/conftest.py with pytest.ini pythonpath configuration.
+- Re-ran Code Review Agent and addressed module-cache isolation findings by forcing fresh imports before contract assertions.
+- Added an autouse conftest fixture to disable managed identity lookup in unit tests.
+- Addressed final suggestion by moving trapi_client imports to an isolated fixture in tests/test_trapi_client.py.
+- Re-ran full unit tests and coverage checks to confirm green build and acceptance criteria.

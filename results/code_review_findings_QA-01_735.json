@@ -1,0 +1,44 @@
+{
+  "issue_id": "QA-01",
+  "pr_number": 735,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/735",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Avoid permanent sys.modules side effects in import-contract test",
+      "severity": "minor",
+      "file": "tests/test_validator.py",
+      "line_start": 102,
+      "line_end": 117,
+      "summary": "The test mutates sys.modules and should restore any pre-existing module objects after completion.",
+      "status": "addressed"
+    },
+    {
+      "title": "Prefer stable test import setup over runtime sys.path mutation",
+      "severity": "minor",
+      "file": "tests/conftest.py",
+      "line_start": 1,
+      "line_end": 7,
+      "summary": "Runtime sys.path mutation should be replaced with project-level pytest import path configuration.",
+      "status": "addressed"
+    },
+    {
+      "title": "Ensure import-contract tests force fresh imports to avoid module cache false positives",
+      "severity": "major",
+      "file": "tests/test_validator.py",
+      "line_start": 96,
+      "line_end": 131,
+      "summary": "Import-contract tests should pop cached modules before import and restore previous module objects in finally blocks.",
+      "status": "addressed"
+    },
+    {
+      "title": "Avoid top-level trapi_client import in tests to prevent import-time side effects",
+      "severity": "minor",
+      "file": "tests/test_trapi_client.py",
+      "line_start": 10,
+      "line_end": 10,
+      "summary": "Import trapi_client inside a fixture/test to ensure test monkeypatch and environment setup are applied before module import.",
+      "status": "addressed"
+    }
+  ]
+}

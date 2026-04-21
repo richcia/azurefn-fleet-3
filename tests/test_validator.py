@@ -94,12 +94,23 @@ def test_validate_roster_response_player_count_high() -> None:
 
 
 def test_trapi_client_import_contract_uses_validator_module() -> None:
-    module = importlib.import_module("trapi_client")
+    previous_trapi_module = sys.modules.get("trapi_client")
+    sys.modules.pop("trapi_client", None)
+
+    try:
+        module = importlib.import_module("trapi_client")
+    finally:
+        if previous_trapi_module is None:
+            sys.modules.pop("trapi_client", None)
+        else:
+            sys.modules["trapi_client"] = previous_trapi_module
 
     assert module.validate_roster_response is validate_roster_response
 
 
 def test_function_app_import_contract_uses_validator_module() -> None:
+    previous_blob_writer_module = sys.modules.get("src.blob_writer")
+    previous_function_app_module = sys.modules.get("function_app")
     stub_blob_writer = types.ModuleType("src.blob_writer")
 
     class BlobWriter:  # noqa: D401
@@ -108,10 +119,18 @@ def test_function_app_import_contract_uses_validator_module() -> None:
 
     stub_blob_writer.BlobWriter = BlobWriter
     sys.modules["src.blob_writer"] = stub_blob_writer
+    sys.modules.pop("function_app", None)
 
     try:
         module = importlib.import_module("function_app")
         assert module.validate_roster_response is validate_roster_response
     finally:
-        sys.modules.pop("src.blob_writer", None)
-        sys.modules.pop("function_app", None)
+        if previous_blob_writer_module is None:
+            sys.modules.pop("src.blob_writer", None)
+        else:
+            sys.modules["src.blob_writer"] = previous_blob_writer_module
+
+        if previous_function_app_module is None:
+            sys.modules.pop("function_app", None)
+        else:
+            sys.modules["function_app"] = previous_function_app_module

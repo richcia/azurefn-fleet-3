@@ -2,6 +2,7 @@ param functionAppName string
 param location string
 param tags object = {}
 param hostStorageAccountName string
+param appInsightsConnectionString string
 
 resource hostingPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: '${functionAppName}-plan'
@@ -47,6 +48,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'AzureWebJobsStorage__credential'
           value: 'managedidentity'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsightsConnectionString
         }
       ]
     }

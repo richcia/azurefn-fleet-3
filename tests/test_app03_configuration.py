@@ -22,6 +22,7 @@ def test_host_json_sets_timeout_and_single_concurrency() -> None:
     host_config = json.loads(host_path.read_text(encoding="utf-8"))
     assert host_config["functionTimeout"] == "00:02:00"
     assert host_config["extensions"]["queues"]["maxConcurrentCalls"] == 1
+    assert host_config["logging"]["applicationInsights"]["samplingSettings"]["isEnabled"] is True
 
 
 def test_local_settings_example_has_required_app03_values() -> None:

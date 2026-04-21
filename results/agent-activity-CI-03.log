@@ -4,3 +4,9 @@
 [2026-04-21T19:16:00Z] Step 1: Implemented .github/workflows/cd-promote.yml with workflow_dispatch inputs, OIDC login, pre-swap validation, slot swap, and post-swap production smoke test.
 [2026-04-21T19:17:00Z] Step 2: Re-ran unit tests after implementation: PASS (26 passed, 1 deselected).
 [2026-04-21T19:18:00Z] Step 3: Ran Code Review Agent before committing; review reported no PR diff visible and requested committed/pushed changes.
+[2026-04-21T19:19:00Z] Step 3: Identified active PR metadata via GitHub API (PR #743 / https://github.com/richcia/azurefn-fleet-3/pull/743).
+[2026-04-21T19:20:00Z] Step 3: Ran Code Review Agent on committed changes; captured no critical issues and minor suggestions.
+[2026-04-21T19:22:00Z] Step 4: Applied review suggestions (promotion guard, configurable smoke function, retry/backoff).
+[2026-04-21T19:24:00Z] Step 4: Ran Code Review Agent again; addressed major/critical workflow safety findings (rollback, concurrency, target-state checks, SHA pinning, rollback gating).
+[2026-04-21T19:26:00Z] Step 4: Re-ran unit test suite after all review feedback; PASS (26 passed, 1 deselected).
+[2026-04-21T19:27:00Z] Step 3: Saved review artifacts to results/code_review_findings_CI-03_743.json and results/prompt_improvements_CI-03_743.json.

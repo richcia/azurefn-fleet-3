@@ -4,38 +4,42 @@ on:
   workflow_dispatch:
     inputs:
       source:
-        description: Source environment slot
+        description: Source environment slot (must be staging for promotion)
         required: true
         default: staging
         type: choice
         options:
           - staging
-          - prod
       target:
-        description: Target environment slot
+        description: Target environment slot (must be prod for promotion)
         required: true
         default: prod
         type: choice
         options:
-          - staging
           - prod
 
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: cd-promote-prod
+  cancel-in-progress: false
+
 jobs:
   promote:
     name: Promote Function App slot
     runs-on: ubuntu-latest
     environment: ${{ inputs.target }}
+    env:
+      SMOKE_TEST_FUNCTION_NAME: ${{ vars.SMOKE_TEST_FUNCTION_NAME }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Log in to Azure via OIDC
-        uses: azure/login@v2
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -54,6 +58,12 @@ jobs:
           : "${TARGET_ENV:?Target environment is required}"
           : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
           : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+          smoke_test_function_name="${SMOKE_TEST_FUNCTION_NAME:-GetAndStoreYankeesRoster}"
+
+          if [ "$SOURCE_ENV" != "staging" ] || [ "$TARGET_ENV" != "prod" ]; then
+            echo "This promotion workflow only supports source=staging and target=prod"
+            exit 1
+          fi
 
           map_env_to_slot() {
             local env_name="$1"
@@ -77,6 +87,7 @@ jobs:
           SOURCE_SLOT="$(map_env_to_slot "$SOURCE_ENV")"
           TARGET_SLOT="$(map_env_to_slot "$TARGET_ENV")"
           source_slot_args=()
+          target_slot_args=()
 
           if [ "$SOURCE_SLOT" = "$TARGET_SLOT" ]; then
             echo "Source and target slots must be different"
@@ -103,6 +114,10 @@ jobs:
             source_slot_args+=(--slot "$SOURCE_SLOT")
           fi
 
+          if [ "$TARGET_SLOT" != "production" ]; then
+            target_slot_args+=(--slot "$TARGET_SLOT")
+          fi
+
           source_state="$(az functionapp show \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name "$AZURE_FUNCTIONAPP_NAME" \
@@ -112,6 +127,18 @@ jobs:
 
           if [ "$source_state" != "Running" ]; then
             echo "Source slot '$SOURCE_SLOT' is not healthy/running (state='$source_state')"
+            exit 1
+          fi
+
+          target_state="$(az functionapp show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            "${target_slot_args[@]}" \
+            --query state \
+            --output tsv)"
+
+          if [ "$target_state" != "Running" ]; then
+            echo "Target slot '$TARGET_SLOT' is not healthy/running (state='$target_state')"
             exit 1
           fi
 
@@ -128,16 +155,35 @@ jobs:
           fi
 
           source_host="$(slot_hostname "$AZURE_FUNCTIONAPP_NAME" "$SOURCE_SLOT")"
-          source_smoke_url="https://${source_host}/admin/functions/GetAndStoreYankeesRoster"
+          source_smoke_url="https://${source_host}/admin/functions/${smoke_test_function_name}"
 
-          source_http_code="$(curl -sS -o /tmp/source-slot-smoke.json -w "%{http_code}" \
-            -X POST "$source_smoke_url" \
-            -H "x-functions-key: $source_master_key" \
-            -H "Content-Type: application/json" \
-            -d '{}')"
+          max_attempts=5
+          sleep_seconds=8
+          source_http_code=""
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            source_http_code="$(curl -sS -o /tmp/source-slot-smoke.json -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              -X POST "$source_smoke_url" \
+              -H "x-functions-key: $source_master_key" \
+              -H "Content-Type: application/json" \
+              -d '{}')"
+            source_curl_rc=$?
+            set -e
+
+            if [ "$source_curl_rc" -eq 0 ] && ([ "$source_http_code" = "200" ] || [ "$source_http_code" = "202" ]); then
+              break
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
 
           if [ "$source_http_code" != "200" ] && [ "$source_http_code" != "202" ]; then
-            echo "Pre-swap source slot smoke test failed with HTTP status $source_http_code"
+            echo "Pre-swap source slot smoke test failed with HTTP status $source_http_code after $max_attempts attempts"
             cat /tmp/source-slot-smoke.json
             exit 1
           fi
@@ -148,6 +194,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Swap source slot to target slot
+        id: swap
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
@@ -167,6 +214,7 @@ jobs:
             --target-slot "$TARGET_SLOT"
 
       - name: Post-swap smoke test (production responds)
+        id: post_swap_smoke
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
@@ -174,6 +222,7 @@ jobs:
           set -euo pipefail
           : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
           : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+          smoke_test_function_name="${SMOKE_TEST_FUNCTION_NAME:-GetAndStoreYankeesRoster}"
 
           production_master_key="$(az functionapp keys list \
             --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -186,15 +235,94 @@ jobs:
             exit 1
           fi
 
-          production_smoke_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/admin/functions/GetAndStoreYankeesRoster"
-          production_http_code="$(curl -sS -o /tmp/production-slot-smoke.json -w "%{http_code}" \
-            -X POST "$production_smoke_url" \
-            -H "x-functions-key: $production_master_key" \
-            -H "Content-Type: application/json" \
-            -d '{}')"
+          production_smoke_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/admin/functions/${smoke_test_function_name}"
+          max_attempts=8
+          sleep_seconds=10
+          production_http_code=""
 
-          if [ "$production_http_code" != "200" ] && [ "$production_http_code" != "202" ]; then
-            echo "Post-swap production smoke test failed with HTTP status $production_http_code"
-            cat /tmp/production-slot-smoke.json
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            production_http_code="$(curl -sS -o /tmp/production-slot-smoke.json -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              -X POST "$production_smoke_url" \
+              -H "x-functions-key: $production_master_key" \
+              -H "Content-Type: application/json" \
+              -d '{}')"
+            production_curl_rc=$?
+            set -e
+
+            if [ "$production_curl_rc" -eq 0 ] && ([ "$production_http_code" = "200" ] || [ "$production_http_code" = "202" ]); then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "Post-swap production smoke test failed with HTTP status $production_http_code after $max_attempts attempts"
+          cat /tmp/production-slot-smoke.json
+          exit 1
+
+      - name: Roll back slot swap on failure
+        if: ${{ failure() && steps.swap.conclusion == 'success' }}
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          SOURCE_SLOT: ${{ steps.pre_swap.outputs.source_slot }}
+          TARGET_SLOT: ${{ steps.pre_swap.outputs.target_slot }}
+        run: |
+          set -euo pipefail
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+          : "${SOURCE_SLOT:?Source slot is required}"
+          : "${TARGET_SLOT:?Target slot is required}"
+
+          az functionapp deployment slot swap \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --slot "$TARGET_SLOT" \
+            --target-slot "$SOURCE_SLOT"
+
+          smoke_test_function_name="${SMOKE_TEST_FUNCTION_NAME:-GetAndStoreYankeesRoster}"
+          production_master_key="$(az functionapp keys list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --query masterKey \
+            --output tsv)"
+
+          if [ -z "$production_master_key" ]; then
+            echo "Rollback completed but failed to retrieve production slot host master key"
             exit 1
           fi
+
+          rollback_smoke_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/admin/functions/${smoke_test_function_name}"
+          max_attempts=5
+          sleep_seconds=8
+          rollback_http_code=""
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            set +e
+            rollback_http_code="$(curl -sS -o /tmp/rollback-production-smoke.json -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              -X POST "$rollback_smoke_url" \
+              -H "x-functions-key: $production_master_key" \
+              -H "Content-Type: application/json" \
+              -d '{}')"
+            rollback_curl_rc=$?
+            set -e
+
+            if [ "$rollback_curl_rc" -eq 0 ] && ([ "$rollback_http_code" = "200" ] || [ "$rollback_http_code" = "202" ]); then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "Rollback smoke test failed with HTTP status $rollback_http_code after $max_attempts attempts"
+          cat /tmp/rollback-production-smoke.json
+          exit 1

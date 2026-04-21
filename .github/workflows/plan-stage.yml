@@ -25,6 +25,7 @@ jobs:
       actions: write
       contents: write
       issues: write
+      repository-projects: write
 
     steps:
       - name: Checkout Repository
@@ -274,6 +275,114 @@ jobs:
             fi
           done < <(jq -c '.tasks[]' "${PLAN_FILE}")
 
+      - name: Create Project Board and Add Repository Issues
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          SPEC_FILE="${{ steps.context.outputs.trigger_file }}"
+          if [ ! -f "$SPEC_FILE" ]; then
+            echo "Spec file not found: $SPEC_FILE"
+            exit 1
+          fi
+
+          PROJECT_TITLE=$(awk '
+            /^### Name[[:space:]]*$/ {
+              while (getline > 0) {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
+                if ($0 != "") { print $0; exit }
+              }
+            }
+          ' "$SPEC_FILE")
+
+          if [ -z "${PROJECT_TITLE:-}" ]; then
+            PROJECT_TITLE="${{ steps.context.outputs.project_name }}"
+          fi
+
+          OWNER_LOGIN="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+
+          OWNER_META=$(gh api graphql \
+            -f query='query($owner: String!, $repo: String!) { repository(owner: $owner, name: $repo) { owner { __typename id login } } }' \
+            -F owner="$OWNER_LOGIN" \
+            -F repo="$REPO_NAME")
+
+          OWNER_ID=$(jq -r '.data.repository.owner.id' <<< "$OWNER_META")
+          OWNER_TYPE=$(jq -r '.data.repository.owner.__typename' <<< "$OWNER_META")
+
+          if [ -z "$OWNER_ID" ] || [ "$OWNER_ID" = "null" ]; then
+            echo "Unable to resolve owner ID for $OWNER_LOGIN"
+            exit 1
+          fi
+
+          echo "Resolved project title: $PROJECT_TITLE"
+          echo "Resolved owner: $OWNER_LOGIN ($OWNER_TYPE)"
+
+          PROJECT_ID=""
+
+          if [ "$OWNER_TYPE" = "Organization" ]; then
+            PROJECT_LIST=$(gh api graphql \
+              -f query='query($login: String!, $title: String!) { organization(login: $login) { projectsV2(first: 100, query: $title) { nodes { id title } } } }' \
+              -F login="$OWNER_LOGIN" \
+              -F title="$PROJECT_TITLE" 2>/dev/null || true)
+            PROJECT_ID=$(jq -r --arg title "$PROJECT_TITLE" '.data.organization.projectsV2.nodes[]? | select(.title == $title) | .id' <<< "$PROJECT_LIST" | head -n1)
+          else
+            PROJECT_LIST=$(gh api graphql \
+              -f query='query($login: String!, $title: String!) { user(login: $login) { projectsV2(first: 100, query: $title) { nodes { id title } } } }' \
+              -F login="$OWNER_LOGIN" \
+              -F title="$PROJECT_TITLE" 2>/dev/null || true)
+            PROJECT_ID=$(jq -r --arg title "$PROJECT_TITLE" '.data.user.projectsV2.nodes[]? | select(.title == $title) | .id' <<< "$PROJECT_LIST" | head -n1)
+          fi
+
+          if [ -z "${PROJECT_ID:-}" ]; then
+            echo "Creating GitHub Project: $PROJECT_TITLE"
+            PROJECT_ID=$(gh api graphql \
+              -f query='mutation($ownerId: ID!, $title: String!) { createProjectV2(input: { ownerId: $ownerId, title: $title }) { projectV2 { id } } }' \
+              -F ownerId="$OWNER_ID" \
+              -F title="$PROJECT_TITLE" \
+              --jq '.data.createProjectV2.projectV2.id')
+          else
+            echo "Using existing project with title: $PROJECT_TITLE"
+          fi
+
+          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "null" ]; then
+            echo "Failed to resolve or create project ID"
+            exit 1
+          fi
+
+          BOARD_VIEW_ID=$(gh api graphql \
+            -f query='query($projectId: ID!) { node(id: $projectId) { ... on ProjectV2 { views(first: 50) { nodes { id name layout } } } } }' \
+            -F projectId="$PROJECT_ID" \
+            --jq '.data.node.views.nodes[] | select(.layout == "BOARD_LAYOUT") | .id' 2>/dev/null || true)
+
+          if [ -z "${BOARD_VIEW_ID:-}" ]; then
+            echo "Creating Board view for project"
+            gh api graphql \
+              -f query='mutation($projectId: ID!) { createProjectV2View(input: { projectId: $projectId, name: "Board", layout: BOARD_LAYOUT }) { projectV2View { id } } }' \
+              -F projectId="$PROJECT_ID" >/dev/null
+          else
+            echo "Board view already exists"
+          fi
+
+          echo "Adding repository issues to project"
+          added=0
+          skipped=0
+
+          while IFS= read -r issue_node_id; do
+            [ -z "$issue_node_id" ] && continue
+            if gh api graphql \
+              -f query='mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) { item { id } } }' \
+              -F projectId="$PROJECT_ID" \
+              -F contentId="$issue_node_id" >/dev/null 2>&1; then
+              added=$((added + 1))
+            else
+              skipped=$((skipped + 1))
+            fi
+          done < <(gh api "repos/${{ github.repository }}/issues?state=all&per_page=100" --paginate --jq '.[] | select(has("pull_request") | not) | .node_id')
+
+          echo "Project population complete. Added: $added, Skipped: $skipped"
+
 
       - name: Commit Audit Trail
         run: |
@@ -289,4 +398,4 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          # gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"
+          # gh workflow run assign-stage.yml --ref "${{ github.ref_name }}"

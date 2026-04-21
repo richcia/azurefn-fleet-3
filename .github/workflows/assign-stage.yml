@@ -294,5 +294,5 @@ jobs:
           set -euo pipefail
 
           echo "ready_count=${{ steps.ready_issues.outputs.ready_count }}; dispatching next run"
-          gh workflow run on-assign-tasks.yml --ref "${{ github.ref_name }}"
+          gh workflow run assign-stage.yml --ref "${{ github.ref_name }}"
 

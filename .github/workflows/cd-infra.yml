@@ -1,0 +1,142 @@
+name: CD Infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure (Bicep)
+        id: deploy
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          TRAPI_ENDPOINT: ${{ vars.TRAPI_ENDPOINT }}
+          TRAPI_DEPLOYMENT_NAME: ${{ vars.TRAPI_DEPLOYMENT_NAME }}
+          ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
+        run: |
+          set -euo pipefail
+
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${TRAPI_ENDPOINT:?TRAPI_ENDPOINT environment variable is required}"
+          : "${TRAPI_DEPLOYMENT_NAME:?TRAPI_DEPLOYMENT_NAME environment variable is required}"
+          : "${ALERT_EMAIL_ADDRESS:?ALERT_EMAIL_ADDRESS environment variable is required}"
+
+          location="${AZURE_LOCATION:-eastus}"
+          deployment_name="infra-${{ inputs.environment }}-${{ github.run_id }}"
+
+          outputs=$(az deployment group create \
+            --name "$deployment_name" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters \
+              location="$location" \
+              trapiEndpoint="$TRAPI_ENDPOINT" \
+              trapiDeploymentName="$TRAPI_DEPLOYMENT_NAME" \
+              alertEmailAddress="$ALERT_EMAIL_ADDRESS" \
+            --query properties.outputs \
+            --output json)
+
+          {
+            echo "outputs<<EOF"
+            echo "$outputs"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate deployed resources and role assignments
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          DEPLOYMENT_OUTPUTS_JSON: ${{ steps.deploy.outputs.outputs }}
+        run: |
+          set -euo pipefail
+
+          function_app_name=$(jq -r '.functionAppName.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          function_principal_id=$(jq -r '.functionPrincipalId.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          data_storage_account_name=$(jq -r '.dataStorageAccountName.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          host_storage_account_name=$(jq -r '.hostStorageAccountName.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          key_vault_name=$(jq -r '.keyVaultName.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          data_container_resource_id=$(jq -r '.dataContainerResourceId.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          app_insights_id=$(jq -r '.appInsightsId.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
+          app_insights_name="${app_insights_id##*/}"
+
+          require_output() {
+            local value="$1"
+            local label="$2"
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "Missing deployment output: $label"
+              return 1
+            fi
+          }
+
+          require_output "$function_app_name" "functionAppName"
+          require_output "$function_principal_id" "functionPrincipalId"
+          require_output "$data_storage_account_name" "dataStorageAccountName"
+          require_output "$host_storage_account_name" "hostStorageAccountName"
+          require_output "$key_vault_name" "keyVaultName"
+          require_output "$data_container_resource_id" "dataContainerResourceId"
+          require_output "$app_insights_id" "appInsightsId"
+
+          az functionapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$function_app_name" --output none
+          az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$data_storage_account_name" --output none
+          az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$host_storage_account_name" --output none
+          az keyvault show --resource-group "$AZURE_RESOURCE_GROUP" --name "$key_vault_name" --output none
+          az monitor app-insights component show --app "$app_insights_name" --resource-group "$AZURE_RESOURCE_GROUP" --output none || \
+            az resource show --ids "$app_insights_id" --api-version 2020-02-02 --output none
+
+          host_storage_id=$(az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$host_storage_account_name" --query id --output tsv)
+          key_vault_id=$(az keyvault show --resource-group "$AZURE_RESOURCE_GROUP" --name "$key_vault_name" --query id --output tsv)
+
+          validate_role() {
+            local scope="$1"
+            local role_name="$2"
+            local attempts=6
+            local delay_seconds=10
+
+            for attempt in $(seq 1 "$attempts"); do
+              count=$(az role assignment list \
+                --assignee-object-id "$function_principal_id" \
+                --scope "$scope" \
+                --query "[?roleDefinitionName=='$role_name'] | length(@)" \
+                --output tsv)
+              if [ "${count:-0}" -ge 1 ]; then
+                return 0
+              fi
+              if [ "$attempt" -lt "$attempts" ]; then
+                sleep "$delay_seconds"
+              fi
+            done
+
+            echo "Missing expected role '$role_name' at scope '$scope' for principal '$function_principal_id'"
+            return 1
+          }
+
+          validate_role "$data_container_resource_id" "Storage Blob Data Contributor"
+          validate_role "$host_storage_id" "Storage Blob Data Contributor"
+          validate_role "$host_storage_id" "Storage Queue Data Contributor"
+          validate_role "$key_vault_id" "Key Vault Secrets User"

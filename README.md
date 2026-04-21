@@ -58,24 +58,25 @@ Prerequisite: install [Azure Functions Core Tools](https://learn.microsoft.com/a
    - `federated_credential_name`
    - `subject_type` (`branch` or `environment`)
    - `subject_value` (branch/environment value)
-3. After completion, copy the emitted values and configure deployment credentials per environment (`staging`, `production`):
+3. After completion, copy the emitted values and configure deployment credentials per environment (`staging`, `prod`):
    - `AZURE_CLIENT_ID`
    - `AZURE_TENANT_ID`
    - `AZURE_SUBSCRIPTION_ID`
-   Set these as **environment variables** because deployment workflows read them via `${{ vars.* }}`.
+   Set these as **environment secrets** because deployment workflows read them via `${{ secrets.* }}`. Do **not** create or store a client secret.
 4. Ensure deployment targets are configured:
    - environment variable `AZURE_RESOURCE_GROUP`
-   - environment variable `AZURE_FUNCTIONAPP_NAME` (used by `cd-infra.yml` via `${{ vars.AZURE_FUNCTIONAPP_NAME }}`)
    - environment secret `AZURE_FUNCTIONAPP_NAME` (used by `cd-app.yml` and `cd-promote.yml` via `${{ secrets.AZURE_FUNCTIONAPP_NAME }}`)
 
 ### 2) Run `cd-infra.yml` (deploy/validate infrastructure)
 
 1. Open **Actions** → **CD Infra** (`.github/workflows/cd-infra.yml`).
 2. Click **Run workflow**.
-3. Set inputs:
-   - `environment`: `staging` or `production`
-   - `storage_container_name`: keep `yankees-roster` unless intentionally changing
-4. Confirm the workflow finishes with successful Bicep deployment and storage/RBAC validation.
+3. Set input:
+   - `environment`: `staging` or `prod`
+4. Ensure the selected GitHub Environment also defines:
+   - secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+   - variables: `AZURE_RESOURCE_GROUP`, `TRAPI_ENDPOINT`, `TRAPI_DEPLOYMENT_NAME`, `ALERT_EMAIL_ADDRESS` (optional `AZURE_LOCATION`, defaults to `eastus`)
+5. Confirm the workflow finishes with successful Bicep deployment plus validation of Function App, Storage accounts, Key Vault, Application Insights, and required RBAC assignments.
 
 ### 3) Run `cd-app.yml` (deploy Function App code)
 

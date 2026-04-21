@@ -12,6 +12,6 @@
     "TRAPI_DEPLOYMENT_NAME": "<your-trapi-deployment-name>",
     "TRAPI_API_VERSION": "<your-trapi-api-version>",
     "TRAPI_AUTH_SCOPE": "<your-trapi-auth-scope>",
-    "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=azure_agents_key;IngestionEndpoint=https://azure_agents.in.applicationinsights.azure.com/"
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "<your-application-insights-connection-string>"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "issue_number": 724,
+  "pr_number": 742,
+  "proposed_improvements": [
+    "Require secret-scan commands to be fully reproducible from repository files only (no /tmp allowlists).",
+    "Require tests to cover optional sensitive-setting branches (e.g., conditional Key Vault references).",
+    "Require workflow-auth tests to enforce OIDC variable usage across every workflow that uses azure/login.",
+    "Require workflow-auth tests to assert azure/login never regresses to creds: or client-secret based login."
+  ]
+}

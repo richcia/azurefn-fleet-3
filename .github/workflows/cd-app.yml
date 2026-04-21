@@ -1,0 +1,173 @@
+name: CD App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Function App
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create deployment package
+        run: |
+          set -euo pipefail
+          zip_name="functionapp-${{ github.sha }}.zip"
+
+          zip -r "$zip_name" . \
+            -x ".git/*" \
+               ".github/*" \
+               ".pytest_cache/*" \
+               "__pycache__/*" \
+               "tests/*" \
+               "infra/*" \
+               "results/*" \
+               "template/*" \
+               "knowledge/*" \
+               "*.pyc" \
+               "update.cmd" \
+               "local.settings.json" \
+               "local.settings.json.example"
+
+          echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
+        id: package
+
+      - name: Deploy function app code
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          ZIP_NAME: ${{ steps.package.outputs.zip_name }}
+        run: |
+          set -euo pipefail
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+          : "${ZIP_NAME:?Deployment package is required}"
+
+          az functionapp deployment source config-zip \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --src "$ZIP_NAME" \
+            --build-remote true
+
+      - name: Smoke test deployment
+        env:
+          DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+        run: |
+          set -euo pipefail
+          : "${DEPLOYMENT_ENVIRONMENT:?Deployment environment is required}"
+          : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
+          : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
+
+          function_name="GetAndStoreYankeesRoster"
+          run_date_utc="$(date -u +%Y-%m-%d)"
+          target_blob_name="${run_date_utc}.json"
+
+          app_settings="$(az functionapp config appsettings list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --output json)"
+
+          storage_account_name="$(jq -r '.[] | select(.name=="ROSTER_STORAGE_ACCOUNT_NAME") | .value' <<< "$app_settings" | head -n 1)"
+          container_name="$(jq -r '.[] | select(.name=="ROSTER_CONTAINER_NAME") | .value' <<< "$app_settings" | head -n 1)"
+
+          if [ -z "$storage_account_name" ] || [ "$storage_account_name" = "null" ]; then
+            echo "ROSTER_STORAGE_ACCOUNT_NAME app setting is required for smoke test"
+            exit 1
+          fi
+
+          if [ -z "$container_name" ] || [ "$container_name" = "null" ]; then
+            container_name="yankees-roster"
+          fi
+
+          if [ "$DEPLOYMENT_ENVIRONMENT" = "staging" ]; then
+            blob_already_exists="$(az storage blob exists \
+              --auth-mode login \
+              --account-name "$storage_account_name" \
+              --container-name "$container_name" \
+              --name "$target_blob_name" \
+              --query exists \
+              --output tsv)"
+
+            if [ "$blob_already_exists" = "true" ]; then
+              az storage blob delete \
+                --auth-mode login \
+                --account-name "$storage_account_name" \
+                --container-name "$container_name" \
+                --name "$target_blob_name" \
+                --output none
+            fi
+          fi
+
+          master_key="$(az functionapp keys list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --query masterKey \
+            --output tsv)"
+
+          if [ -z "$master_key" ]; then
+            echo "Failed to retrieve Function App host master key"
+            exit 1
+          fi
+
+          invoke_url="https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/admin/functions/${function_name}"
+          http_code="$(curl -sS -o /tmp/function-invoke-response.json -w "%{http_code}" \
+            -X POST "$invoke_url" \
+            -H "x-functions-key: $master_key" \
+            -H "Content-Type: application/json" \
+            -d '{}')"
+
+          if [ "$http_code" != "200" ] && [ "$http_code" != "202" ]; then
+            echo "Function invocation failed with HTTP status $http_code"
+            cat /tmp/function-invoke-response.json
+            exit 1
+          fi
+
+          max_attempts=30
+          sleep_seconds=10
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            blob_exists="$(az storage blob exists \
+              --auth-mode login \
+              --account-name "$storage_account_name" \
+              --container-name "$container_name" \
+              --name "$target_blob_name" \
+              --query exists \
+              --output tsv)"
+
+            if [ "$blob_exists" = "true" ]; then
+              echo "Smoke test passed: function invocation succeeded and blob exists ($container_name/$target_blob_name)"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              sleep "$sleep_seconds"
+            fi
+          done
+
+          echo "Smoke test failed: blob $container_name/$target_blob_name was not observed after function invocation"
+          exit 1

@@ -1,0 +1,37 @@
+{
+  "issue_number": "QA-02",
+  "pr_number": 739,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/739",
+  "findings": {
+    "critical_issues": [],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Prevent false positives from pre-existing blobs",
+        "file": "tests/integration/test_roster_integration.py",
+        "line_start": 98,
+        "line_end": 131,
+        "recommendation": "Verify the blob observed by polling was created or updated by the current invocation by checking blob last_modified against invocation start time.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-2",
+        "title": "Reduce midnight UTC flakiness in date-based blob lookup",
+        "file": "tests/integration/test_roster_integration.py",
+        "line_start": 92,
+        "line_end": 111,
+        "recommendation": "Poll candidate blob names derived from both pre-invoke and post-invoke UTC dates to handle day rollover during execution.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-3",
+        "title": "Assert required container path explicitly",
+        "file": "tests/integration/test_roster_integration.py",
+        "line_start": 85,
+        "line_end": 86,
+        "recommendation": "Assert container is exactly 'yankees-roster' so QA-02 validates the specified path.",
+        "status": "addressed"
+      }
+    ]
+  }
+}

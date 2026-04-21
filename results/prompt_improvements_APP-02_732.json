@@ -1,0 +1,19 @@
+{
+  "issue_number": "APP-02",
+  "pr_number": 732,
+  "source_pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/732",
+  "prompt_improvements": [
+    {
+      "id": "include-negative-config-tests",
+      "proposal": "Require at least one negative-path test for each required environment variable, including explicit assertion of exception type and message."
+    },
+    {
+      "id": "require-overwrite-policy-explicitness",
+      "proposal": "Require the implementation prompt to explicitly state overwrite policy for failed artifacts (overwrite, conflict-as-noop, or unique naming) and corresponding tests."
+    },
+    {
+      "id": "require-config-override-tests",
+      "proposal": "Require tests for both default and override behavior of environment-configured values (for example default container and custom container)."
+    }
+  ]
+}

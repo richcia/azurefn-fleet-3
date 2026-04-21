@@ -34,6 +34,7 @@ Your job is to transform a design/spec document into an implementation-ready eng
 10. Ensure the critical path is clear and includes all blocking dependencies.
 11. All `app` type tasks must have a corresponding `infra` type task for any required infrastructure changes.
 12. Reuse existing open GitHub issues when possible to avoid duplicating work. Update the existing Issues with new information rather than creating new issues for the same work.
+13. Use md files in `knowledge` for reference and context for design decisions only
 
 ## Required Task Categories
 1. Environment and IaC provisioning

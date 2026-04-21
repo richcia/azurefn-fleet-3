@@ -25,6 +25,7 @@ Your job is to review code changes and produce actionable findings that help aut
 8. Ensure code correctly implements the intended functionality and meets the requirements based on the associated GitHub issue
 
 ## Review Rules
+- Use md files in `knowledge` for reference and context for design decisions only
 - Focus on bugs, risks, and missing tests before style nits.
 - Keep findings specific, actionable, and evidence-based.
 - Include exact file locations and concise rationale.

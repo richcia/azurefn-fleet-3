@@ -101,9 +101,6 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
     - Triggered on push to 'main'
     - Disabled by default
     - Runs all unit tests
-  - CD Setup 
-    - Trigger manually
-    - Provisions GitHub actions with federated identity for provisioning Azure resources and deploying apps to Azure via OIDC
   - CD App 
     - Triggered manually
     - Deploys to environment specified as workflow parameter
@@ -114,7 +111,7 @@ All credentials and sensitive configuration are stored in Azure Key Vault and re
     - Target default is Prod
   - CD Infra 
     - Triggered manually
-    - Provisions all required Azure resoures in environment specified as workflow parameter
+    - Provisions all Azure resources required by the entire project in environment specified as workflow parameter
     - Runs validation test
     - Leverages `Infrastructure as Code`
 

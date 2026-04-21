@@ -1,0 +1,22 @@
+{
+  "issue_number": "DOC-01",
+  "pr_number": 744,
+  "source_pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/744",
+  "prompt_improvements": [
+    {
+      "area": "Workflow credential consistency",
+      "improvement": "Require implementor prompts to cross-check README credential names against actual workflow variable/secret names and explicitly document any mappings.",
+      "rationale": "Prevents setup docs from drifting away from executable CI/CD configuration."
+    },
+    {
+      "area": "Docs acceptance criteria validation",
+      "improvement": "Require an explicit acceptance-criteria-to-section checklist with final line references in the changed markdown file.",
+      "rationale": "Improves traceability and reduces missed documentation requirements."
+    },
+    {
+      "area": "Review sequencing",
+      "improvement": "Require code review to run only after implementation commits are pushed and PR diff is non-empty.",
+      "rationale": "Avoids wasted review cycles and false critical findings caused by empty diffs."
+    }
+  ]
+}

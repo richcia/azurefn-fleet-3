@@ -41,7 +41,7 @@ Prerequisites:
    ```bash
    az login
    ```
-5. Start the Azure Functions host:
+6. Start the Azure Functions host:
    ```bash
    func start
    ```
@@ -91,17 +91,16 @@ az ad app federated-credential create --id "$APP_OBJECT_ID" --parameters "{\"nam
 
 ### 3) Configure GitHub secrets/variables
 
-Configure environment secrets for `staging` and `prod`:
-- `CLIENT_ID` = `$CLIENT_ID`
-- `TENANT_ID` = `$TENANT_ID`
-- `SUBSCRIPTION_ID` = `$SUBSCRIPTION_ID`
-- `AZURE_FUNCTIONAPP_NAME` = deployed Function App name
-
-Also set environment variables used by workflows:
-- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (same values as above)
+Configure environment secrets/variables for `staging` and `prod`:
+- `AZURE_CLIENT_ID` = `$CLIENT_ID`
+- `AZURE_TENANT_ID` = `$TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID` = `$SUBSCRIPTION_ID`
+- `AZURE_FUNCTIONAPP_NAME` = deployed Function App name (secret)
 - `AZURE_RESOURCE_GROUP`
 - `TRAPI_ENDPOINT`, `TRAPI_DEPLOYMENT_NAME`, `ALERT_EMAIL_ADDRESS`
 - Optional: `AZURE_LOCATION`, `SMOKE_TEST_FUNCTION_NAME`
+
+If your org standard is generic names (`CLIENT_ID`, `TENANT_ID`, `SUBSCRIPTION_ID`), map/copy them into the required `AZURE_*` names above because repository workflows authenticate with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID`.
 
 Do **not** configure a client secret; workflows use OIDC (`azure/login`) with federated identity.
 

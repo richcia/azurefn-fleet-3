@@ -74,15 +74,54 @@ jobs:
 
       - name: Smoke test deployment
         env:
+          DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
         run: |
           set -euo pipefail
+          : "${DEPLOYMENT_ENVIRONMENT:?Deployment environment is required}"
           : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP environment variable is required}"
           : "${AZURE_FUNCTIONAPP_NAME:?AZURE_FUNCTIONAPP_NAME secret is required}"
 
           function_name="GetAndStoreYankeesRoster"
-          start_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          run_date_utc="$(date -u +%Y-%m-%d)"
+          target_blob_name="${run_date_utc}.json"
+
+          app_settings="$(az functionapp config appsettings list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --output json)"
+
+          storage_account_name="$(jq -r '.[] | select(.name=="ROSTER_STORAGE_ACCOUNT_NAME") | .value' <<< "$app_settings" | head -n 1)"
+          container_name="$(jq -r '.[] | select(.name=="ROSTER_CONTAINER_NAME") | .value' <<< "$app_settings" | head -n 1)"
+
+          if [ -z "$storage_account_name" ] || [ "$storage_account_name" = "null" ]; then
+            echo "ROSTER_STORAGE_ACCOUNT_NAME app setting is required for smoke test"
+            exit 1
+          fi
+
+          if [ -z "$container_name" ] || [ "$container_name" = "null" ]; then
+            container_name="yankees-roster"
+          fi
+
+          if [ "$DEPLOYMENT_ENVIRONMENT" = "staging" ]; then
+            blob_already_exists="$(az storage blob exists \
+              --auth-mode login \
+              --account-name "$storage_account_name" \
+              --container-name "$container_name" \
+              --name "$target_blob_name" \
+              --query exists \
+              --output tsv)"
+
+            if [ "$blob_already_exists" = "true" ]; then
+              az storage blob delete \
+                --auth-mode login \
+                --account-name "$storage_account_name" \
+                --container-name "$container_name" \
+                --name "$target_blob_name" \
+                --output none
+            fi
+          fi
 
           master_key="$(az functionapp keys list \
             --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -108,42 +147,21 @@ jobs:
             exit 1
           fi
 
-          app_insights_name="$(az monitor app-insights component list \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --query "[0].name" \
-            --output tsv)"
-
-          if [ -z "$app_insights_name" ] || [ "$app_insights_name" = "null" ]; then
-            echo "Application Insights component not found in resource group $AZURE_RESOURCE_GROUP"
-            exit 1
-          fi
-
-          smoke_query="traces | where timestamp > datetime(${start_time}) | where message == 'function_completed' | project timestamp, blob_uri=tostring(customDimensions.blob_uri), write_conflict=tostring(customDimensions.write_conflict) | order by timestamp desc"
-
           max_attempts=30
           sleep_seconds=10
 
           for attempt in $(seq 1 "$max_attempts"); do
-            smoke_rows="$(az monitor app-insights query \
-              --app "$app_insights_name" \
-              --analytics-query "$smoke_query" \
-              --query "tables[0].rows" \
-              --output json)"
+            blob_exists="$(az storage blob exists \
+              --auth-mode login \
+              --account-name "$storage_account_name" \
+              --container-name "$container_name" \
+              --name "$target_blob_name" \
+              --query exists \
+              --output tsv)"
 
-            row_count="$(jq 'length' <<< "$smoke_rows")"
-            if [ "$row_count" -gt 0 ]; then
-              blob_uri="$(jq -r '.[0][1]' <<< "$smoke_rows")"
-              write_conflict="$(jq -r '.[0][2]' <<< "$smoke_rows")"
-
-              if [ -n "$blob_uri" ] && [ "$blob_uri" != "null" ]; then
-                echo "Smoke test passed: function completed and blob created ($blob_uri)"
-                exit 0
-              fi
-
-              if [ "$write_conflict" = "True" ] || [ "$write_conflict" = "true" ]; then
-                echo "Smoke test passed: function completed and blob already existed for current run date"
-                exit 0
-              fi
+            if [ "$blob_exists" = "true" ]; then
+              echo "Smoke test passed: function invocation succeeded and blob exists ($container_name/$target_blob_name)"
+              exit 0
             fi
 
             if [ "$attempt" -lt "$max_attempts" ]; then
@@ -151,5 +169,5 @@ jobs:
             fi
           done
 
-          echo "Smoke test failed: function_completed event with blob confirmation not observed in Application Insights"
+          echo "Smoke test failed: blob $container_name/$target_blob_name was not observed after function invocation"
           exit 1

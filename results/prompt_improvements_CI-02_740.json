@@ -1,0 +1,18 @@
+{
+  "issue_number": "CI-02",
+  "pr_number": 740,
+  "improvements": [
+    {
+      "category": "smoke test acceptance enforcement",
+      "improvement": "When acceptance criteria require blob verification, require explicit data-plane blob existence checks (`az storage blob exists`) in the workflow, not telemetry-only signals."
+    },
+    {
+      "category": "resource targeting",
+      "improvement": "Avoid selecting Azure resources by positional queries like `[0]`; always derive resource names from deployed app configuration or explicit environment inputs."
+    },
+    {
+      "category": "false-positive prevention",
+      "improvement": "Prompt should explicitly require smoke tests to correlate checks to the current run (e.g., pre-clean staging artifacts or use unique run identifiers) so stale data cannot cause passing results."
+    }
+  ]
+}

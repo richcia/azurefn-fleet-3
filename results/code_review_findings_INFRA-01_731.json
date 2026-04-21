@@ -1,0 +1,38 @@
+{
+  "issue_number": "INFRA-01",
+  "pr_number": 731,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/731",
+  "findings": {
+    "critical_issues": [
+      {
+        "id": "CRIT-1",
+        "title": "Missing host-storage blob RBAC for managed-identity AzureWebJobsStorage",
+        "file": "infra/modules/rbac.bicep",
+        "line_start": 37,
+        "line_end": 44,
+        "recommendation": "Add a host-storage Storage Blob Data Contributor role assignment for the Function App principal at host storage account scope.",
+        "status": "addressed"
+      }
+    ],
+    "suggestions": [
+      {
+        "id": "SUG-1",
+        "title": "Add staging deployment-validation artifact",
+        "file": "infra/main.bicep",
+        "line_start": 1,
+        "line_end": 63,
+        "recommendation": "Add a staging parameters artifact to support az deployment group create validation.",
+        "status": "addressed"
+      },
+      {
+        "id": "SUG-2",
+        "title": "Avoid committing generated ARM JSON",
+        "file": "infra/main.json",
+        "line_start": 1,
+        "line_end": 1,
+        "recommendation": "Remove generated ARM template from source control to avoid drift.",
+        "status": "addressed"
+      }
+    ]
+  }
+}

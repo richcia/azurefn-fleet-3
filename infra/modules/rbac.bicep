@@ -44,5 +44,16 @@ resource hostStorageQueueRoleAssignment 'Microsoft.Authorization/roleAssignments
   }
 }
 
+resource hostStorageBlobRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(hostStorageAccount.id, principalId, blobDataContributorRoleDefinitionId)
+  scope: hostStorageAccount
+  properties: {
+    principalId: principalId
+    roleDefinitionId: blobDataContributorRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 output dataContainerRoleAssignmentId string = dataContainerRoleAssignment.id
 output hostStorageQueueRoleAssignmentId string = hostStorageQueueRoleAssignment.id
+output hostStorageBlobRoleAssignmentId string = hostStorageBlobRoleAssignment.id

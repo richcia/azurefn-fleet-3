@@ -85,11 +85,29 @@ jobs:
           app_insights_id=$(jq -r '.appInsightsId.value' <<< "$DEPLOYMENT_OUTPUTS_JSON")
           app_insights_name="${app_insights_id##*/}"
 
+          require_output() {
+            local value="$1"
+            local label="$2"
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "Missing deployment output: $label"
+              return 1
+            fi
+          }
+
+          require_output "$function_app_name" "functionAppName"
+          require_output "$function_principal_id" "functionPrincipalId"
+          require_output "$data_storage_account_name" "dataStorageAccountName"
+          require_output "$host_storage_account_name" "hostStorageAccountName"
+          require_output "$key_vault_name" "keyVaultName"
+          require_output "$data_container_resource_id" "dataContainerResourceId"
+          require_output "$app_insights_id" "appInsightsId"
+
           az functionapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$function_app_name" --output none
           az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$data_storage_account_name" --output none
           az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$host_storage_account_name" --output none
           az keyvault show --resource-group "$AZURE_RESOURCE_GROUP" --name "$key_vault_name" --output none
-          az monitor app-insights component show --app "$app_insights_name" --resource-group "$AZURE_RESOURCE_GROUP" --output none
+          az monitor app-insights component show --app "$app_insights_name" --resource-group "$AZURE_RESOURCE_GROUP" --output none || \
+            az resource show --ids "$app_insights_id" --api-version 2020-02-02 --output none
 
           host_storage_id=$(az storage account show --resource-group "$AZURE_RESOURCE_GROUP" --name "$host_storage_account_name" --query id --output tsv)
           key_vault_id=$(az keyvault show --resource-group "$AZURE_RESOURCE_GROUP" --name "$key_vault_name" --query id --output tsv)

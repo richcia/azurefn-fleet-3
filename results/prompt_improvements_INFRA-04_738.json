@@ -1,0 +1,18 @@
+{
+  "issue_number": "INFRA-04",
+  "pr_number": 738,
+  "improvements": [
+    {
+      "category": "workflow-to-doc consistency",
+      "proposal": "Ask the implementor to verify README variable/secret references exactly match workflow inputs and env usage before finalizing."
+    },
+    {
+      "category": "workflow robustness",
+      "proposal": "Require explicit null/empty checks for parsed deployment outputs before invoking dependent CLI validation commands."
+    },
+    {
+      "category": "azure cli compatibility",
+      "proposal": "Require a fallback validation approach for Azure resource checks when extension-backed commands may vary across runner images."
+    }
+  ]
+}

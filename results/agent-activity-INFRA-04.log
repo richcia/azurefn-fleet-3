@@ -4,3 +4,7 @@
 [Step 2] Ran baseline validation: installed dependencies with `python -m pip install -r requirements.txt` and executed `python -m pytest tests -v` (all passing).
 [Step 1] Implemented `.github/workflows/cd-infra.yml` with manual environment input, OIDC azure/login, Bicep deployment, and post-deploy resource/RBAC validation.
 [Step 1] Updated README.md with federated identity setup details and CD Infra run instructions aligned with the new workflow.
+[Step 3] Ran Code Review Agent against PR https://github.com/richcia/azurefn-fleet-3/pull/738 with INFRA-04 acceptance criteria.
+[Step 3] Saved review artifacts to results/code_review_findings_INFRA-04_738.json and results/prompt_improvements_INFRA-04_738.json.
+[Step 4] Applied review feedback: fixed README/workflow mismatch, added deployment output validation guards, and added App Insights validation fallback.
+[Step 4] Re-ran unit tests after feedback updates (`python -m pytest tests -q`) with all tests passing.

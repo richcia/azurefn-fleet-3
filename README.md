@@ -65,7 +65,6 @@ Prerequisite: install [Azure Functions Core Tools](https://learn.microsoft.com/a
    Set these as **environment secrets** because deployment workflows read them via `${{ secrets.* }}`. Do **not** create or store a client secret.
 4. Ensure deployment targets are configured:
    - environment variable `AZURE_RESOURCE_GROUP`
-   - environment variable `AZURE_FUNCTIONAPP_NAME` (used by `cd-infra.yml` via `${{ vars.AZURE_FUNCTIONAPP_NAME }}`)
    - environment secret `AZURE_FUNCTIONAPP_NAME` (used by `cd-app.yml` and `cd-promote.yml` via `${{ secrets.AZURE_FUNCTIONAPP_NAME }}`)
 
 ### 2) Run `cd-infra.yml` (deploy/validate infrastructure)

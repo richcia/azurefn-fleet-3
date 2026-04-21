@@ -1,0 +1,21 @@
+{
+  "issue_number": "INFRA-01",
+  "pr_number": 731,
+  "improvements": [
+    {
+      "priority": "high",
+      "change": "Explicitly require host-storage RBAC for identity-based AzureWebJobsStorage (Blob + Queue roles) whenever allowSharedKeyAccess is false.",
+      "rationale": "Prevents runtime host storage authorization failures for Function App startup and checkpoints."
+    },
+    {
+      "priority": "medium",
+      "change": "Require adding environment-specific deployment parameters and validating with az deployment group create in the implementation step.",
+      "rationale": "Makes acceptance criterion for staging deployment success testable and reproducible."
+    },
+    {
+      "priority": "medium",
+      "change": "Instruct agent not to commit generated Bicep build outputs (e.g., infra/main.json) unless explicitly requested.",
+      "rationale": "Keeps PRs focused on source IaC and prevents generated-file drift."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "issue_number": "INFRA-02",
+  "pr_number": 734,
+  "improvements": [
+    {
+      "priority": "high",
+      "change": "Require explicit deployment ordering for Key Vault references: create identity, assign Key Vault Secrets User RBAC, then apply app settings with @Microsoft.KeyVault references.",
+      "rationale": "Prevents first-run resolution failures caused by RBAC timing."
+    },
+    {
+      "priority": "medium",
+      "change": "Instruct the implementor to avoid split ownership of the same app settings across modules/resources unless deliberately staged.",
+      "rationale": "Reduces configuration drift and maintenance overhead."
+    },
+    {
+      "priority": "medium",
+      "change": "Add a guardrail to avoid generated Bicep build artifacts (e.g., infra/main.json) being committed.",
+      "rationale": "Keeps IaC PRs source-focused and avoids generated-file drift."
+    },
+    {
+      "priority": "low",
+      "change": "Clarify when non-credential configuration values should be treated as secrets and marked @secure.",
+      "rationale": "Aligns implementation with team security policy while avoiding unnecessary secure-parameter friction."
+    }
+  ]
+}

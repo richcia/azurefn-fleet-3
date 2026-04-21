@@ -12,6 +12,12 @@
         "environment": "staging"
       }
     },
+    "trapiEndpoint": {
+      "value": "https://trapi.research.microsoft.com/gcr/shared"
+    },
+    "trapiDeploymentName": {
+      "value": "gcr-shared"
+    },
     "alertEmailAddress": {
       "value": "rciapala@users.noreply.github.com"
     }

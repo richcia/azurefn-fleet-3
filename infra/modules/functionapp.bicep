@@ -4,6 +4,25 @@ param tags object = {}
 param hostStorageAccountName string
 param appInsightsConnectionString string
 
+var baseAppSettings = [
+  {
+    name: 'FUNCTIONS_EXTENSION_VERSION'
+    value: '~4'
+  }
+  {
+    name: 'FUNCTIONS_WORKER_RUNTIME'
+    value: 'python'
+  }
+  {
+    name: 'AzureWebJobsStorage__accountName'
+    value: hostStorageAccountName
+  }
+  {
+    name: 'AzureWebJobsStorage__credential'
+    value: 'managedidentity'
+  }
+]
+
 resource hostingPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: '${functionAppName}-plan'
   location: location
@@ -32,28 +51,12 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'Python|3.11'
       minTlsVersion: '1.2'
-      appSettings: [
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'python'
-        }
-        {
-          name: 'AzureWebJobsStorage__accountName'
-          value: hostStorageAccountName
-        }
-        {
-          name: 'AzureWebJobsStorage__credential'
-          value: 'managedidentity'
-        }
+      appSettings: concat(baseAppSettings, [
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsightsConnectionString
         }
-      ]
+      ])
     }
   }
 }

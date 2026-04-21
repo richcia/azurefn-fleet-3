@@ -1,0 +1,26 @@
+{
+  "issue_id": "QA-01",
+  "pr_number": 735,
+  "improvements": [
+    {
+      "category": "test_isolation",
+      "proposed_prompt_text": "When writing tests that mutate sys.modules, always preserve and restore previous module objects in finally blocks to prevent inter-test coupling."
+    },
+    {
+      "category": "import_contract_tests",
+      "proposed_prompt_text": "For import-contract tests, force a fresh import by removing the target module from sys.modules before import, then restore the original module cache entry afterwards."
+    },
+    {
+      "category": "test_configuration",
+      "proposed_prompt_text": "Prefer project-level pytest import configuration (for example pytest.ini pythonpath) over runtime sys.path mutation in conftest.py unless absolutely required."
+    },
+    {
+      "category": "review_alignment",
+      "proposed_prompt_text": "After implementing acceptance tests, run a quick pass for maintainability issues (module cache side effects, deterministic setup, and minimal global mutation) before requesting code review."
+    },
+    {
+      "category": "module_import_side_effects",
+      "proposed_prompt_text": "In unit tests for modules with import-time globals, avoid top-level imports where practical; import via fixture or helper so monkeypatch/environment setup is guaranteed first."
+    }
+  ]
+}

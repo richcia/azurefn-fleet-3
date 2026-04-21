@@ -1,0 +1,32 @@
+{
+  "issue_number": "DOC-01",
+  "pr_number": 744,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/744",
+  "findings": {
+    "critical_issues": [
+      {
+        "title": "Initial review found empty PR diff before README commit",
+        "description": "First code review pass reported no changed files in PR scope before implementation commit was pushed.",
+        "target_file": "README.md",
+        "line_numbers": [],
+        "status": "resolved"
+      }
+    ],
+    "suggestions": [
+      {
+        "title": "Align credential names with workflow expectations",
+        "description": "README now explicitly uses AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID with note on mapping generic CLIENT_ID/TENANT_ID/SUBSCRIPTION_ID.",
+        "target_file": "README.md",
+        "line_numbers": [94, 95, 96, 97, 101, 102, 103, 106],
+        "status": "resolved"
+      },
+      {
+        "title": "Fix duplicate local-development step numbering",
+        "description": "Renumbered final local setup step from 5 to 6 for clear step-by-step flow.",
+        "target_file": "README.md",
+        "line_numbers": [44],
+        "status": "resolved"
+      }
+    ]
+  }
+}

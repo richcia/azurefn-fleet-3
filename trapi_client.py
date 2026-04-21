@@ -96,16 +96,6 @@ def fetch_1985_yankees_roster() -> dict[str, Any]:
 
     delay_seconds = 1
     for attempt in range(TRAPI_MAX_RETRIES + 1):
-        _LOGGER.info(
-            "trapi_request_sent",
-            extra={
-                "model_version": TRAPI_DEPLOYMENT_NAME,
-                "prompt_hash": prompt_hash,
-                "token_count": 0,
-                "latency_ms": 0,
-                "player_count": 0,
-            },
-        )
         started = time.perf_counter()
         response = requests.post(
             request_url,
@@ -154,16 +144,6 @@ def fetch_1985_yankees_roster() -> dict[str, Any]:
         players = response_json.get("players", []) if isinstance(response_json, dict) else []
         player_count = len(players) if isinstance(players, list) else 0
 
-        _LOGGER.info(
-            "trapi_response_received",
-            extra={
-                "model_version": TRAPI_DEPLOYMENT_NAME,
-                "prompt_hash": prompt_hash,
-                "token_count": token_count,
-                "latency_ms": latency_ms,
-                "player_count": player_count,
-            },
-        )
         validation_result = validate_roster_response(response_json)
         if not validation_result.is_valid and validation_result.error is not None:
             raise RosterValidationError(

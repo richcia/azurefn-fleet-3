@@ -1,0 +1,22 @@
+{
+  "issue_number": "APP-04",
+  "pr_number": 737,
+  "source_pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/737",
+  "prompt_improvements": [
+    {
+      "area": "Event ownership",
+      "improvement": "Require the implementor to declare a single owning module for each structured log event name and avoid duplicate event emission across layers.",
+      "rationale": "Prevents duplicate telemetry records and ambiguous dashboard/alert interpretation."
+    },
+    {
+      "area": "Structured logging assertions",
+      "improvement": "Require tests to validate both presence and exact count of required log events, plus required extra fields per event.",
+      "rationale": "Makes acceptance criteria around observability precise and regression-resistant."
+    },
+    {
+      "area": "Acceptance criteria traceability",
+      "improvement": "Require a direct mapping of each acceptance criterion to one or more test assertions in the PR description or results artifact.",
+      "rationale": "Improves review speed and reduces missed requirements."
+    }
+  ]
+}

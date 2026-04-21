@@ -1,0 +1,12 @@
+Return a JSON object only, with this exact schema and no additional keys:
+{"players":[{"name":"string","position":"string","jersey_number":0}]}
+
+Task:
+- List the active 1985 New York Yankees roster members only.
+- Include exactly one object per active player from the 1985 season.
+- The total number of players must be between 24 and 28 inclusive.
+- Use integer values for jersey_number.
+
+Output rules:
+- Output valid JSON only (no markdown, no prose, no comments).
+- The top-level key must be "players".

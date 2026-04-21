@@ -25,9 +25,9 @@
     ],
     "secret_scan": {
       "tool": "trufflehog",
-      "command": "trufflehog --json --repo_path . -x /tmp/trufflehog-exclude.txt file:///home/runner/work/azurefn-fleet-3/azurefn-fleet-3",
+      "command": "trufflehog --json --repo_path . -x .trufflehog-exclude.txt file:///home/runner/work/azurefn-fleet-3/azurefn-fleet-3",
       "findings": 0,
-      "notes": "Excluded results/copilot-progress.md due to known high-entropy false positive commit hash"
+      "notes": "Uses repository-managed exclusion for known false positive high-entropy commit hash in results/copilot-progress.md"
     }
   }
 }

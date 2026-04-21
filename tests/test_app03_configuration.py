@@ -29,6 +29,7 @@ def test_local_settings_example_has_required_app03_values() -> None:
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     values = settings["Values"]
     required_keys = {
+        "DATA_STORAGE_ACCOUNT_NAME",
         "TRAPI_ENDPOINT",
         "TRAPI_DEPLOYMENT_NAME",
         "TRAPI_AUTH_SCOPE",
@@ -40,6 +41,7 @@ def test_local_settings_example_has_required_app03_values() -> None:
     assert required_keys.issubset(values.keys())
     assert values["WEBSITE_TIME_ZONE"] == "UTC"
     placeholder_keys = {
+        "DATA_STORAGE_ACCOUNT_NAME",
         "TRAPI_ENDPOINT",
         "TRAPI_DEPLOYMENT_NAME",
         "TRAPI_AUTH_SCOPE",
@@ -71,7 +73,8 @@ def test_workflows_use_oidc_for_azure_login_without_client_secret() -> None:
         assert "uses: azure/login@v2" in workflow
         assert "id-token: write" in workflow
         assert "client-secret" not in workflow
-        if workflow_name in {"cd-infra.yml", "cd-app.yml"}:
+        assert "creds:" not in workflow
+        if workflow_name in {"cd-infra.yml", "cd-app.yml", "integration-staging.yml"}:
             assert "client-id: ${{ vars.AZURE_CLIENT_ID }}" in workflow
             assert "tenant-id: ${{ vars.AZURE_TENANT_ID }}" in workflow
             assert "subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}" in workflow
@@ -86,3 +89,4 @@ def test_bicep_storage_and_keyvault_security_settings() -> None:
     main_bicep = (repo_root / "infra" / "main.bicep").read_text(encoding="utf-8")
     assert "TRAPI_ENDPOINT: '@Microsoft.KeyVault(" in main_bicep
     assert "TRAPI_DEPLOYMENT_NAME: '@Microsoft.KeyVault(" in main_bicep
+    assert "TRAPI_FALLBACK_CREDENTIAL: '@Microsoft.KeyVault(" in main_bicep

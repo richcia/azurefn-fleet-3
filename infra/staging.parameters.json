@@ -11,6 +11,9 @@
         "owner": "rciapala",
         "environment": "staging"
       }
+    },
+    "alertEmailAddress": {
+      "value": "rciapala@users.noreply.github.com"
     }
   }
 }

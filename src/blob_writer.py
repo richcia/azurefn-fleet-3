@@ -37,10 +37,13 @@ class BlobWriter:
         _LOGGER.info("blob_write_succeeded", extra={"blob_uri": blob_client.url})
         return blob_client.url
 
-    def write_failed(self, payload: Any, run_date_utc: str) -> str:
+    def write_failed(self, payload: Any, run_date_utc: str) -> str | None:
         blob_client = self._blob_service_client.get_blob_client(
             container=self._container_name,
             blob=f"failed/{run_date_utc}.json",
         )
-        blob_client.upload_blob(json.dumps(payload), overwrite=True)
+        try:
+            blob_client.upload_blob(json.dumps(payload), overwrite=False)
+        except ResourceExistsError:
+            return None
         return blob_client.url

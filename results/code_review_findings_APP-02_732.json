@@ -1,0 +1,29 @@
+{
+  "issue_number": "APP-02",
+  "pr_number": 732,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/732",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "title": "Add test coverage for missing required storage account env var",
+      "file": "src/blob_writer.py",
+      "line_start": 16,
+      "line_end": 19,
+      "recommendation": "Add a unit test asserting BlobWriter() raises ValueError when ROSTER_STORAGE_ACCOUNT_NAME is missing or blank."
+    },
+    {
+      "title": "Clarify intended overwrite behavior for failed payload blobs",
+      "file": "src/blob_writer.py",
+      "line_start": 45,
+      "line_end": 45,
+      "recommendation": "Decide whether failed/{run_date_utc}.json should overwrite. Implement deterministic behavior and test it."
+    },
+    {
+      "title": "Add explicit test for custom container in write_failed()",
+      "file": "tests/test_blob_writer.py",
+      "line_start": 69,
+      "line_end": 88,
+      "recommendation": "Add a test that sets ROSTER_CONTAINER_NAME and validates write_failed() targets that container."
+    }
+  ]
+}

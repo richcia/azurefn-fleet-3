@@ -84,5 +84,33 @@ def test_write_failed_uses_failed_prefix_and_default_container(monkeypatch: pyte
         container="yankees-roster",
         blob="failed/2026-01-01.json",
     )
-    mock_blob_client.upload_blob.assert_called_once_with('{"error": "bad payload"}', overwrite=True)
+    mock_blob_client.upload_blob.assert_called_once_with('{"error": "bad payload"}', overwrite=False)
+    assert blob_uri == mock_blob_client.url
+
+
+def test_blob_writer_requires_storage_account_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _reload_blob_writer_module(monkeypatch, account_name="")
+
+    with pytest.raises(ValueError, match="ROSTER_STORAGE_ACCOUNT_NAME is required"):
+        module.BlobWriter()
+
+
+def test_write_failed_uses_custom_container_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _reload_blob_writer_module(monkeypatch, account_name="acct", container_name="custom-container")
+
+    mock_blob_client = Mock()
+    mock_blob_client.url = "https://acct.blob.core.windows.net/custom-container/failed/2026-01-01.json"
+    mock_service_client = Mock()
+    mock_service_client.get_blob_client.return_value = mock_blob_client
+
+    monkeypatch.setattr(module, "DefaultAzureCredential", Mock(return_value=object()))
+    monkeypatch.setattr(module, "BlobServiceClient", Mock(return_value=mock_service_client))
+
+    writer = module.BlobWriter()
+    blob_uri = writer.write_failed({"error": "bad payload"}, run_date_utc="2026-01-01")
+
+    mock_service_client.get_blob_client.assert_called_once_with(
+        container="custom-container",
+        blob="failed/2026-01-01.json",
+    )
     assert blob_uri == mock_blob_client.url

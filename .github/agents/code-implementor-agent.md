@@ -23,6 +23,7 @@ Accept a GitHub Issue number or URL. Fetch the full issue body to extract:
 3. Verify each Acceptance Criteria item is satisfied by the implementation before proceeding.
 4. Follow the project's coding standards, conventions, and `.github/copilot-instructions.md`.
 5. All new `*.py` source files must be created under the `src` folder
+6. Add new GitHub workspace yml files under the `.github/workflows/ci-cd` folder
 6. Wait for any asynchronous operations to complete before proceeding to the next step
 
 ---

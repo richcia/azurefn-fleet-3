@@ -48,9 +48,6 @@ module functionApp './modules/functionapp.bicep' = {
     location: location
     tags: tags
     hostStorageAccountName: hostStorage.outputs.storageAccountName
-    trapiEndpointSettingValue: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-ENDPOINT)'
-    trapiDeploymentNameSettingValue: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-DEPLOYMENT-NAME)'
-    trapiFallbackCredentialSettingValue: empty(trapiFallbackCredential) ? '' : '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=TRAPI-FALLBACK-CREDENTIAL)'
   }
 }
 
@@ -60,7 +57,6 @@ module keyVault './modules/keyvault.bicep' = {
     keyVaultName: keyVaultName
     location: location
     tags: tags
-    functionPrincipalId: functionApp.outputs.principalId
     trapiEndpoint: trapiEndpoint
     trapiDeploymentName: trapiDeploymentName
     trapiFallbackCredential: trapiFallbackCredential
@@ -74,7 +70,30 @@ module rbac './modules/rbac.bicep' = {
     dataStorageAccountName: dataStorage.outputs.storageAccountName
     dataContainerName: dataStorage.outputs.containerName
     hostStorageAccountName: hostStorage.outputs.storageAccountName
+    keyVaultName: keyVault.outputs.keyVaultName
   }
+}
+
+resource deployedFunctionApp 'Microsoft.Web/sites@2023-12-01' existing = {
+  name: functionAppName
+}
+
+resource functionAppKeyVaultAppSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: deployedFunctionApp
+  name: 'appsettings'
+  properties: union({
+    FUNCTIONS_EXTENSION_VERSION: '~4'
+    FUNCTIONS_WORKER_RUNTIME: 'python'
+    AzureWebJobsStorage__accountName: hostStorage.outputs.storageAccountName
+    AzureWebJobsStorage__credential: 'managedidentity'
+    TRAPI_ENDPOINT: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.keyVaultName};SecretName=TRAPI-ENDPOINT)'
+    TRAPI_DEPLOYMENT_NAME: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.keyVaultName};SecretName=TRAPI-DEPLOYMENT-NAME)'
+  }, empty(trapiFallbackCredential) ? {} : {
+    TRAPI_FALLBACK_CREDENTIAL: '@Microsoft.KeyVault(VaultName=${keyVault.outputs.keyVaultName};SecretName=TRAPI-FALLBACK-CREDENTIAL)'
+  })
+  dependsOn: [
+    rbac
+  ]
 }
 
 output functionAppName string = functionApp.outputs.functionAppName

@@ -2,9 +2,6 @@ param functionAppName string
 param location string
 param tags object = {}
 param hostStorageAccountName string
-param trapiEndpointSettingValue string
-param trapiDeploymentNameSettingValue string
-param trapiFallbackCredentialSettingValue string = ''
 
 var baseAppSettings = [
   {
@@ -22,21 +19,6 @@ var baseAppSettings = [
   {
     name: 'AzureWebJobsStorage__credential'
     value: 'managedidentity'
-  }
-  {
-    name: 'TRAPI_ENDPOINT'
-    value: trapiEndpointSettingValue
-  }
-  {
-    name: 'TRAPI_DEPLOYMENT_NAME'
-    value: trapiDeploymentNameSettingValue
-  }
-]
-
-var fallbackCredentialAppSetting = empty(trapiFallbackCredentialSettingValue) ? [] : [
-  {
-    name: 'TRAPI_FALLBACK_CREDENTIAL'
-    value: trapiFallbackCredentialSettingValue
   }
 ]
 
@@ -68,7 +50,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       linuxFxVersion: 'Python|3.11'
       minTlsVersion: '1.2'
-      appSettings: concat(baseAppSettings, fallbackCredentialAppSetting)
+      appSettings: baseAppSettings
     }
   }
 }

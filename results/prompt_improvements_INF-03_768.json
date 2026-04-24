@@ -1,0 +1,26 @@
+{
+  "issue": "INF-03",
+  "pr": 768,
+  "proposed_improvements": [
+    {
+      "area": "timeAggregation specification",
+      "problem": "The prompt said to use timeAggregation based on how the metric is aggregated, but did not specify the correct value for queries ending in 'summarize count()'. The implementor defaulted to 'Count' (row count) instead of 'Total' (sum of the metric column), causing permanent false-positive alert firing.",
+      "improvement": "Explicitly state in the prompt: 'For queries that end in summarize <col> = count(), set timeAggregation to Total so the alert engine evaluates the column value (the count of matching rows) rather than the number of result rows returned. Never use timeAggregation Count with a pre-aggregated summarize query.'"
+    },
+    {
+      "area": "cloud_RoleName scoping requirement",
+      "problem": "The prompt specified scoping by functionAppName for some alerts but was silent on whether all KQL queries must include cloud_RoleName. One query (data quality) was therefore left unscoped.",
+      "improvement": "Add an explicit rule: 'All KQL queries MUST include a cloud_RoleName == functionAppName filter to prevent cross-app interference in any shared workspace scenario.'"
+    },
+    {
+      "area": "muteActionsDuration",
+      "problem": "The prompt did not mention notification suppression/deduplication, leading to omission of muteActionsDuration. Without it, a sustained condition can generate emails every 5 minutes.",
+      "improvement": "Add: 'Set muteActionsDuration on every alert to suppress repeated notifications during a sustained condition. Use PT15M for severity-1 alerts and PT1H for severity-2 alerts unless otherwise specified.'"
+    },
+    {
+      "area": "Resource type casing convention",
+      "problem": "The prompt did not mention Bicep resource type casing conventions, leading to a mix of lowercase and PascalCase provider namespaces in the same file.",
+      "improvement": "Add: 'Use PascalCase for all Bicep resource type strings (e.g. Microsoft.Insights/... not microsoft.insights/...) for consistency with ARM schema conventions.'"
+    }
+  ]
+}

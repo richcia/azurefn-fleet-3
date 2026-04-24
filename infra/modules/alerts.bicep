@@ -17,7 +17,7 @@ param functionAppName string
 // Action Group (email notification)
 // ---------------------------------------------------------------------------
 
-resource actionGroup 'microsoft.insights/actionGroups@2023-01-01' = {
+resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
   name: 'ag-${functionAppName}'
   location: 'global'
   tags: tags
@@ -56,7 +56,7 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
       allOf: [
         {
           query: 'requests | where cloud_RoleName == \'${functionAppName}\' and success == false | summarize FailedRuns = count()'
-          timeAggregation: 'Count'
+          timeAggregation: 'Total'
           metricMeasureColumn: 'FailedRuns'
           operator: 'GreaterThan'
           threshold: 0
@@ -72,6 +72,7 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview
         actionGroup.id
       ]
     }
+    muteActionsDuration: 'PT15M'
   }
 }
 
@@ -96,6 +97,8 @@ resource durationAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-previe
     criteria: {
       allOf: [
         {
+          // When no requests arrive in the window, max(duration) returns null
+          // and Azure skips the evaluation harmlessly (no false-positive fire).
           query: 'requests | where cloud_RoleName == \'${functionAppName}\' | summarize MaxDuration = max(duration)'
           timeAggregation: 'Maximum'
           metricMeasureColumn: 'MaxDuration'
@@ -113,6 +116,7 @@ resource durationAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-previe
         actionGroup.id
       ]
     }
+    muteActionsDuration: 'PT1H'
   }
 }
 
@@ -140,8 +144,8 @@ resource dataQualityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-pre
     criteria: {
       allOf: [
         {
-          query: 'customMetrics | where name == \'player_count_returned\' | where value < 24 or value > 40 | summarize OutOfRangeCount = count()'
-          timeAggregation: 'Count'
+          query: 'customMetrics | where cloud_RoleName == \'${functionAppName}\' | where name == \'player_count_returned\' | where value < 24 or value > 40 | summarize OutOfRangeCount = count()'
+          timeAggregation: 'Total'
           metricMeasureColumn: 'OutOfRangeCount'
           operator: 'GreaterThan'
           threshold: 0
@@ -157,5 +161,6 @@ resource dataQualityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-pre
         actionGroup.id
       ]
     }
+    muteActionsDuration: 'PT1H'
   }
 }

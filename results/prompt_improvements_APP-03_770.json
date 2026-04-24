@@ -1,0 +1,26 @@
+{
+  "issue": "APP-03",
+  "pr": 770,
+  "proposed_improvements": [
+    {
+      "area": "fixture_pattern",
+      "current": "Writer fixture uses 'return BlobWriter()' inside 'with patch(...)' block, causing patch to exit before test body runs",
+      "improvement": "Specify in prompt: 'Use yield inside with-patch blocks in pytest fixtures to keep the patch context manager active during test execution. Example: yield BlobWriter() instead of return BlobWriter()'"
+    },
+    {
+      "area": "error_handling",
+      "current": "Prompt didn't specify error handling requirements for write_failed()",
+      "improvement": "Add explicit requirement: 'write_failed() must catch all exceptions from upload_blob, log them with structured error context (blob_name, run_date_utc), and re-raise to preserve caller stack trace'"
+    },
+    {
+      "area": "test_coverage",
+      "current": "Prompt didn't require tests for error propagation paths",
+      "improvement": "Add test requirement: 'Include tests for HttpResponseError propagation from write() and write_failed() to verify non-409 storage errors are not silently swallowed'"
+    },
+    {
+      "area": "sdk_interaction",
+      "current": "Prompt said use both overwrite=False and if_none_match='*' without explaining SDK interaction",
+      "improvement": "Add note: 'When using azure-storage-blob, overwrite=False auto-injects If-None-Match:* when no conditions are present. Explicitly passing if_none_match=\"*\" bypasses this auto-inject but achieves the same result. Add a clarifying comment explaining this interaction.'"
+    }
+  ]
+}

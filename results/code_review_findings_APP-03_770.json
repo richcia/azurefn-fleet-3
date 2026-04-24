@@ -1,0 +1,56 @@
+{
+  "issue": "APP-03",
+  "pr": 770,
+  "critical_issues": [
+    {
+      "id": "CR-1",
+      "severity": "critical",
+      "file": "src/blob_writer.py",
+      "line": 10,
+      "description": "Module-level DefaultAzureCredential() instantiated at import time freezes the credential chain. Also creates test isolation leak since return inside with block exits the patch context before test body runs.",
+      "recommendation": "Keep module-level credential per spec (issue explicitly says 'reuse at module level'), but fix test fixture to use yield instead of return so the patch stays active during test execution."
+    },
+    {
+      "id": "CR-2",
+      "severity": "critical",
+      "file": "src/blob_writer.py",
+      "lines": "45-50",
+      "description": "if_none_match='*' kwarg alongside overwrite=False bypasses the SDK's auto-inject path (_any_conditions returns True when explicit kwarg present), creating subtle coupling risk during future refactors.",
+      "recommendation": "Keep explicit if_none_match='*' (required by spec) but add clarifying comment explaining the interaction with overwrite=False."
+    }
+  ],
+  "major_issues": [
+    {
+      "id": "CR-3",
+      "severity": "major",
+      "file": "src/blob_writer.py",
+      "lines": "66-71",
+      "description": "write_failed() has no exception handling. If upload_blob raises (e.g. 503, network timeout), the exception propagates raw with no structured log entry.",
+      "recommendation": "Wrap in try/except with structured logging and re-raise."
+    },
+    {
+      "id": "CR-4",
+      "severity": "major",
+      "file": "tests/test_blob_writer.py",
+      "description": "No tests for transient storage errors (HttpResponseError, ServiceRequestError) from write() or write_failed().",
+      "recommendation": "Add test verifying HttpResponseError propagates from write()."
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "CR-5",
+      "severity": "suggestion",
+      "file": "tests/test_blob_writer.py",
+      "lines": "22-25",
+      "description": "writer fixture uses return inside with block, causing patch to exit before test body runs. Tests pass only because BlobClient is mocked separately in each test.",
+      "recommendation": "Change return to yield so patch stays active throughout test."
+    },
+    {
+      "id": "CR-6",
+      "severity": "suggestion",
+      "file": "tests/test_blob_writer.py",
+      "description": "No test for empty/whitespace run_date_utc - would create blob named '.json'.",
+      "recommendation": "Add input validation or document current permissive behavior as intentional."
+    }
+  ]
+}

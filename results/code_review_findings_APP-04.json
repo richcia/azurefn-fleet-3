@@ -1,0 +1,48 @@
+{
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/",
+  "branch": "copilot/app-04-create-host-json-configuration",
+  "issue": "APP-04",
+  "critical_issues": [],
+  "suggestions": [
+    {
+      "id": 1,
+      "severity": "Minor",
+      "title": "test_host_json_is_valid_json raises exception instead of asserting cleanly on invalid JSON",
+      "file": "tests/test_host_json.py",
+      "line": 15,
+      "description": "json.load() will throw json.JSONDecodeError if the file contains malformed JSON. Pytest reports this as an ERROR (unexpected exception), not a clean FAIL, which can obscure CI output.",
+      "recommendation": "Wrap the parse in a try/except and re-assert with a human-readable message using pytest.fail().",
+      "status": "APPLIED"
+    },
+    {
+      "id": 2,
+      "severity": "Minor",
+      "title": "Every test independently opens and parses host.json — no shared fixture",
+      "file": "tests/test_host_json.py",
+      "line": 16,
+      "description": "Six of seven tests each call HOST_JSON_PATH.open() and json.load() independently. If load logic needs to change, it must be updated in six places.",
+      "recommendation": "Introduce a module-scoped fixture and share it across tests.",
+      "status": "APPLIED"
+    },
+    {
+      "id": 3,
+      "severity": "Minor",
+      "title": "Downstream tests produce FileNotFoundError instead of a clean skip if host.json is absent",
+      "file": "tests/test_host_json.py",
+      "line": 14,
+      "description": "If host.json were missing, test_host_json_exists would FAIL correctly, but the remaining six tests would each throw FileNotFoundError (ERROR, not FAIL), cluttering CI output.",
+      "recommendation": "Add a module-level guard in the shared fixture so downstream tests skip rather than error when the file is absent.",
+      "status": "APPLIED"
+    },
+    {
+      "id": 4,
+      "severity": "Minor",
+      "title": "No $schema declaration in host.json",
+      "file": "host.json",
+      "line": 1,
+      "description": "The Azure Functions host.json schema supports a $schema property for IDE tooling and documentation completeness.",
+      "recommendation": "Add '$schema': 'https://json.schemastore.org/host.json' as the first property.",
+      "status": "APPLIED"
+    }
+  ]
+}

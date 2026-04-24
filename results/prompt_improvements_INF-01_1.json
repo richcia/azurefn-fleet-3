@@ -1,0 +1,37 @@
+[
+  {
+    "area": "Security parameters",
+    "finding": "CRIT-02 — TRAPI params missing @secure()",
+    "improvement": "Explicitly instruct the agent: 'All parameters that hold credentials, API keys, endpoints, or other sensitive values must be decorated with @secure() in both the calling module (main.bicep) and the receiving module. Verify this in both files during generation, not just the top-level orchestrator.'"
+  },
+  {
+    "area": "Azure Functions identity-based storage RBAC",
+    "finding": "CRIT-01 — Storage Table Data Contributor missing",
+    "improvement": "Add to the prompt or knowledge base: 'When configuring identity-based AzureWebJobsStorage with AzureWebJobsStorage__accountName, three RBAC roles are required on the host storage account: Storage Blob Data Contributor (ba92f5b4), Storage Queue Data Contributor (974c5e8b), and Storage Table Data Contributor (0a9a7e1f). All three must be assigned for the Functions v4 runtime to start successfully.'"
+  },
+  {
+    "area": "GitHub Actions secret vs vars usage",
+    "finding": "MAJ-02 — TRAPI credentials sourced from vars not secrets",
+    "improvement": "Add to prompt: 'GitHub Actions environment variables that hold secrets or credentials must use secrets context (${{ secrets.NAME }}) not vars context (${{ vars.NAME }}). Vars are unmasked in logs and visible in the UI to anyone with write access.'"
+  },
+  {
+    "area": "Consumption plan scale limit",
+    "finding": "MAJ-01 — Hardcoded functionAppScaleLimit: 1",
+    "improvement": "Add constraint: 'Do not hardcode functionAppScaleLimit unless explicitly requested. If a scale limit is needed, parameterize it with a default of 0 (platform default) so production deployments are not inadvertently throttled.'"
+  },
+  {
+    "area": "Workspace-based App Insights properties",
+    "finding": "MIN-01 — RetentionInDays no-op on workspace-based component",
+    "improvement": "Add to knowledge base: 'When App Insights uses IngestionMode: LogAnalytics, the RetentionInDays property on the Microsoft.Insights/components resource is ignored by Azure. Retention must be configured on the Log Analytics workspace resource instead.'"
+  },
+  {
+    "area": "Key Vault hardening",
+    "finding": "MIN-02 — enablePurgeProtection absent",
+    "improvement": "Add default: 'Key Vault provisioned with soft-delete enabled must also set enablePurgeProtection: true to prevent immediate permanent deletion during the retention window. Note the operational trade-off in comments.'"
+  },
+  {
+    "area": "Cross-module string consistency",
+    "finding": "MIN-03 — Container name duplicated as magic string",
+    "improvement": "Add general rule: 'Any string that appears in more than one Bicep module (e.g., container name, SKU, tier) must be defined as a var in main.bicep and passed as a parameter to child modules. This prevents silent drift between modules that Bicep cannot detect at compile time.'"
+  }
+]

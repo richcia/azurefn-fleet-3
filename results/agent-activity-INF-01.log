@@ -1,0 +1,96 @@
+# Agent Activity Log — Issue INF-01
+
+## Step 1 — Implement Tasks (2026-04-24)
+
+### Tasks Completed
+
+1. **Created `infra/main.bicep`**
+   - Orchestrates: storage, monitoring, keyvault, functionapp, rbac, alerts modules
+   - Parameters: `location`, `trapiEndpoint`, `trapiDeploymentName`, `alertEmailAddress`
+   - Outputs all 7 required values: `functionAppName`, `functionPrincipalId`, `dataStorageAccountName`, `hostStorageAccountName`, `keyVaultName`, `dataContainerResourceId`, `appInsightsId`
+
+2. **Created `infra/modules/storage.bicep`**
+   - Dedicated data storage account: Standard_LRS, Cool access tier, `allowSharedKeyAccess: false`, `allowBlobPublicAccess: false`, TLS 1.2+
+   - Blob service: soft-delete enabled for 7 days
+   - `yankees-roster` container: `publicAccess: None`
+   - Host storage account: Standard_LRS, Hot tier, identity-based access, `allowSharedKeyAccess: false`
+
+3. **Created `infra/modules/monitoring.bicep`**
+   - Log Analytics Workspace: PerGB2018 SKU, 30-day retention
+   - Application Insights: workspace-based (`IngestionMode: LogAnalytics`), 30-day retention, sampling enabled
+   - Outputs: `appInsightsId`, `appInsightsConnectionString`, `logAnalyticsWorkspaceId`
+
+4. **Created `infra/modules/functionapp.bicep`**
+   - App Service Plan: Y1 (Dynamic/Consumption), Linux
+   - Function App: `functionapp,linux` kind, `reserved: true`, Python 3.11, system-assigned MI
+   - App settings: `AzureWebJobsStorage__accountName` + blob/queue/table service URIs (identity-based, no listKeys)
+   - APPLICATIONINSIGHTS_CONNECTION_STRING from monitoring module
+   - TRAPI settings via Key Vault references
+
+5. **Created `infra/modules/keyvault.bicep`**
+   - Standard SKU, RBAC authorization model (`enableRbacAuthorization: true`)
+   - Soft-delete enabled (90-day retention)
+   - Stores `trapiEndpoint` and `trapiDeploymentName` as secrets
+
+6. **Created `infra/modules/rbac.bicep`**
+   - Storage Blob Data Contributor on `yankees-roster` container (scoped, not account-level)
+   - Storage Blob Data Contributor on host storage account
+   - Storage Queue Data Contributor on host storage account
+   - Key Vault Secrets User on Key Vault
+
+7. **Created `infra/modules/alerts.bicep`**
+   - Email Action Group
+   - Scheduled Query Rule: exceptions > 0 in 24h window
+
+### Validation
+- `bicep build infra/main.bicep` → exit 0, no warnings, no errors
+- All 7 required outputs confirmed in compiled ARM template
+- All individual modules lint cleanly
+
+---
+
+## Step 2 — Build and Test (2026-04-24)
+
+- No Python unit tests exist in the repository for infrastructure Bicep files
+- Bicep linting serves as the primary validation mechanism for IaC
+- All 6 module files compiled without errors or warnings
+
+---
+
+## Step 3 — Code Review (2026-04-24)
+
+### Critical Findings
+- CRIT-01: `Storage Table Data Contributor` role missing on host storage (required for Functions v4 runtime table locks) → Fixed
+- CRIT-02: TRAPI params missing `@secure()` decorator → plaintext in ARM deployment history → Fixed
+
+### Major Findings
+- MAJ-01: `functionAppScaleLimit: 1` hardcoded → removed cap, platform default used
+- MAJ-02: `cd-infra.yml` used `vars.*` for TRAPI credentials → changed to `secrets.*`
+
+### Minor Findings
+- MIN-01: `RetentionInDays` on workspace-based App Insights is no-op → removed with explanatory comment
+- MIN-02: Key Vault missing `enablePurgeProtection` → added `enablePurgeProtection: true`
+- MIN-03: Container name `yankees-roster` hardcoded in two modules → promoted to `var dataContainerName` in main.bicep, passed as parameter
+
+### Artifacts
+- results/code_review_findings_INF-01_1.json
+- results/prompt_improvements_INF-01_1.json
+
+---
+
+## Step 4 — Apply Code Review Feedback and Test (2026-04-24)
+
+### Changes Applied
+1. `infra/modules/rbac.bicep` — Added `Storage Table Data Contributor` role assignment for host storage; added `dataContainerName` parameter; removed hardcoded `yankees-roster` string
+2. `infra/main.bicep` — Added `@secure()` to `trapiEndpoint` and `trapiDeploymentName`; added `var dataContainerName`; passed it to storage and rbac modules
+3. `infra/modules/keyvault.bicep` — Added `@secure()` to TRAPI params; added `enablePurgeProtection: true`
+4. `infra/modules/functionapp.bicep` — Removed hardcoded `functionAppScaleLimit: 1`
+5. `infra/modules/monitoring.bicep` — Removed no-op `RetentionInDays`; added clarifying comment
+6. `infra/modules/storage.bicep` — Parameterized container name via `dataContainerName` param
+7. `.github/workflows/cd-infra.yml` — Changed `vars.TRAPI_ENDPOINT/TRAPI_DEPLOYMENT_NAME` to `secrets.*`
+
+### Validation
+- `bicep build infra/main.bicep` → exit 0, no warnings, no errors
+- All 7 required outputs confirmed in compiled ARM template
+- TRAPI params confirmed as `securestring` type in ARM template
+

@@ -37,8 +37,8 @@ jobs:
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          TRAPI_ENDPOINT: ${{ vars.TRAPI_ENDPOINT }}
-          TRAPI_DEPLOYMENT_NAME: ${{ vars.TRAPI_DEPLOYMENT_NAME }}
+          TRAPI_ENDPOINT: ${{ secrets.TRAPI_ENDPOINT }}
+          TRAPI_DEPLOYMENT_NAME: ${{ secrets.TRAPI_DEPLOYMENT_NAME }}
           ALERT_EMAIL_ADDRESS: ${{ vars.ALERT_EMAIL_ADDRESS }}
         run: |
           set -euo pipefail

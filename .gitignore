@@ -20,3 +20,6 @@ local.settings.json
 
 # Local tool binaries
 .gobin/
+
+# Bicep compiled ARM templates (build artifacts)
+infra/**/*.json

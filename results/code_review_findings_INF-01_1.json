@@ -1,0 +1,65 @@
+[
+  {
+    "category": "critical",
+    "id": "CRIT-01",
+    "title": "Storage Table Data Contributor role missing on host storage account",
+    "description": "The Functions v4 runtime with identity-based AzureWebJobsStorage__* settings requires Storage Table Data Contributor in addition to Blob and Queue Data Contributor. Without it the runtime fails at startup with 403 AuthorizationPermissionMismatch when accessing table-based locks.",
+    "file": "infra/modules/rbac.bicep",
+    "resolution": "Added hostStorageTableContributorAssignment role assignment for role ID 0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
+    "status": "resolved"
+  },
+  {
+    "category": "critical",
+    "id": "CRIT-02",
+    "title": "TRAPI secret parameters missing @secure() decorator",
+    "description": "Without @secure(), ARM stores parameter values in plaintext in deployment history, visible to anyone with Reader RBAC on the resource group. This defeats the purpose of storing credentials in Key Vault.",
+    "files": ["infra/main.bicep lines 5,8", "infra/modules/keyvault.bicep lines 11,14"],
+    "resolution": "Added @secure() decorator to trapiEndpoint and trapiDeploymentName in both main.bicep and keyvault.bicep",
+    "status": "resolved"
+  },
+  {
+    "category": "major",
+    "id": "MAJ-01",
+    "title": "functionAppScaleLimit: 1 hardcoded — caps Consumption plan at single instance",
+    "description": "Setting functionAppScaleLimit: 1 silently prevents scale-out on Consumption plan, negating the elasticity benefit of serverless.",
+    "file": "infra/modules/functionapp.bicep line 57",
+    "resolution": "Removed the hardcoded cap; platform default (unlimited scale) is used",
+    "status": "resolved"
+  },
+  {
+    "category": "major",
+    "id": "MAJ-02",
+    "title": "cd-infra.yml sources TRAPI credentials from vars not secrets",
+    "description": "GitHub Actions vars are not masked in logs and visible in Settings UI. Secrets should be used for sensitive credentials.",
+    "file": ".github/workflows/cd-infra.yml lines 40-41",
+    "resolution": "Changed vars.TRAPI_ENDPOINT and vars.TRAPI_DEPLOYMENT_NAME to secrets.TRAPI_ENDPOINT and secrets.TRAPI_DEPLOYMENT_NAME",
+    "status": "resolved"
+  },
+  {
+    "category": "minor",
+    "id": "MIN-01",
+    "title": "RetentionInDays on workspace-based App Insights component is silently ignored",
+    "description": "When IngestionMode is LogAnalytics, retention is controlled by the Log Analytics workspace. The RetentionInDays property on the App Insights component has no effect and is misleading.",
+    "file": "infra/modules/monitoring.bicep line 44",
+    "resolution": "Removed RetentionInDays property and added clarifying comment pointing to workspace retention setting",
+    "status": "resolved"
+  },
+  {
+    "category": "minor",
+    "id": "MIN-02",
+    "title": "Key Vault enablePurgeProtection absent",
+    "description": "Without enablePurgeProtection: true, soft-deleted secrets can be immediately purged by a privileged user, defeating the purpose of soft-delete.",
+    "file": "infra/modules/keyvault.bicep",
+    "resolution": "Added enablePurgeProtection: true to Key Vault properties",
+    "status": "resolved"
+  },
+  {
+    "category": "minor",
+    "id": "MIN-03",
+    "title": "Container name yankees-roster hardcoded in both storage.bicep and rbac.bicep",
+    "description": "Magic string duplication creates silent drift risk if the name changes in one module but not the other.",
+    "files": ["infra/modules/storage.bicep line 46", "infra/modules/rbac.bicep line 35"],
+    "resolution": "Added dataContainerName var in main.bicep as single source of truth; passed as parameter to both storage and rbac modules",
+    "status": "resolved"
+  }
+]

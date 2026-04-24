@@ -54,7 +54,6 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
     reserved: true
     siteConfig: {
       linuxFxVersion: 'Python|3.11'
-      functionAppScaleLimit: 1
       appSettings: [
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'

@@ -2,9 +2,11 @@
 param location string = resourceGroup().location
 
 @description('TRAPI endpoint URL (stored in Key Vault)')
+@secure()
 param trapiEndpoint string
 
 @description('TRAPI GPT-4o deployment name (stored in Key Vault)')
+@secure()
 param trapiDeploymentName string
 
 @description('Email address for operational alerts')
@@ -23,6 +25,10 @@ var tags = {
 // globally-unique storage/function names without manual input.
 var baseName = uniqueString(resourceGroup().id)
 
+// Single source of truth for the data container name; passed to both
+// storage and rbac modules to prevent silent drift between modules.
+var dataContainerName = 'yankees-roster'
+
 // ---------------------------------------------------------------------------
 // Storage (data account + host account)
 // ---------------------------------------------------------------------------
@@ -34,6 +40,7 @@ module storage 'modules/storage.bicep' = {
     tags: tags
     dataStorageAccountName: 'data${baseName}'
     hostStorageAccountName: 'host${baseName}'
+    dataContainerName: dataContainerName
   }
 }
 
@@ -91,6 +98,7 @@ module rbac 'modules/rbac.bicep' = {
   params: {
     functionPrincipalId: functionapp.outputs.functionPrincipalId
     dataStorageAccountName: storage.outputs.dataStorageAccountName
+    dataContainerName: dataContainerName
     hostStorageAccountName: storage.outputs.hostStorageAccountName
     keyVaultName: keyvault.outputs.keyVaultName
   }

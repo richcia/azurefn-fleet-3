@@ -4,6 +4,9 @@ param functionPrincipalId string
 @description('Name of the dedicated data storage account')
 param dataStorageAccountName string
 
+@description('Name of the blob container in the dedicated data storage account')
+param dataContainerName string
+
 @description('Name of the host storage account')
 param hostStorageAccountName string
 
@@ -16,6 +19,7 @@ param keyVaultName string
 
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e0'
 
 // ---------------------------------------------------------------------------
@@ -31,18 +35,18 @@ resource dataBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01
   parent: dataStorageAccount
 }
 
-resource yankeesRosterContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' existing = {
-  name: 'yankees-roster'
+resource dataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' existing = {
+  name: dataContainerName
   parent: dataBlobService
 }
 
 // ---------------------------------------------------------------------------
-// Storage Blob Data Contributor — scoped to the yankees-roster container
+// Storage Blob Data Contributor — scoped to the data container
 // ---------------------------------------------------------------------------
 
 resource dataContainerBlobContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(yankeesRosterContainer.id, functionPrincipalId, storageBlobDataContributorRoleId)
-  scope: yankeesRosterContainer
+  name: guid(dataContainer.id, functionPrincipalId, storageBlobDataContributorRoleId)
+  scope: dataContainer
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
     principalId: functionPrincipalId
@@ -81,6 +85,21 @@ resource hostStorageQueueContributorAssignment 'Microsoft.Authorization/roleAssi
   scope: hostStorageAccount
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
+    principalId: functionPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Storage Table Data Contributor — scoped to the host storage account
+// (required by the Functions v4 runtime for distributed lock/lease management)
+// ---------------------------------------------------------------------------
+
+resource hostStorageTableContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(hostStorageAccount.id, functionPrincipalId, storageTableDataContributorRoleId)
+  scope: hostStorageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId)
     principalId: functionPrincipalId
     principalType: 'ServicePrincipal'
   }

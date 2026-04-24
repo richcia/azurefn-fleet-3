@@ -8,9 +8,11 @@ param tags object
 param baseName string
 
 @description('TRAPI endpoint URL to store as a Key Vault secret')
+@secure()
 param trapiEndpoint string
 
 @description('TRAPI deployment name to store as a Key Vault secret')
+@secure()
 param trapiDeploymentName string
 
 // ---------------------------------------------------------------------------
@@ -30,6 +32,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
+    enablePurgeProtection: true
     enabledForDeployment: false
     enabledForTemplateDeployment: false
     enabledForDiskEncryption: false

@@ -57,8 +57,40 @@
 
 ---
 
-## Step 3 — Code Review (pending)
+## Step 3 — Code Review (2026-04-24)
+
+### Critical Findings
+- CRIT-01: `Storage Table Data Contributor` role missing on host storage (required for Functions v4 runtime table locks) → Fixed
+- CRIT-02: TRAPI params missing `@secure()` decorator → plaintext in ARM deployment history → Fixed
+
+### Major Findings
+- MAJ-01: `functionAppScaleLimit: 1` hardcoded → removed cap, platform default used
+- MAJ-02: `cd-infra.yml` used `vars.*` for TRAPI credentials → changed to `secrets.*`
+
+### Minor Findings
+- MIN-01: `RetentionInDays` on workspace-based App Insights is no-op → removed with explanatory comment
+- MIN-02: Key Vault missing `enablePurgeProtection` → added `enablePurgeProtection: true`
+- MIN-03: Container name `yankees-roster` hardcoded in two modules → promoted to `var dataContainerName` in main.bicep, passed as parameter
+
+### Artifacts
+- results/code_review_findings_INF-01_1.json
+- results/prompt_improvements_INF-01_1.json
 
 ---
 
-## Step 4 — Apply Code Review Feedback (pending)
+## Step 4 — Apply Code Review Feedback and Test (2026-04-24)
+
+### Changes Applied
+1. `infra/modules/rbac.bicep` — Added `Storage Table Data Contributor` role assignment for host storage; added `dataContainerName` parameter; removed hardcoded `yankees-roster` string
+2. `infra/main.bicep` — Added `@secure()` to `trapiEndpoint` and `trapiDeploymentName`; added `var dataContainerName`; passed it to storage and rbac modules
+3. `infra/modules/keyvault.bicep` — Added `@secure()` to TRAPI params; added `enablePurgeProtection: true`
+4. `infra/modules/functionapp.bicep` — Removed hardcoded `functionAppScaleLimit: 1`
+5. `infra/modules/monitoring.bicep` — Removed no-op `RetentionInDays`; added clarifying comment
+6. `infra/modules/storage.bicep` — Parameterized container name via `dataContainerName` param
+7. `.github/workflows/cd-infra.yml` — Changed `vars.TRAPI_ENDPOINT/TRAPI_DEPLOYMENT_NAME` to `secrets.*`
+
+### Validation
+- `bicep build infra/main.bicep` → exit 0, no warnings, no errors
+- All 7 required outputs confirmed in compiled ARM template
+- TRAPI params confirmed as `securestring` type in ARM template
+

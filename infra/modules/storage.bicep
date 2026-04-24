@@ -10,6 +10,9 @@ param dataStorageAccountName string
 @description('Name of the host/runtime storage account used by the Function App')
 param hostStorageAccountName string
 
+@description('Name of the blob container in the dedicated data storage account')
+param dataContainerName string
+
 // ---------------------------------------------------------------------------
 // Dedicated data storage account (Standard_LRS, Cool, no shared-key access)
 // ---------------------------------------------------------------------------
@@ -43,7 +46,7 @@ resource dataBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01
 }
 
 resource yankeesRosterContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: 'yankees-roster'
+  name: dataContainerName
   parent: dataBlobService
   properties: {
     publicAccess: 'None'

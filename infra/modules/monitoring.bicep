@@ -41,7 +41,8 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalyticsWorkspace.id
     IngestionMode: 'LogAnalytics'
-    RetentionInDays: 30
+    // Retention is governed by the Log Analytics workspace (retentionInDays: 30).
+    // RetentionInDays on a workspace-based component is ignored by Azure.
     SamplingPercentage: 100
   }
 }

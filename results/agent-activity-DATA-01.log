@@ -1,0 +1,26 @@
+## Agent Activity Log — DATA-01
+
+### Step 1 — Implementation
+
+- Explored repository structure: tests/, spec.md, requirements.txt, pytest.ini
+- Identified acceptance criteria: 24–28 players, each with name/position/jersey_number, three known anchor players present
+- Created tests/fixtures/ directory
+- Created tests/fixtures/roster_1985_yankees.json with 25 historically-sourced 1985 NY Yankees active roster entries
+  - Anchor players confirmed: Don Mattingly #23 1B, Dave Winfield #31 RF, Rickey Henderson #24 LF
+  - Total players: 25 (within 24–28 range)
+  - All fields: name (string), position (string), jersey_number (integer)
+
+### Step 2 — Build and Test
+
+- Installed dependencies via requirements.txt
+- Ran full pytest suite: 25/25 tests passed (no regressions introduced)
+- Validated fixture JSON programmatically: all acceptance criteria assertions pass
+
+### Step 3 — Code Review
+
+- Launched Code Review Agent against PR
+- Recorded findings in results/code_review_findings_DATA-01_{PR}.json
+
+### Step 4 — Apply Code Review Feedback
+
+- Applied review feedback and re-ran tests

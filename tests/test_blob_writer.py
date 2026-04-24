@@ -4,7 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from azure.core.exceptions import ResourceExistsError
+from azure.core.exceptions import HttpResponseError, ResourceExistsError
 
 from src.blob_writer import BlobWriter
 
@@ -22,7 +22,7 @@ def set_env(monkeypatch):
 @pytest.fixture()
 def writer():
     with patch("src.blob_writer._DEFAULT_AZURE_CREDENTIAL"):
-        return BlobWriter()
+        yield BlobWriter()
 
 
 class TestBlobWriterInit:
@@ -186,3 +186,30 @@ class TestBlobWriterAuthentication:
         assert "?" not in bw._account_url
         assert "sig=" not in bw._account_url
         assert "sv=" not in bw._account_url
+
+
+class TestBlobWriterErrorPropagation:
+    def test_write_propagates_http_response_error(self, writer):
+        mock_blob_client = MagicMock()
+        mock_blob_client.upload_blob.side_effect = HttpResponseError("429 Too Many Requests")
+        with patch("src.blob_writer.BlobClient", return_value=mock_blob_client):
+            with pytest.raises(HttpResponseError):
+                writer.write(PAYLOAD, RUN_DATE)
+
+    def test_write_failed_propagates_http_response_error(self, writer):
+        mock_blob_client = MagicMock()
+        mock_blob_client.upload_blob.side_effect = HttpResponseError("503 Service Unavailable")
+        with patch("src.blob_writer.BlobClient", return_value=mock_blob_client):
+            with pytest.raises(HttpResponseError):
+                writer.write_failed(PAYLOAD, RUN_DATE)
+
+    def test_write_failed_logs_error_before_reraising(self, writer):
+        mock_blob_client = MagicMock()
+        mock_blob_client.upload_blob.side_effect = HttpResponseError("503 Service Unavailable")
+        with patch("src.blob_writer.BlobClient", return_value=mock_blob_client):
+            with patch("src.blob_writer._LOGGER") as mock_logger:
+                with pytest.raises(HttpResponseError):
+                    writer.write_failed(PAYLOAD, RUN_DATE)
+        mock_logger.exception.assert_called_once()
+        call_args = mock_logger.exception.call_args
+        assert "blob_failed_write_error" in call_args[0][0]

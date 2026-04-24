@@ -37,11 +37,14 @@ class BlobWriter:
         """Upload payload to yankees-roster/{run_date_utc}.json using a conditional PUT.
 
         Returns the blob URI on success, or None if the blob already exists (409 conflict).
+        Non-conflict errors (transient, auth) propagate to the caller.
         """
         blob_name = f"{run_date_utc}.json"
         blob_client = self._get_blob_client(blob_name)
         data = json.dumps(payload, indent=2)
         try:
+            # overwrite=False combined with if_none_match="*" ensures a conditional PUT
+            # (If-None-Match: *) that prevents duplicate writes on same-day retrigger.
             blob_client.upload_blob(
                 data=data,
                 overwrite=False,
@@ -63,9 +66,16 @@ class BlobWriter:
         blob_name = f"failed/{run_date_utc}.json"
         blob_client = self._get_blob_client(blob_name)
         data = json.dumps(payload, indent=2)
-        blob_client.upload_blob(
-            data=data,
-            overwrite=True,
-            content_settings=ContentSettings(content_type="application/json"),
-        )
+        try:
+            blob_client.upload_blob(
+                data=data,
+                overwrite=True,
+                content_settings=ContentSettings(content_type="application/json"),
+            )
+        except Exception:
+            _LOGGER.exception(
+                "blob_failed_write_error",
+                extra={"blob_name": blob_name, "run_date_utc": run_date_utc},
+            )
+            raise
         _LOGGER.info("blob_failed_write_succeeded", extra={"blob_name": blob_name})

@@ -11,9 +11,9 @@ param baseName string
 @secure()
 param trapiEndpoint string
 
-@description('TRAPI deployment name to store as a Key Vault secret')
+@description('Application Insights connection string to store as a Key Vault secret')
 @secure()
-param trapiDeploymentName string
+param appInsightsConnectionString string
 
 // ---------------------------------------------------------------------------
 // Key Vault (Standard SKU, RBAC authorization model)
@@ -52,11 +52,11 @@ resource trapiEndpointSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource trapiDeploymentNameSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: 'trapiDeploymentName'
+resource appInsightsConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: 'appInsightsConnectionString'
   parent: keyVault
   properties: {
-    value: trapiDeploymentName
+    value: appInsightsConnectionString
   }
 }
 

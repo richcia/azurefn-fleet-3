@@ -5,8 +5,7 @@ param location string = resourceGroup().location
 @secure()
 param trapiEndpoint string
 
-@description('TRAPI GPT-4o deployment name (stored in Key Vault)')
-@secure()
+@description('TRAPI GPT-4o deployment name (non-sensitive plain setting)')
 param trapiDeploymentName string
 
 @description('Email address for operational alerts')
@@ -68,7 +67,7 @@ module keyvault 'modules/keyvault.bicep' = {
     tags: tags
     baseName: baseName
     trapiEndpoint: trapiEndpoint
-    trapiDeploymentName: trapiDeploymentName
+    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
   }
 }
 
@@ -82,10 +81,6 @@ module functionapp 'modules/functionapp.bicep' = {
     location: location
     tags: tags
     baseName: baseName
-    hostStorageAccountName: storage.outputs.hostStorageAccountName
-    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
-    dataStorageAccountName: storage.outputs.dataStorageAccountName
-    keyVaultUri: keyvault.outputs.keyVaultUri
   }
 }
 
@@ -101,6 +96,35 @@ module rbac 'modules/rbac.bicep' = {
     dataContainerName: dataContainerName
     hostStorageAccountName: storage.outputs.hostStorageAccountName
     keyVaultName: keyvault.outputs.keyVaultName
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Key Vault reference app settings — applied AFTER Key Vault Secrets User
+// RBAC assignment completes to prevent 403 errors during KV reference
+// resolution at Function App startup.
+// ---------------------------------------------------------------------------
+
+resource functionAppRef 'Microsoft.Web/sites@2023-01-01' existing = {
+  name: functionapp.outputs.functionAppName
+}
+
+resource kvAppsettings 'Microsoft.Web/sites/config@2023-01-01' = {
+  name: 'appsettings'
+  parent: functionAppRef
+  dependsOn: [rbac]
+  properties: {
+    FUNCTIONS_EXTENSION_VERSION: '~4'
+    FUNCTIONS_WORKER_RUNTIME: 'python'
+    APPLICATIONINSIGHTS_CONNECTION_STRING: '@Microsoft.KeyVault(SecretUri=${keyvault.outputs.keyVaultUri}secrets/appInsightsConnectionString/)'
+    AzureWebJobsStorage__accountName: storage.outputs.hostStorageAccountName
+    AzureWebJobsStorage__blobServiceUri: 'https://${storage.outputs.hostStorageAccountName}.blob.${environment().suffixes.storage}'
+    AzureWebJobsStorage__queueServiceUri: 'https://${storage.outputs.hostStorageAccountName}.queue.${environment().suffixes.storage}'
+    AzureWebJobsStorage__tableServiceUri: 'https://${storage.outputs.hostStorageAccountName}.table.${environment().suffixes.storage}'
+    DATA_STORAGE_ACCOUNT_NAME: storage.outputs.dataStorageAccountName
+    TRAPI_ENDPOINT: '@Microsoft.KeyVault(SecretUri=${keyvault.outputs.keyVaultUri}secrets/trapiEndpoint/)'
+    TRAPI_DEPLOYMENT_NAME: trapiDeploymentName
+    WEBSITE_RUN_FROM_PACKAGE: '1'
   }
 }
 

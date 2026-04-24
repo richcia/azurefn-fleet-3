@@ -50,6 +50,10 @@ jobs:
           trap 'EXIT_CODE=$?; echo "::group::Run Design Review Agent failure output"; cat "$LOG_FILE"; echo "::endgroup::"; exit "$EXIT_CODE"' ERR
 
           echo "::notice::[on-design] Starting design review workflow"
+          echo "::group::[on-design] Current folder files"
+          pwd
+          ls -la
+          echo "::endgroup::"
 
           DESIGN_SPEC_FILE="${{ inputs.design_spec_file }}"
           echo "::notice::[on-design] Input design spec file: $DESIGN_SPEC_FILE"

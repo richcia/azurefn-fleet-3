@@ -97,6 +97,7 @@ module rbac 'modules/rbac.bicep' = {
   name: 'rbac'
   params: {
     functionPrincipalId: functionapp.outputs.functionPrincipalId
+    stagingSlotPrincipalId: functionapp.outputs.stagingSlotPrincipalId
     dataStorageAccountName: storage.outputs.dataStorageAccountName
     dataContainerName: dataContainerName
     hostStorageAccountName: storage.outputs.hostStorageAccountName
@@ -125,6 +126,7 @@ module alerts 'modules/alerts.bicep' = {
 
 output functionAppName string = functionapp.outputs.functionAppName
 output functionPrincipalId string = functionapp.outputs.functionPrincipalId
+output stagingSlotPrincipalId string = functionapp.outputs.stagingSlotPrincipalId
 output dataStorageAccountName string = storage.outputs.dataStorageAccountName
 output hostStorageAccountName string = storage.outputs.hostStorageAccountName
 output keyVaultName string = keyvault.outputs.keyVaultName

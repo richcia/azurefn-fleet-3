@@ -1,0 +1,26 @@
+{
+  "issue": "INF-02",
+  "pr_branch": "copilot/inf-02-add-staging-deployment-slot",
+  "proposed_improvements": [
+    {
+      "area": "RBAC completeness for deployment slots",
+      "current_gap": "The prompt specifies 'RBAC: staging slot MI has Storage Blob Data Contributor on yankees-roster container' but does not mention that the slot MI also needs host storage (Blob/Queue/Table) and Key Vault roles for the Functions runtime to start.",
+      "proposed_improvement": "Add to the task description: 'The staging slot MI must receive all the same RBAC roles as the production MI, plus Storage Blob Data Contributor on the data container. Specifically: Storage Blob/Queue/Table Data Contributor on the host storage account, Key Vault Secrets User on the Key Vault, and Storage Blob Data Contributor on the yankees-roster container.'"
+    },
+    {
+      "area": "Slot plan compatibility clarification",
+      "current_gap": "The Risks section mentions 'Consumption Plan supports deployment slots but slot swap behavior differs from App Service' but doesn't confirm this as a known-good fact, leaving implementors uncertain.",
+      "proposed_improvement": "Add a statement: 'Azure Functions Consumption (Y1/Dynamic) supports exactly one additional deployment slot. This is confirmed supported. Cold-start on the staging slot is expected; the cd-promote.yml smoke test retry count (5 attempts with 8s sleep) is designed to handle this.'"
+    },
+    {
+      "area": "App settings parity enforcement",
+      "current_gap": "The AC says 'Staging slot has identical app settings to production slot (except WEBSITE_SLOT_NAME)' but gives no guidance on how to enforce this at the Bicep level.",
+      "proposed_improvement": "Add to the task: 'Use a Bicep variable (e.g. commonAppSettings) to hold shared settings. Both production and staging slots should reference this variable, with staging adding WEBSITE_SLOT_NAME via concat(). This enforces parity structurally.'"
+    },
+    {
+      "area": "Slot-sticky settings list",
+      "current_gap": "The prompt only mentions WEBSITE_SLOT_NAME as a slot-sticky setting, but WEBSITE_RUN_FROM_PACKAGE is also a standard candidate.",
+      "proposed_improvement": "Add: 'Mark both WEBSITE_SLOT_NAME and WEBSITE_RUN_FROM_PACKAGE as slot-sticky in the slotConfigNames config resource. Document that this list is authoritative — any future sticky settings must be added here.'"
+    }
+  ]
+}

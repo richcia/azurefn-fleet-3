@@ -1,0 +1,63 @@
+{
+  "issue": "INF-02",
+  "pr_branch": "copilot/inf-02-add-staging-deployment-slot",
+  "reviewed_at": "2026-04-24",
+  "critical_issues": [
+    {
+      "id": 1,
+      "title": "Staging slot MI missing host storage RBAC (Functions runtime will not start)",
+      "severity": "Critical",
+      "file": "infra/modules/rbac.bicep",
+      "lines": "134-142 (original)",
+      "description": "The staging slot's MI was only granted Storage Blob Data Contributor on the data container. The Functions v4 runtime requires Blob, Queue, and Table Data Contributor on the host storage account for identity-based AzureWebJobsStorage to function. Without these, the slot cannot acquire leases, manage triggers, or write runtime logs, so it will never reach Running state.",
+      "resolution": "Added stagingSlotHostBlobAssignment, stagingSlotHostQueueAssignment, and stagingSlotHostTableAssignment role assignments on hostStorageAccount in rbac.bicep."
+    },
+    {
+      "id": 2,
+      "title": "Staging slot MI missing Key Vault Secrets User role (KV references will fail)",
+      "severity": "Critical",
+      "file": "infra/modules/rbac.bicep",
+      "lines": "134-142 (original)",
+      "description": "The staging slot app settings include Key Vault references for TRAPI_ENDPOINT and TRAPI_DEPLOYMENT_NAME. Without the Key Vault Secrets User role on the Key Vault, these references remain unresolved, causing any function invocation to receive null/error values. The pre-swap smoke test would fail.",
+      "resolution": "Added stagingSlotKeyVaultSecretsUserAssignment role assignment on keyVaultResource in rbac.bicep."
+    },
+    {
+      "id": 3,
+      "title": "Consumption Plan (Y1/Dynamic) does not support deployment slots per reviewer",
+      "severity": "Critical (disputed)",
+      "file": "infra/modules/functionapp.bicep",
+      "lines": "26-38, 113",
+      "description": "Code reviewer flagged that Y1/Dynamic does not support slots. However, Azure Functions Consumption Plan does support up to one additional deployment slot as of current Azure platform documentation. The issue's own Risks section acknowledges this: 'Consumption Plan supports deployment slots but slot swap behavior differs from App Service'. A clarifying comment was added to the Bicep to document this behaviour and the cold-start tradeoff.",
+      "resolution": "Added a comment to the App Service Plan resource explaining Consumption plan slot support and cold-start implications. No plan change made — cost constraint from spec.md preserved."
+    }
+  ],
+  "suggestions": [
+    {
+      "id": 4,
+      "title": "Duplicated app settings block creates silent drift risk",
+      "severity": "Major",
+      "file": "infra/modules/functionapp.bicep",
+      "lines": "57-102, 127-176 (original)",
+      "description": "The full appSettings array was copy-pasted from production to staging. Any future setting added to production would require a manual update to the staging block.",
+      "resolution": "Extracted shared settings into a commonAppSettings variable. Production uses it directly; staging uses concat(commonAppSettings, [{WEBSITE_SLOT_NAME}])."
+    },
+    {
+      "id": 5,
+      "title": "WEBSITE_RUN_FROM_PACKAGE should also be slot-sticky",
+      "severity": "Minor",
+      "file": "infra/modules/functionapp.bicep",
+      "lines": "184-190 (original)",
+      "description": "slotConfigNames only listed WEBSITE_SLOT_NAME. WEBSITE_RUN_FROM_PACKAGE is a standard candidate for slot-stickiness to prevent a swap from pairing a production package URL with staging config.",
+      "resolution": "Added WEBSITE_RUN_FROM_PACKAGE to the appSettingNames array in slotConfigNames."
+    },
+    {
+      "id": 6,
+      "title": "No explicit dependsOn between slotConfigNames and stagingSlot",
+      "severity": "Minor",
+      "file": "infra/modules/functionapp.bicep",
+      "lines": "184 (original)",
+      "description": "slotConfigNames and stagingSlot are siblings without a declared dependency, potentially allowing ARM to process slotConfigNames before the staging slot is fully provisioned.",
+      "resolution": "Added dependsOn: [stagingSlot] to the slotConfigNames resource."
+    }
+  ]
+}

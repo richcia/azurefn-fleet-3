@@ -140,3 +140,56 @@ resource stagingSlotDataContainerBlobContributorAssignment 'Microsoft.Authorizat
     principalType: 'ServicePrincipal'
   }
 }
+
+// ---------------------------------------------------------------------------
+// Host storage role assignments — staging slot MI
+// The Functions v4 runtime (identity-based AzureWebJobsStorage) requires
+// Blob, Queue, and Table Data Contributor on the host storage account so the
+// slot can acquire leases, manage triggers, and write runtime logs.
+// ---------------------------------------------------------------------------
+
+resource stagingSlotHostBlobAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(hostStorageAccount.id, stagingSlotPrincipalId, storageBlobDataContributorRoleId)
+  scope: hostStorageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+    principalId: stagingSlotPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource stagingSlotHostQueueAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(hostStorageAccount.id, stagingSlotPrincipalId, storageQueueDataContributorRoleId)
+  scope: hostStorageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageQueueDataContributorRoleId)
+    principalId: stagingSlotPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource stagingSlotHostTableAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(hostStorageAccount.id, stagingSlotPrincipalId, storageTableDataContributorRoleId)
+  scope: hostStorageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageTableDataContributorRoleId)
+    principalId: stagingSlotPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Key Vault Secrets User — staging slot MI scoped to the Key Vault
+// Required so Key Vault references (TRAPI_ENDPOINT, TRAPI_DEPLOYMENT_NAME)
+// resolve correctly on the staging slot.
+// ---------------------------------------------------------------------------
+
+resource stagingSlotKeyVaultSecretsUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVaultResource.id, stagingSlotPrincipalId, keyVaultSecretsUserRoleId)
+  scope: keyVaultResource
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: stagingSlotPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "issue": "APP-04",
+  "prompt_improvements": [
+    {
+      "area": "Test Quality Guidance",
+      "current_gap": "The prompt does not specify test quality patterns, leading to tests that open/parse the same file redundantly and produce confusing ERROR outputs instead of clean FAIL on edge cases.",
+      "proposed_improvement": "Add instruction: 'When writing pytest tests for file-based configuration (JSON, YAML, etc.), use a module-scoped pytest fixture to load the file once and share it across all content tests. The fixture should use pytest.skip() if the file does not exist, and pytest.fail() with a human-readable message if the file is malformed JSON/YAML. This prevents confusing ERROR outputs from uncaught exceptions and reduces file I/O duplication.'"
+    },
+    {
+      "area": "Schema Declaration Best Practice",
+      "current_gap": "The prompt does not mention adding $schema declarations to JSON configuration files.",
+      "proposed_improvement": "Add instruction: 'When creating Azure Functions host.json, always include a $schema declaration as the first property: \"$schema\": \"https://json.schemastore.org/host.json\". This enables IDE validation and tooling support.'"
+    },
+    {
+      "area": "Acceptance Criteria Specificity",
+      "current_gap": "The acceptance criterion says 'extensions.http.maxOutboundConnections or equivalent concurrency limiter' but the correct property is maxConcurrentRequests (for HTTP triggers). The ambiguity could lead to wrong property names.",
+      "proposed_improvement": "Specify the exact property name in the acceptance criteria: 'extensions.http.maxConcurrentRequests must be set to 1' for single-instance HTTP concurrency control. This matches the Azure Functions host.json v2 schema."
+    }
+  ]
+}

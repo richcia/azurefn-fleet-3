@@ -1,0 +1,44 @@
+# Agent Activity Log — Issue INF-03
+
+## Step 1 — Implement Tasks
+
+- Read infra/modules/alerts.bicep (existing: single exceptionAlert on exceptions table, 24h window)
+- Read infra/main.bicep (orchestrates monitoring, alerts modules; passes appInsightsId and functionAppName to alerts module)
+- Read spec.md (Monitoring & Operations: Alerting section — three required alert rules)
+- Read infra/modules/monitoring.bicep (outputs appInsightsId, appInsightsConnectionString, logAnalyticsWorkspaceId)
+- Replaced single exceptionAlert with three required alert rules:
+  1. failureAlert  — requests success==false > 0, PT1H window, severity 1
+  2. durationAlert — max(duration) > 90000ms, PT1H window, severity 2
+  3. dataQualityAlert — customMetrics player_count_returned out-of-range (< 24 or > 40), PT1H window, severity 2
+- All three rules: Enabled, scoped to appInsightsId, wired to Action Group (email to alertEmailAddress)
+
+## Step 2 — Build and Test
+
+- az bicep build infra/modules/alerts.bicep → BUILD OK (no errors/warnings)
+- az bicep build infra/main.bicep → BUILD OK (no errors/warnings)
+- python -m pytest tests/ -v → 25/25 passed
+
+## Step 3 — Code Review
+
+- Launched Code Review Agent for PR #768
+- Findings:
+  - CRITICAL-1: failureAlert timeAggregation:'Count' always fires (row count=1 > 0). Fix: use 'Total'
+  - CRITICAL-2: dataQualityAlert timeAggregation:'Count' always fires (same root cause). Fix: use 'Total'
+  - SUG-1: dataQualityAlert missing cloud_RoleName filter
+  - SUG-2: No muteActionsDuration — up to 12 emails/hour during sustained condition
+  - SUG-3: Duration alert null-window behaviour undocumented
+  - SUG-4: Action group resource type lowercase vs PascalCase inconsistency
+  - SUG-5: N/A (no alerts.json in this repo)
+- Saved findings to results/code_review_findings_INF-03_768.json
+- Saved prompt improvements to results/prompt_improvements_INF-03_768.json
+
+## Step 4 — Apply Code Review Feedback and Test
+
+- Fixed CRIT-1: failureAlert timeAggregation → 'Total'
+- Fixed CRIT-2: dataQualityAlert timeAggregation → 'Total'
+- Fixed SUG-1: Added cloud_RoleName filter to dataQualityAlert query
+- Fixed SUG-2: Added muteActionsDuration PT15M (sev-1) and PT1H (sev-2) to all three alerts
+- Fixed SUG-3: Added inline comment on null MaxDuration behaviour for durationAlert
+- Fixed SUG-4: Updated action group resource type to PascalCase 'Microsoft.Insights/actionGroups@2023-01-01'
+- az bicep build → BUILD OK after all fixes
+- python -m pytest tests/ -v → 25/25 passed

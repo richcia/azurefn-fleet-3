@@ -1,0 +1,73 @@
+{
+  "issue": "INF-03",
+  "pr": 768,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/768",
+  "reviewed_file": "infra/modules/alerts.bicep",
+  "critical_issues": [
+    {
+      "id": "CRIT-1",
+      "title": "Failure alert fires on every evaluation cycle due to wrong timeAggregation",
+      "file": "infra/modules/alerts.bicep",
+      "line": 59,
+      "description": "Using timeAggregation:'Count' against a summarize count() query always emits one result row (count=1). The alert engine counts rows (=1) rather than the FailedRuns value, so 1 > 0 fires permanently. Fix: change timeAggregation to 'Total' so the engine sums the FailedRuns column value.",
+      "status": "FIXED",
+      "fix_applied": "Changed timeAggregation from 'Count' to 'Total' for failureAlert"
+    },
+    {
+      "id": "CRIT-2",
+      "title": "Data quality alert fires on every evaluation cycle due to wrong timeAggregation",
+      "file": "infra/modules/alerts.bicep",
+      "line": 143,
+      "description": "Identical root cause to CRIT-1. summarize OutOfRangeCount = count() always emits one row; timeAggregation:'Count' counts rows (=1), so 1 > 0 fires permanently. Fix: change timeAggregation to 'Total'.",
+      "status": "FIXED",
+      "fix_applied": "Changed timeAggregation from 'Count' to 'Total' for dataQualityAlert"
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "SUG-1",
+      "title": "Data-quality query not scoped by cloud_RoleName",
+      "file": "infra/modules/alerts.bicep",
+      "line": 143,
+      "description": "The customMetrics query omits a cloud_RoleName filter, which could cause false positives if the App Insights workspace is ever shared.",
+      "status": "FIXED",
+      "fix_applied": "Added 'where cloud_RoleName == functionAppName' filter to dataQualityAlert query"
+    },
+    {
+      "id": "SUG-2",
+      "title": "No muteActionsDuration — alerts can send emails every 5 minutes during an outage",
+      "file": "infra/modules/alerts.bicep",
+      "line": 50,
+      "description": "All three alerts use evaluationFrequency PT5M with no muteActionsDuration, so up to 12 emails/hour can be sent during a sustained condition.",
+      "status": "FIXED",
+      "fix_applied": "Added muteActionsDuration PT15M for severity-1 failure alert; PT1H for severity-2 duration and data-quality alerts"
+    },
+    {
+      "id": "SUG-3",
+      "title": "Duration alert does not document null-window behaviour",
+      "file": "infra/modules/alerts.bicep",
+      "line": 99,
+      "description": "When no requests arrive in the evaluation window, max(duration) returns null and Azure skips the evaluation. This should be documented.",
+      "status": "FIXED",
+      "fix_applied": "Added inline comment explaining null MaxDuration behaviour for the duration alert"
+    },
+    {
+      "id": "SUG-4",
+      "title": "Inconsistent resource type casing on action group",
+      "file": "infra/modules/alerts.bicep",
+      "line": 20,
+      "description": "Action group used lowercase 'microsoft.insights/actionGroups' while alert rules used PascalCase 'Microsoft.Insights/...'. Should be consistent.",
+      "status": "FIXED",
+      "fix_applied": "Updated action group resource type to 'Microsoft.Insights/actionGroups@2023-01-01'"
+    },
+    {
+      "id": "SUG-5",
+      "title": "alerts.json must be kept in sync with alerts.bicep",
+      "file": "infra/modules/alerts.json",
+      "line": null,
+      "description": "The repo commits both Bicep source and pre-compiled ARM JSON. Future Bicep-only edits could silently diverge from the JSON. Add a CI gate or remove alerts.json from source control.",
+      "status": "NOT_APPLICABLE",
+      "note": "No alerts.json file exists in this repository — this concern does not apply."
+    }
+  ]
+}

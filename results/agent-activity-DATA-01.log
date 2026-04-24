@@ -1,0 +1,39 @@
+## Agent Activity Log — DATA-01
+
+### Step 1 — Implementation
+
+- Explored repository structure: tests/, spec.md, requirements.txt, pytest.ini
+- Identified acceptance criteria: 24–28 players, each with name/position/jersey_number, three known anchor players present
+- Created tests/fixtures/ directory
+- Created tests/fixtures/roster_1985_yankees.json with 25 historically-sourced 1985 NY Yankees active roster entries
+  - Anchor players confirmed: Don Mattingly #23 1B, Dave Winfield #31 RF, Rickey Henderson #24 LF
+  - Total players: 25 (within 24–28 range)
+  - All fields: name (string), position (string), jersey_number (integer)
+
+### Step 2 — Build and Test
+
+- Installed dependencies via requirements.txt
+- Ran full pytest suite: 25/25 tests passed (no regressions introduced)
+- Validated fixture JSON programmatically: all acceptance criteria assertions pass
+
+### Step 3 — Code Review
+
+- Launched Code Review Agent against branch copilot/data-01-compile-canonical-1985-yankees-roster
+- Critical findings:
+  - CRITICAL-1: Gary Roenicke was a 1985 Baltimore Oriole, not a Yankee → replaced with Bobby Brown (#1, CF)
+  - CRITICAL-2: Generic "OF" position code inconsistent with rest of fixture → resolved by replacement
+- Major suggestion: No test consumed the fixture (AC #4 unverified) → resolved in Step 4
+- Findings recorded in results/code_review_findings_DATA-01_PR.json
+- Prompt improvements recorded in results/prompt_improvements_DATA-01_PR.json
+
+### Step 4 — Apply Code Review Feedback
+
+- Replaced Gary Roenicke (#8, OF) with Bobby Brown (#1, CF) in tests/fixtures/roster_1985_yankees.json
+- Added tests/test_fixture_roster_1985_yankees.py with 20 tests covering:
+  - File existence and valid JSON
+  - Player count in 24-28 range
+  - All required fields (name, position, jersey_number) with correct types
+  - No duplicate jersey numbers or names
+  - No generic "OF" position code
+  - Anchor player assertions (Mattingly #23 1B, Winfield #31 RF, Henderson #24 LF)
+- Re-ran full test suite: 46/46 tests passed

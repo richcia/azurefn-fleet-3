@@ -1,0 +1,29 @@
+{
+  "issue": "DATA-01",
+  "proposed_improvements": [
+    {
+      "area": "Historical Accuracy Verification",
+      "current_gap": "The prompt did not instruct the implementor to verify each player against a specific historical source before committing.",
+      "proposed_improvement": "Add an explicit instruction: 'Before committing the fixture, verify each player's presence on the 1985 NY Yankees active roster against Baseball-Reference or Retrosheet. Document the verification source in a comment or README.'",
+      "rationale": "Gary Roenicke was incorrectly included (1985 Orioles, not Yankees). A verification step would have caught this."
+    },
+    {
+      "area": "Position Code Convention",
+      "current_gap": "The prompt did not specify which position code convention to use (generic OF vs LF/CF/RF; P vs SP/RP).",
+      "proposed_improvement": "Add: 'Use specific outfield position codes (LF, CF, RF) — do not use generic OF. For pitchers, use SP (starting pitcher) and RP (relief pitcher) rather than generic P to distinguish roles.'",
+      "rationale": "The inconsistency (Gary Roenicke listed as 'OF' while all others used LF/CF/RF) caused a critical finding. An explicit convention would prevent this."
+    },
+    {
+      "area": "Fixture Consumer Test",
+      "current_gap": "The prompt listed AC #4 (fixture used as reference payload for integration test assertions) but did not explicitly instruct the implementor to create a test file that loads and validates the fixture.",
+      "proposed_improvement": "Add an explicit output artifact: 'tests/test_fixture_roster_1985_yankees.py — a pytest test file that loads the fixture, validates its structure (player count, field types), and asserts the three anchor players are present with correct position and jersey number.'",
+      "rationale": "Without a test consumer, AC #4 was technically unmet. The code review caught this as a major finding."
+    },
+    {
+      "area": "Activity Log Template",
+      "current_gap": "The activity log template used {PR} as a placeholder that was never substituted.",
+      "proposed_improvement": "Instruct the agent to fill in the actual PR number when creating the activity log, or create the log after the PR is created.",
+      "rationale": "Minor but causes confusion in audit trails."
+    }
+  ]
+}

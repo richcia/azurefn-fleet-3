@@ -1,0 +1,29 @@
+{
+  "players": [
+    { "name": "Don Mattingly",      "position": "1B", "jersey_number": 23 },
+    { "name": "Dave Winfield",      "position": "RF", "jersey_number": 31 },
+    { "name": "Rickey Henderson",   "position": "LF", "jersey_number": 24 },
+    { "name": "Willie Randolph",    "position": "2B", "jersey_number": 30 },
+    { "name": "Bobby Meacham",      "position": "SS", "jersey_number": 2  },
+    { "name": "Mike Pagliarulo",    "position": "3B", "jersey_number": 13 },
+    { "name": "Butch Wynegar",      "position": "C",  "jersey_number": 10 },
+    { "name": "Ron Hassey",         "position": "C",  "jersey_number": 14 },
+    { "name": "Ken Griffey Sr.",    "position": "CF", "jersey_number": 33 },
+    { "name": "Omar Moreno",        "position": "CF", "jersey_number": 28 },
+    { "name": "Mike Easler",        "position": "DH", "jersey_number": 22 },
+    { "name": "Don Baylor",         "position": "DH", "jersey_number": 25 },
+    { "name": "Mike Fischlin",      "position": "SS", "jersey_number": 3  },
+    { "name": "Andre Robertson",    "position": "SS", "jersey_number": 16 },
+    { "name": "Ron Guidry",         "position": "SP", "jersey_number": 49 },
+    { "name": "Phil Niekro",        "position": "SP", "jersey_number": 35 },
+    { "name": "Ed Whitson",         "position": "SP", "jersey_number": 32 },
+    { "name": "Joe Cowley",         "position": "SP", "jersey_number": 40 },
+    { "name": "Dennis Rasmussen",   "position": "SP", "jersey_number": 47 },
+    { "name": "Dave Righetti",      "position": "RP", "jersey_number": 19 },
+    { "name": "Brian Fisher",       "position": "RP", "jersey_number": 36 },
+    { "name": "Rich Bordi",         "position": "RP", "jersey_number": 34 },
+    { "name": "Bob Shirley",        "position": "RP", "jersey_number": 39 },
+    { "name": "Dale Murray",        "position": "RP", "jersey_number": 44 },
+    { "name": "Bobby Brown",         "position": "CF", "jersey_number": 1  }
+  ]
+}

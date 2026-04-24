@@ -1,0 +1,27 @@
+# Agent Activity Log - Issue APP-01
+
+## Step 1 — Implement Tasks
+- Explored repository structure: trapi_client.py, spec.md, function_app.py, pytest.ini
+- Identified PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "get_1985_yankees.txt" in trapi_client.py
+- Created prompts/ directory
+- Created prompts/get_1985_yankees.txt with:
+  - Model version comment header: # model: gpt-4o-2024-08-06
+  - JSON schema requirement: {players: [{name, position, jersey_number}]}
+  - Active roster count constraint: 24-28 players
+  - Anchor player requirements: Don Mattingly, Dave Winfield, Rickey Henderson
+  - No markdown fencing instruction
+  - LF line endings, no trailing whitespace (stable SHA-256)
+- Created tests/ directory with conftest.py
+- Created tests/test_prompt_get_1985_yankees.py with 17 tests covering all acceptance criteria
+
+## Step 2 — Build and Test
+- Installed pytest and pytest-cov
+- Ran python -m pytest tests/test_prompt_get_1985_yankees.py -v
+- Result: 17 passed in 0.05s ✅
+- All acceptance criteria validated by tests
+
+## Step 3 — Code Review
+- Pending
+
+## Step 4 — Apply Code Review Feedback
+- Pending

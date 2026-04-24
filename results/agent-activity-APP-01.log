@@ -1,0 +1,41 @@
+# Agent Activity Log - Issue APP-01
+
+## Step 1 — Implement Tasks
+- Explored repository structure: trapi_client.py, spec.md, function_app.py, pytest.ini
+- Identified PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "get_1985_yankees.txt" in trapi_client.py
+- Created prompts/ directory
+- Created prompts/get_1985_yankees.txt with:
+  - Model version comment header: # model: gpt-4o-2024-08-06
+  - JSON schema requirement: {players: [{name, position, jersey_number}]}
+  - Active roster count constraint: 24-28 players
+  - Anchor player requirements: Don Mattingly, Dave Winfield, Rickey Henderson
+  - No markdown fencing instruction
+  - LF line endings, no trailing whitespace (stable SHA-256)
+- Created tests/ directory with conftest.py
+- Created tests/test_prompt_get_1985_yankees.py with 17 tests covering all acceptance criteria
+
+## Step 2 — Build and Test
+- Installed pytest and pytest-cov
+- Ran python -m pytest tests/test_prompt_get_1985_yankees.py -v
+- Result: 17 passed in 0.05s ✅
+- All acceptance criteria validated by tests
+
+## Step 3 — Code Review
+- Launched code-review-agent on PR #766
+- Critical finding CR-01: Schema example had invalid JSON (bare 'integer' token) — FIXED
+- Critical finding CR-02: function_app.py and trapi_client.py compute divergent hashes — DEFERRED (pre-existing, beyond APP-01 scope)
+- Major finding CR-03: test_sha256_is_stable was vacuous (format-only assertion) — FIXED
+- Major finding CR-04: Prompt sent as role:user not role:system — DEFERRED (pre-existing trapi_client.py)
+- Minor finding CR-05: test_requests_24_to_28_players matched incidental jersey numbers — FIXED
+- Minor finding CR-06: test_requests_active_roster_only used OR condition — FIXED
+- Minor finding CR-07: No .gitattributes for LF enforcement — FIXED
+- Added test_schema_example_is_valid_json to catch invalid JSON in schema examples
+- Created results/code_review_findings_APP-01_766.json
+- Created results/prompt_improvements_APP-01_766.json
+
+## Step 4 — Apply Code Review Feedback and Test
+- Fixed prompts/get_1985_yankees.txt: replaced invalid JSON schema placeholder with valid concrete example
+- Fixed tests/test_prompt_get_1985_yankees.py: pinned SHA-256, stronger assertions, added valid JSON test
+- Added .gitattributes enforcing LF line endings for prompts/*.txt
+- Added results/ files for code review findings and prompt improvements
+- Re-ran tests: 18/18 passed

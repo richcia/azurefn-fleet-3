@@ -1,0 +1,42 @@
+{
+  "issue_number": "APP-01",
+  "pr_number": 766,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/766",
+  "proposed_improvements": [
+    {
+      "id": "PI-01",
+      "category": "prompt_quality",
+      "current_behavior": "Prompt schema example uses type-placeholder tokens (e.g., 'integer') that produce invalid JSON and risk model reproducing them verbatim.",
+      "proposed_improvement": "Instruct the code-implementor-agent to use concrete valid JSON examples in all prompt schema examples. Specifically: 'Use a real representative data example with actual values (e.g., a known player name and jersey number) rather than type placeholders like \"integer\" or \"string\" in JSON schema examples within prompt files.'",
+      "rationale": "Type-placeholder JSON is not parseable and may cause model to reproduce the literal tokens in output."
+    },
+    {
+      "id": "PI-02",
+      "category": "test_specificity",
+      "current_behavior": "SHA-256 stability test only checked output format (64 hex chars), not a pinned value.",
+      "proposed_improvement": "Add instruction: 'When writing a SHA-256 stability test for a content file, always pin the expected hash as a module-level constant and assert equality. Never assert only format properties of the hash output.'",
+      "rationale": "A hash-format-only test provides zero change detection coverage."
+    },
+    {
+      "id": "PI-03",
+      "category": "test_specificity",
+      "current_behavior": "Substring presence tests used incidental matches (jersey numbers satisfying numeric range tests, single OR condition passing trivially).",
+      "proposed_improvement": "Add instruction: 'When testing that a text file contains a specific phrase or range, use regex patterns that match the intended prose rather than bare substring checks that may match unrelated content.'",
+      "rationale": "Naive substring tests create false confidence - the test passes even when the targeted requirement is absent."
+    },
+    {
+      "id": "PI-04",
+      "category": "file_stability",
+      "current_behavior": "No .gitattributes file was created to enforce LF line endings, leaving prompt files vulnerable to CRLF changes on Windows.",
+      "proposed_improvement": "Add instruction: 'When creating text files with SHA-256 stability requirements, always add a .gitattributes entry enforcing LF line endings (text eol=lf) for those file patterns.'",
+      "rationale": "Without enforced LF endings, cross-platform development silently corrupts hash-stable files."
+    },
+    {
+      "id": "PI-05",
+      "category": "scope_awareness",
+      "current_behavior": "Implementation did not address pre-existing divergence between function_app.py and trapi_client.py hash computation for the same prompt file.",
+      "proposed_improvement": "Add instruction: 'When creating a new artifact that is referenced by multiple modules, check that all referencing modules use consistent normalization/hashing logic. Flag inconsistencies even if fixing them is out of scope.'",
+      "rationale": "Cross-component hash divergence undermines audit trail and was only caught in code review."
+    }
+  ]
+}

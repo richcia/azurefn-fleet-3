@@ -1,0 +1,91 @@
+{
+  "issue_number": "APP-01",
+  "pr_number": 766,
+  "pr_url": "https://github.com/richcia/azurefn-fleet-3/pull/766",
+  "reviewed_commit": "8389ba09e54544aaa6fa0c84ec8068d181d4a91f",
+  "findings": {
+    "critical_issues": [
+      {
+        "id": "CR-01",
+        "severity": "critical",
+        "title": "Schema example on line 13 of get_1985_yankees.txt contained invalid JSON",
+        "file": "prompts/get_1985_yankees.txt",
+        "line": 13,
+        "description": "The original schema example used bare word 'integer' as a value placeholder, making it unparseable JSON. A strict model could reproduce the literal non-JSON token 'integer' in output.",
+        "resolution": "Replaced with a concrete valid JSON example: {\"players\": [{\"name\": \"Don Mattingly\", \"position\": \"First Base\", \"jersey_number\": 23}]}",
+        "status": "FIXED"
+      },
+      {
+        "id": "CR-02",
+        "severity": "critical",
+        "title": "function_app.py and trapi_client.py compute divergent SHA-256 hashes for the same prompt file",
+        "file": "function_app.py",
+        "line_range": "47-52",
+        "description": "function_app._prompt_hash() hashes raw file bytes while trapi_client._prompt_hash() hashes normalized text (trailing whitespace/newlines stripped). This produces different digests for the same file, making cross-component audit correlation impossible.",
+        "resolution": "Noted as out-of-scope for APP-01 (requires src/validator.py to be implemented first). function_app.py should be updated in a follow-up task to use trapi_client._load_prompt() and _prompt_hash().",
+        "status": "DEFERRED - pre-existing issue in function_app.py, beyond APP-01 scope"
+      }
+    ],
+    "major_issues": [
+      {
+        "id": "CR-03",
+        "severity": "major",
+        "title": "test_sha256_is_stable was vacuous - only checked format, not pinned value",
+        "file": "tests/test_prompt_get_1985_yankees.py",
+        "line_range": "88-92",
+        "description": "Original test only asserted SHA-256 output had 64 hex chars (always true). Any prompt change would pass.",
+        "resolution": "Pinned expected normalized SHA-256 as constant EXPECTED_PROMPT_SHA256 and assert equality.",
+        "status": "FIXED"
+      },
+      {
+        "id": "CR-04",
+        "severity": "major",
+        "title": "Prompt delivered as role:user rather than role:system in trapi_client.py",
+        "file": "trapi_client.py",
+        "line": 94,
+        "description": "System-level instructions are sent as user message. GPT-4o is more reliably constrained by system messages for strict output format requirements.",
+        "resolution": "Pre-existing code in trapi_client.py, beyond APP-01 scope. Recommend addressing in a TRAPI integration task.",
+        "status": "DEFERRED - pre-existing issue in trapi_client.py, beyond APP-01 scope"
+      }
+    ],
+    "minor_issues": [
+      {
+        "id": "CR-05",
+        "severity": "minor",
+        "title": "test_requests_24_to_28_players matched incidental jersey number substrings",
+        "file": "tests/test_prompt_get_1985_yankees.py",
+        "line_range": "60-63",
+        "description": "assert '24' in prompt_text and '28' in prompt_text passed due to jersey numbers, not the roster count range phrase.",
+        "resolution": "Replaced with regex: re.search(r'24[–\\-]28|24 to 28|between 24 and 28', prompt_text)",
+        "status": "FIXED"
+      },
+      {
+        "id": "CR-06",
+        "severity": "minor",
+        "title": "test_requests_active_roster_only used OR condition that always passed",
+        "file": "tests/test_prompt_get_1985_yankees.py",
+        "line_range": "55-57",
+        "description": "'active' in lower OR 'roster' in lower always passed since 'roster' appears throughout the prompt.",
+        "resolution": "Changed to AND condition requiring both 'active' and 'roster' to be present.",
+        "status": "FIXED"
+      },
+      {
+        "id": "CR-07",
+        "severity": "minor",
+        "title": "No .gitattributes enforcing LF line endings for prompt files",
+        "file": ".gitattributes",
+        "line": null,
+        "description": "Without enforced LF endings, Windows contributors could silently introduce CRLF, changing the SHA-256 hash.",
+        "resolution": "Added .gitattributes with 'prompts/*.txt text eol=lf'.",
+        "status": "FIXED"
+      }
+    ],
+    "new_test_added": {
+      "id": "CR-08",
+      "title": "Added test_schema_example_is_valid_json",
+      "file": "tests/test_prompt_get_1985_yankees.py",
+      "description": "New test parses the schema example line with json.loads() to prevent future regressions of the invalid-JSON issue.",
+      "status": "ADDED"
+    }
+  }
+}

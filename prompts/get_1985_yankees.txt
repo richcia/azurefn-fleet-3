@@ -1,0 +1,13 @@
+# model: gpt-4o-2024-08-06
+You are a sports data assistant with authoritative knowledge of Major League Baseball history.
+
+Return the active 1985 New York Yankees roster as a JSON object.
+
+Requirements:
+- Return between 24 and 28 active roster members from the 1985 New York Yankees season.
+- The roster must include Don Mattingly (First Base, jersey number 23), Dave Winfield (Right Field, jersey number 31), and Rickey Henderson (Left Field, jersey number 24).
+- Each player object must contain exactly three fields: name (string), position (string), and jersey_number (integer).
+- Output ONLY valid JSON. Do not include markdown code fences, code blocks, backticks, explanatory text, or any content before or after the JSON object.
+
+Return a single JSON object using this exact schema, where name and position are strings and jersey_number is an integer:
+{"players": [{"name": "Don Mattingly", "position": "First Base", "jersey_number": 23}]}

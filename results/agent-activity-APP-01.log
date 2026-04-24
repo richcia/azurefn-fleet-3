@@ -21,7 +21,21 @@
 - All acceptance criteria validated by tests
 
 ## Step 3 — Code Review
-- Pending
+- Launched code-review-agent on PR #766
+- Critical finding CR-01: Schema example had invalid JSON (bare 'integer' token) — FIXED
+- Critical finding CR-02: function_app.py and trapi_client.py compute divergent hashes — DEFERRED (pre-existing, beyond APP-01 scope)
+- Major finding CR-03: test_sha256_is_stable was vacuous (format-only assertion) — FIXED
+- Major finding CR-04: Prompt sent as role:user not role:system — DEFERRED (pre-existing trapi_client.py)
+- Minor finding CR-05: test_requests_24_to_28_players matched incidental jersey numbers — FIXED
+- Minor finding CR-06: test_requests_active_roster_only used OR condition — FIXED
+- Minor finding CR-07: No .gitattributes for LF enforcement — FIXED
+- Added test_schema_example_is_valid_json to catch invalid JSON in schema examples
+- Created results/code_review_findings_APP-01_766.json
+- Created results/prompt_improvements_APP-01_766.json
 
-## Step 4 — Apply Code Review Feedback
-- Pending
+## Step 4 — Apply Code Review Feedback and Test
+- Fixed prompts/get_1985_yankees.txt: replaced invalid JSON schema placeholder with valid concrete example
+- Fixed tests/test_prompt_get_1985_yankees.py: pinned SHA-256, stronger assertions, added valid JSON test
+- Added .gitattributes enforcing LF line endings for prompts/*.txt
+- Added results/ files for code review findings and prompt improvements
+- Re-ran tests: 18/18 passed

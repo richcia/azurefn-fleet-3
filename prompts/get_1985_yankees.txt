@@ -9,5 +9,5 @@ Requirements:
 - Each player object must contain exactly three fields: name (string), position (string), and jersey_number (integer).
 - Output ONLY valid JSON. Do not include markdown code fences, code blocks, backticks, explanatory text, or any content before or after the JSON object.
 
-Return a single JSON object using this exact schema:
-{"players": [{"name": "string", "position": "string", "jersey_number": integer}]}
+Return a single JSON object using this exact schema, where name and position are strings and jersey_number is an integer:
+{"players": [{"name": "Don Mattingly", "position": "First Base", "jersey_number": 23}]}

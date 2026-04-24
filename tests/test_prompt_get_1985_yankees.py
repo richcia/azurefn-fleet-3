@@ -11,6 +11,10 @@ PROMPT_PATH = REPO_ROOT / "prompts" / "get_1985_yankees.txt"
 
 ANCHOR_PLAYERS = ["Don Mattingly", "Dave Winfield", "Rickey Henderson"]
 
+# Pin normalized SHA-256 so any unintentional prompt change is caught.
+# Update this constant ONLY after a deliberate prompt revision.
+EXPECTED_PROMPT_SHA256 = "bb0943a131f76dc80f3acf74f9a915902145f8a711eabbb07a21d6f900eb74b0"
+
 
 @pytest.fixture(scope="module")
 def prompt_text() -> str:
@@ -52,15 +56,31 @@ class TestPromptJsonSchema:
     def test_schema_jersey_number_field_mentioned(self, prompt_text: str) -> None:
         assert '"jersey_number"' in prompt_text, "Prompt must reference the 'jersey_number' field in schema"
 
+    def test_schema_example_is_valid_json(self, prompt_text: str) -> None:
+        import json
+
+        # Find all JSON-like substrings and verify at least the schema example is valid JSON.
+        for line in prompt_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith('{"players"'):
+                try:
+                    json.loads(stripped)
+                except json.JSONDecodeError as exc:
+                    pytest.fail(f"Schema example line is not valid JSON: {stripped!r} — {exc}")
+                return
+        pytest.fail("No schema example line starting with '{\"players\"' found in prompt")
+
 
 class TestPromptRosterRequirements:
     def test_requests_active_roster_only(self, prompt_text: str) -> None:
         lower = prompt_text.lower()
-        assert "active" in lower or "roster" in lower, "Prompt must request active roster members"
+        assert "active" in lower and "roster" in lower, (
+            "Prompt must explicitly request the active roster (both 'active' and 'roster' required)"
+        )
 
     def test_requests_24_to_28_players(self, prompt_text: str) -> None:
-        assert "24" in prompt_text and "28" in prompt_text, (
-            "Prompt must explicitly specify the 24-28 player count range"
+        assert re.search(r"24[–\-]28|24 to 28|between 24 and 28", prompt_text), (
+            "Prompt must explicitly state the 24-28 player count range"
         )
 
     @pytest.mark.parametrize("player", ANCHOR_PLAYERS)
@@ -89,6 +109,10 @@ class TestPromptFileStability:
         assert "\r\n" not in prompt_text, "File must use LF line endings, not CRLF"
 
     def test_sha256_is_stable(self, normalized_prompt: str) -> None:
+        """Pin the normalized SHA-256 so unintentional prompt changes are caught."""
         digest = hashlib.sha256(normalized_prompt.encode("utf-8")).hexdigest()
-        assert len(digest) == 64, "SHA-256 digest must be 64 hex characters"
-        assert all(c in "0123456789abcdef" for c in digest), "SHA-256 digest must be lowercase hex"
+        assert digest == EXPECTED_PROMPT_SHA256, (
+            f"Prompt file has changed unexpectedly. "
+            f"Expected {EXPECTED_PROMPT_SHA256!r}, got {digest!r}. "
+            "Update EXPECTED_PROMPT_SHA256 only after an intentional prompt revision."
+        )

@@ -1,6 +1,9 @@
 @description('Principal ID of the Function App system-assigned managed identity')
 param functionPrincipalId string
 
+@description('Principal ID of the staging deployment slot system-assigned managed identity')
+param stagingSlotPrincipalId string
+
 @description('Name of the dedicated data storage account')
 param dataStorageAccountName string
 
@@ -119,6 +122,21 @@ resource keyVaultSecretsUserAssignment 'Microsoft.Authorization/roleAssignments@
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
     principalId: functionPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Storage Blob Data Contributor — staging slot MI scoped to the data container
+// (allows staging slot to perform smoke tests against the yankees-roster container)
+// ---------------------------------------------------------------------------
+
+resource stagingSlotDataContainerBlobContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(dataContainer.id, stagingSlotPrincipalId, storageBlobDataContributorRoleId)
+  scope: dataContainer
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+    principalId: stagingSlotPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

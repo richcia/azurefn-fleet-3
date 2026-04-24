@@ -1,0 +1,45 @@
+# Agent Activity Log — INF-02
+
+## Step 1 — Implement Tasks
+
+### 2026-04-24 — Implementation
+
+**Task:** Extend infra/modules/functionapp.bicep to provision a 'staging' deployment slot on the Function App.
+
+**Files Explored:**
+- infra/main.bicep — orchestrates all modules; passes tags, baseName, connection strings
+- infra/modules/functionapp.bicep — defines App Service Plan, Function App resource, and outputs principalId
+- infra/modules/rbac.bicep — grants Storage Blob Data Contributor and other roles to the function's MI
+- .github/workflows/cd-promote.yml — performs slot swap from staging to production with pre/post-swap smoke tests
+- spec.md — Deployment Model section confirms staging→production slot swap strategy
+
+**Changes Made:**
+
+1. **infra/modules/functionapp.bicep** (updated):
+   - Added `Microsoft.Web/sites/slots@2023-01-01` resource named 'staging' as child of `functionApp`
+   - Staging slot has system-assigned managed identity enabled
+   - Staging slot has identical app settings to production slot
+   - Added `WEBSITE_SLOT_NAME = 'staging'` app setting to staging slot
+   - Added `Microsoft.Web/sites/config@2023-01-01` (slotConfigNames) resource to mark `WEBSITE_SLOT_NAME` as slot-sticky
+   - Added output `stagingSlotPrincipalId` exposing the staging slot's MI principal ID
+
+2. **infra/modules/rbac.bicep** (updated):
+   - Added `stagingSlotPrincipalId` parameter
+   - Added `stagingSlotDataContainerBlobContributorAssignment` role assignment granting Storage Blob Data Contributor to staging slot MI scoped to the yankees-roster container
+
+3. **infra/main.bicep** (updated):
+   - Passed `stagingSlotPrincipalId: functionapp.outputs.stagingSlotPrincipalId` to the rbac module
+   - Added `stagingSlotPrincipalId` to outputs
+
+## Step 2 — Build and Test
+
+- All 25 existing unit tests pass (pytest)
+- No new Python tests were needed as changes are infrastructure-only (Bicep)
+
+## Step 3 — Code Review
+
+- Code review launched via Code Review Agent
+
+## Step 4 — Apply Code Review Feedback
+
+- Feedback applied and tests re-run (all pass)

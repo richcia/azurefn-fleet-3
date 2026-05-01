@@ -101,6 +101,8 @@ def get_and_store_yankees_roster(timer: func.TimerRequest) -> None:
         players = validation_result.players or []
         player_count = len(players)
         blob_uri = writer.write(roster_payload, run_date_utc=run_date_utc)
+        if blob_uri is not None:
+            _LOGGER.info("blob_write_succeeded", extra={"blob_uri": blob_uri})
         _PLAYER_COUNT_RETURNED.add(player_count, {"run_date_utc": run_date_utc})
         _LOGGER.info(
             "function_completed",

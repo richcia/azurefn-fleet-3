@@ -1,0 +1,30 @@
+{
+  "issue": "APP-05",
+  "pr": "17",
+  "proposed_improvements": [
+    {
+      "id": "PI-01",
+      "area": "Audit scope",
+      "current_prompt_gap": "The prompt says 'Audit function_app.py' but does not instruct the agent to check ALL layers that may already emit the same log event (e.g., blob_writer.py).",
+      "proposed_improvement": "Add: 'Before adding any new log statement, search the entire codebase for existing emissions of the same event name to avoid creating duplicates. If the event is already emitted in a lower layer (e.g., blob_writer.py), remove it from there and centralise it in function_app.py rather than adding a second emission.'"
+    },
+    {
+      "id": "PI-02",
+      "area": "Test mock boundaries",
+      "current_prompt_gap": "The prompt does not instruct the agent to document mock boundaries in tests or verify that mocks do not inadvertently mask bugs.",
+      "proposed_improvement": "Add: 'When writing tests that fully patch a class (e.g., BlobWriter), add a comment explaining which internal behaviours are excluded from the test boundary. Ensure no production-code logging or metric emission is silently bypassed by the mock.'"
+    },
+    {
+      "id": "PI-03",
+      "area": "Format assertions in tests",
+      "current_prompt_gap": "No guidance on assertion strength for string-format fields like dates.",
+      "proposed_improvement": "Add: 'For fields with a well-defined format (e.g., run_date_utc as YYYY-MM-DD), use strict format validation (regex or datetime.strptime) rather than length checks.'"
+    },
+    {
+      "id": "PI-04",
+      "area": "Coverage of all branches",
+      "current_prompt_gap": "The prompt lists metric emission as an acceptance criterion but does not explicitly call out branch coverage (success path vs. write-conflict path).",
+      "proposed_improvement": "Add: 'For each metric or log event, write tests covering all relevant code paths: success, write-conflict (blob_uri=None), and failure. Confirm the metric is emitted (or not) on each path.'"
+    }
+  ]
+}

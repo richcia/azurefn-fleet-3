@@ -1,0 +1,60 @@
+{
+  "issue": "APP-05",
+  "pr": "17",
+  "critical_issues": [
+    {
+      "id": "CR-01",
+      "severity": "critical",
+      "file": "src/blob_writer.py",
+      "line": 61,
+      "title": "Duplicate blob_write_succeeded log emission",
+      "description": "src/blob_writer.py:61 already emits 'blob_write_succeeded' before the PR change. The new emission added in function_app.py:104-105 creates a duplicate on every successful write, double-billing any downstream consumer counting this event.",
+      "recommendation": "Remove the pre-existing emission from src/blob_writer.py:61 and centralise it in function_app.py. This was done in the final commit.",
+      "status": "resolved"
+    }
+  ],
+  "major_issues": [
+    {
+      "id": "CR-02",
+      "severity": "major",
+      "file": "tests/test_function_app.py",
+      "line": "36-37",
+      "title": "Test mock architecture masks duplicate log",
+      "description": "The _patch_imports fixture patches out the entire BlobWriter class, so src/blob_writer.py:61 never executes during any test. Tests give false confidence that blob_write_succeeded fires only once.",
+      "recommendation": "This is an inherent limitation of the mock boundary. Documented via the removal of the duplicate in blob_writer.py, making the tests accurate again.",
+      "status": "resolved"
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "CR-03",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line": 258,
+      "title": "Unused import ValidationErrorKind",
+      "description": "ValidationErrorKind was imported but never used in test_player_count_returned_not_called_on_validation_failure.",
+      "recommendation": "Remove the unused import.",
+      "status": "resolved"
+    },
+    {
+      "id": "CR-04",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line": 93,
+      "title": "Weak run_date_utc format assertion",
+      "description": "assert len(extra['run_date_utc']) == 10 accepts any 10-char string. Should use regex or strptime to validate YYYY-MM-DD format.",
+      "recommendation": "Replace with re.fullmatch(r'\\d{4}-\\d{2}-\\d{2}', extra['run_date_utc']).",
+      "status": "resolved"
+    },
+    {
+      "id": "CR-05",
+      "severity": "minor",
+      "file": "tests/test_function_app.py",
+      "line": null,
+      "title": "Missing metric-on-conflict test",
+      "description": "No test verifying _PLAYER_COUNT_RETURNED.add() is called when blob_uri=None (write conflict). A future refactor could accidentally gate the metric behind blob_uri is not None.",
+      "recommendation": "Add test_player_count_returned_add_is_called_on_write_conflict.",
+      "status": "resolved"
+    }
+  ]
+}

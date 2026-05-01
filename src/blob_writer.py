@@ -57,9 +57,7 @@ class BlobWriter:
                 extra={"blob_name": blob_name, "run_date_utc": run_date_utc},
             )
             return None
-        blob_uri = blob_client.url
-        _LOGGER.info("blob_write_succeeded", extra={"blob_uri": blob_uri})
-        return blob_uri
+        return blob_client.url
 
     def write_failed(self, payload: Any, run_date_utc: str) -> None:
         """Upload payload to yankees-roster/failed/{run_date_utc}.json with overwrite=True."""

@@ -83,14 +83,15 @@ class TestFunctionStartedLog:
         assert "function_started" in log_calls
 
     def test_function_started_includes_run_date_utc(self, _patch_imports):
+        import re
         mock_logger = _invoke(_patch_imports)
         started_call = next(
             c for c in mock_logger.info.call_args_list if c.args[0] == "function_started"
         )
         extra = started_call.kwargs.get("extra", {})
         assert "run_date_utc" in extra
-        # Verify it looks like a date string (YYYY-MM-DD)
-        assert len(extra["run_date_utc"]) == 10
+        # Verify it is a properly formatted YYYY-MM-DD date string
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", extra["run_date_utc"])
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +256,6 @@ class TestPlayerCountReturnedMetric:
         assert "run_date_utc" in attributes
 
     def test_player_count_returned_not_called_on_validation_failure(self, _patch_imports):
-        from src.validator import ValidationErrorKind
         _patch_imports["mock_fetch"].return_value = _make_valid_payload()
 
         validation = MagicMock()
@@ -273,6 +273,11 @@ class TestPlayerCountReturnedMetric:
                 function_app.get_and_store_yankees_roster(timer)
 
         _patch_imports["mock_metric"].add.assert_not_called()
+
+    def test_player_count_returned_add_is_called_on_write_conflict(self, _patch_imports):
+        """Metric should still be emitted even when blob_uri is None (write conflict)."""
+        _invoke(_patch_imports, blob_uri=None)
+        _patch_imports["mock_metric"].add.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

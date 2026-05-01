@@ -1,0 +1,30 @@
+# Agent Activity Log — Issue APP-05
+
+## Step 1 — Implement Tasks
+
+- Audited `function_app.py` against spec.md logging requirements (Logging section)
+- Identified gap: `blob_write_succeeded` log event missing in `function_app.py`
+- Found that `src/blob_writer.py:61` already emitted `blob_write_succeeded`
+- Added `_LOGGER.info("blob_write_succeeded", extra={"blob_uri": blob_uri})` in `function_app.py` after `writer.write()` returns non-None URI
+
+## Step 2 — Build and Test
+
+- Installed dependencies via `pip install -r requirements.txt`
+- Ran existing 89 tests — all passed before changes
+- Created `tests/test_function_app.py` with 25 unit tests covering all five log events and the OTel metric
+- Ran full suite: 114 tests passed
+
+## Step 3 — Code Review
+
+- Launched Code Review Agent for PR #17
+- Critical finding: duplicate `blob_write_succeeded` emission (both `blob_writer.py:61` and new `function_app.py:104-105`)
+- Findings saved to `results/code_review_findings_APP-05_17.json`
+- Prompt improvements saved to `results/prompt_improvements_APP-05_17.json`
+
+## Step 4 — Apply Code Review Feedback and Test
+
+- Removed `blob_write_succeeded` emission from `src/blob_writer.py:61` (centralised in `function_app.py`)
+- Removed unused `ValidationErrorKind` import in test line 258
+- Strengthened `run_date_utc` format assertion (regex `\d{4}-\d{2}-\d{2}`)
+- Added `test_player_count_returned_add_is_called_on_write_conflict` test
+- Ran full suite: 115 tests passed

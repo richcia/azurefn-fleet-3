@@ -1,0 +1,85 @@
+name: Assign - Assign Task to Copilot
+
+on:
+  workflow_call:
+    inputs:
+      issue_id:
+        description: Optional issue number to assign directly
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: Optional issue number to assign directly
+        required: false
+        type: string
+
+jobs:
+  assign-and-execute:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
+      contents: write
+
+    env:
+      GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+      COPILOT_PROMPT: >-
+        Execute all four phases end-to-end for this issue: (1) fully implement tasks, (2) build and test to green, (3) run Code Review Agent and capture findings, and (4) apply review feedback and re-test to green
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+
+      - name: Assign Issue to Copilot
+        if: inputs.issue_id != ''
+        id: assign_copilot
+        run: |
+          set -euo pipefail
+
+          issue_number="${{ inputs.issue_id }}"
+          echo "Assigning issue #$issue_number to Copilot flow"
+
+          if gh issue view "$issue_number" --json labels --jq '.labels[]?.name' | grep -Eqi '^jit$'; then
+            echo "Issue #$issue_number has label 'jit'. Skipping assignment."
+            exit 0
+          fi
+
+          already_assigned=false
+          if {
+            gh issue view "$issue_number" --json assignees --jq '.assignees[]?.login'
+          } | grep -Eqi '^copilot$|^copilot\[bot\]$|^copilot-swe-agent\[bot\]$'; then
+            already_assigned=true
+          fi
+
+          if [ "$already_assigned" = true ]; then
+            echo "Issue #$issue_number is already assigned to copilot. Skipping assignment."
+          else
+            assignment_payload=$(jq -n --arg repo "${{ github.repository }}" --arg instructions "$COPILOT_PROMPT" '{
+              assignees: ["copilot-swe-agent[bot]"],
+              agent_assignment: {
+                target_repo: $repo,
+                base_branch: "main",
+                custom_instructions: $instructions,
+                custom_agent: "code-implementor-agent",
+                model: ""
+              }
+            }')
+
+            if gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${{ github.repository }}/issues/$issue_number/assignees" \
+              --input - <<< "$assignment_payload"
+            then
+              echo "Assigned issue #$issue_number to Copilot"
+            else
+              echo "Warning: Could not assign issue #$issue_number to Copilot."
+              echo "::warning title=Issue Assignment Failed::Could not assign issue #$issue_number to Copilot. See gh api output above."
+            fi
+          fi
